@@ -573,16 +573,16 @@ class AutoReviewer(CoreUtilsMixin, PromptsAndMemoryMixin):
             logger.info(
                 f"📦 Auto-detected missing dependency: {pkg}. Attempting pip install..."
             )
-            
-            if getattr(sys, 'frozen', False):
-                python_cmd = shutil.which("python3") or shutil.which("python") or "python3"
+
+            if getattr(sys, "frozen", False):
+                python_cmd = (
+                    shutil.which("python3") or shutil.which("python") or "python3"
+                )
             else:
                 python_cmd = sys.executable
 
             try:
-                subprocess.run(
-                    [python_cmd, "-m", "pip", "install", pkg], check=True
-                )
+                subprocess.run([python_cmd, "-m", "pip", "install", pkg], check=True)
                 subprocess.run(
                     [python_cmd, "-m", "pip", "install", f"types-{pkg}"],
                     capture_output=True,
@@ -590,7 +590,7 @@ class AutoReviewer(CoreUtilsMixin, PromptsAndMemoryMixin):
                 logger.info(
                     "✅ Successfully installed {pkg}. System will now retry launch."
                 )
-                return  
+                return
             except subprocess.CalledProcessError as e:
                 logger.error(f"❌ Failed to install {pkg} automatically: {e}")
         tb_files = re.findall(r'File "([^"]+)"', logs)

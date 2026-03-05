@@ -156,8 +156,10 @@ class EntranceController:
                 f"🚀 Launching `{rel_entry_file}` for test... (Attempt {attempt + 1}/3)"
             )
 
-            if getattr(sys, 'frozen', False):
-                python_cmd = shutil.which("python3") or shutil.which("python") or "python3"
+            if getattr(sys, "frozen", False):
+                python_cmd = (
+                    shutil.which("python3") or shutil.which("python") or "python3"
+                )
             else:
                 python_cmd = sys.executable
 
