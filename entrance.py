@@ -8,6 +8,8 @@ import logging
 import json
 import subprocess
 import shutil
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 from autoreviewer import AutoReviewer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
@@ -35,6 +37,34 @@ class EntranceController:
         self.ledger = self.load_ledger()
         self.cascade_queue = []
         self.cascade_diffs = {}
+        self.current_iteration = 1
+        self.start_dashboard()
+
+    def start_dashboard(self):
+        # 1. Build the physical file for the user to see
+        obs_path = os.path.join(self.target_dir, "observer.html")
+        with open(obs_path, "w", encoding="utf-8") as f:
+            f.write(OBSERVER_HTML)
+        
+        # 2. Set the controller reference for the handler
+        ObserverHandler.controller = self
+        
+        # 3. Start the background server
+        def run_server():
+            try:
+                server = HTTPServer(("localhost", 5000), ObserverHandler)
+                server.serve_forever()
+            except Exception as e:
+                logger.error(f"Dashboard failed to start: {e}")
+        
+        threading.Thread(target=run_server, daemon=True).start()
+        
+        # 4. Notify the user with a Cyberpunk banner
+        print("\n" + "="*60)
+        print("⚡ NOCLAW OBSERVER IS LIVE")
+        print(f"🔗 URL: http://localhost:5000")
+        print(f"📂 FILE: {obs_path}")
+        print("="*60 + "\n")
 
     def load_ledger(self):
         if os.path.exists(self.symbols_path):
@@ -60,6 +90,7 @@ class EntranceController:
             self.build_initial_analysis()
         iteration = 1
         while True:
+            self.current_iteration = iteration
             logger.info(
                 f"\n\n{'=' * 70}\n🎯 TARGETED PIPELINE LOOP (Iteration {iteration})\n{'=' * 70}"
             )
@@ -87,28 +118,58 @@ class EntranceController:
         else:
             target_rel_path = self.pick_target_file()
             is_cascade = False
+        
         if not target_rel_path:
             return
+
+        # Identify if NoClaw is targeting its own nervous system
+        engine_files = ["autoreviewer.py", "core_utils.py", "prompts_and_memory.py", "entrance.py"]
+        if any(f in target_rel_path for f in engine_files):
+            timestamp = time.strftime("%H%M%S")
+            pod_name = f"safety_pod_v{iteration}_{timestamp}"
+            pod_path = os.path.join(self.target_dir, pod_name)
+            try:
+                os.makedirs(pod_path, exist_ok=True)
+                logger.warning(f"🛡️ SELF-EVOLUTION DETECTED: Sheltering engine source in {pod_name}")
+                for f_name in engine_files:
+                    src = os.path.join(self.target_dir, f_name)
+                    if os.path.exists(src):
+                        shutil.copy(src, pod_path)
+            except Exception as e:
+                logger.error(f"Failed to create safety pod: {e}")
+
         target_abs_path = os.path.join(self.target_dir, target_rel_path)
         self.llm_engine.session_context = []
         if is_cascade and target_diff:
             msg = f"CRITICAL SYMBOLIC RIPPLE: This file depends on code that was just modified. Ensure this file is updated to support these changes:\n\n### DEPDENDENCY CHANGE DIFF:\n{target_diff}"
             self.llm_engine.session_context.append(msg)
+        
         old_content = ""
         if os.path.exists(target_abs_path):
             with open(target_abs_path, "r", encoding="utf-8", errors="ignore") as f:
                 old_content = f.read()
+
         reviewer = TargetedReviewer(self.target_dir, target_abs_path)
-        # Pass the (possibly enriched) session_context from llm_engine to the reviewer
         reviewer.session_context = self.llm_engine.session_context[:]
         reviewer.run_pipeline(iteration)
+        
         new_content = ""
         if os.path.exists(target_abs_path):
             with open(target_abs_path, "r", encoding="utf-8", errors="ignore") as f:
                 new_content = f.read()
+
+        all_text_context = " ".join(self.llm_engine.session_context).lower()
+        for other_file in self.llm_engine.scan_directory():
+            rel_other = os.path.relpath(other_file, self.target_dir)
+            if rel_other != target_rel_path and rel_other in all_text_context:
+                if rel_other not in self.cascade_queue:
+                    logger.warning(f"🧠 AI INTENT DETECTED: Queuing {rel_other} for follow-up.")
+                    self.cascade_queue.append(rel_other)
+
         logger.info(f"🔄 Refreshing metadata for `{target_rel_path}`...")
         self.update_analysis_for_single_file(target_abs_path, target_rel_path)
         self.update_ledger_for_file(target_rel_path, new_content)
+        
         if old_content != new_content:
             logger.info(
                 f"📝 Edit successful. Checking ripples and running final verification for {target_rel_path}..."
@@ -130,6 +191,7 @@ class EntranceController:
                     if r not in self.cascade_queue:
                         self.cascade_queue.append(r)
                         self.cascade_diffs[r] = current_diff
+            
             logger.info("\n" + "=" * 20 + " FINAL VERIFICATION " + "=" * 20)
             if not self._run_final_verification_and_heal(backup_state):
                 logger.error(
@@ -495,6 +557,121 @@ Reply ONLY with the relative file path.
             with open(f, "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()
         return ""
+
+OBSERVER_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NOCLAW // OBSERVER</title>
+    <style>
+        body { background: #050505; color: #00FF41; font-family: 'Menlo', monospace; margin: 0; padding: 20px; overflow-x: hidden; }
+        .glow { text-shadow: 0 0 10px #00FF41, 0 0 20px #00FF41; }
+        .border { border: 1px solid #00FF41; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2); padding: 20px; margin-bottom: 20px; }
+        h1 { font-size: 2em; border-bottom: 2px solid #00FF41; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: rgba(0, 255, 65, 0.05); }
+        .label { color: #008F11; font-weight: bold; margin-bottom: 5px; }
+        .data { font-size: 0.9em; white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #004411; padding: 10px; background: #000; }
+        .stat-bar { display: flex; justify-content: space-between; font-size: 1.2em; margin-bottom: 20px; }
+        .queue-item { background: #00FF41; color: #000; padding: 2px 5px; margin: 2px; display: inline-block; font-size: 0.8em; }
+        #iteration { font-size: 1.5em; color: #fff; }
+    </style>
+</head>
+<body>
+    <h1 class="glow">NOCLAW_OS // OBSERVER_DASHBOARD</h1>
+    
+    <div class="stat-bar border card">
+        <div>ITERATION: <span id="iteration" class="glow">--</span></div>
+        <div>LEDGER: <span id="ledger">--</span> symbols</div>
+        <div>STATUS: <span id="status" style="color: #fff">SCANNING...</span></div>
+    </div>
+
+    <div class="border card">
+        <div class="label">SYMBOLIC CASCADE QUEUE:</div>
+        <div id="queue">--</div>
+    </div>
+
+    <div class="grid">
+        <div class="border card">
+            <div class="label">LIVE MEMORY (MEMORY.md):</div>
+            <div id="memory" class="data">--</div>
+        </div>
+        <div class="border card">
+            <div class="label">RECENT HISTORY (HISTORY.md):</div>
+            <div id="history" class="data">--</div>
+        </div>
+    </div>
+
+    <div class="border card">
+        <div class="label">LATEST ARCHITECTURAL ANALYSIS:</div>
+        <div id="analysis" class="data">--</div>
+    </div>
+
+    <script>
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                document.getElementById('iteration').innerText = data.iteration;
+                document.getElementById('ledger').innerText = data.ledger_stats.definitions;
+                document.getElementById('memory').innerText = data.memory || "Initializing brain...";
+                document.getElementById('history').innerText = data.history || "No history recorded yet.";
+                document.getElementById('analysis').innerText = data.analysis || "Parsing directory structure...";
+                
+                const queueDiv = document.getElementById('queue');
+                queueDiv.innerHTML = data.cascade_queue.length > 0 
+                    ? data.cascade_queue.map(f => `<span class='queue-item'>${f}</span>`).join('')
+                    : "IDLE // NO PENDING CASCADES";
+                
+                document.getElementById('status').innerText = data.cascade_queue.length > 0 ? "EVOLVING" : "READY";
+            } catch (e) {
+                document.getElementById('status').innerText = "OFFLINE";
+            }
+        }
+        setInterval(updateStats, 3000);
+        updateStats();
+    </script>
+</body>
+</html>
+"""
+
+class ObserverHandler(BaseHTTPRequestHandler):
+    controller = None
+
+    def do_GET(self):
+        if self.path == "/api/status":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            
+            status = {
+                "iteration": getattr(self.controller, 'current_iteration', 1),
+                "cascade_queue": self.controller.cascade_queue,
+                "ledger_stats": {
+                    "definitions": len(self.controller.ledger["definitions"]),
+                    "references": len(self.controller.ledger["references"])
+                },
+                "analysis": self.controller._read_file(self.controller.analysis_path),
+                "memory": self.controller._read_file(os.path.join(self.controller.target_dir, "MEMORY.md")),
+                "history": self.controller._read_file(self.controller.history_path)[-5000:]
+            }
+            self.wfile.write(json.dumps(status).encode())
+        
+        elif self.path == "/" or self.path == "/observer.html":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            # Serve the generated HTML
+            self.wfile.write(OBSERVER_HTML.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format, *args):
+        return
 
 
 if __name__ == "__main__":

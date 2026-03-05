@@ -64,7 +64,7 @@ def main():
     if os_name == "darwin":
         print("\n📦 Starting DMG creation...")
 
-        dmg_name = "NoClaw-v0.1.2-beta1.dmg"
+        dmg_name = "NoClaw-v0.1.2.dmg"
         dmg_path = project_root / dmg_name
 
         # Remove old DMG if it exists
