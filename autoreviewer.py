@@ -738,13 +738,22 @@ class AutoReviewer(CoreUtilsMixin, PromptsAndMemoryMixin):
                 f"⚠️ Issues found and patched in {filename}. Added to {PR_FILE_NAME}.\n"
             )
 
-    def scan_directory(self):
+    def scan_directory(self) -> list[str]:
         file_list = []
         for root, dirs, files in os.walk(self.target_dir):
+            # Prune ignored directories
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+
             for file in files:
+                # 1. Ignore specific files listed in IGNORE_FILES
                 if file in IGNORE_FILES or file == os.path.basename(__file__):
                     continue
+
+                # 2. Ignore PyInstaller and DMG artifacts by extension
+                if file.endswith(".spec") or file.endswith(".dmg"):
+                    continue
+
+                # 3. Only include files with supported extensions
                 if any(file.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
                     file_list.append(os.path.join(root, file))
         return file_list

@@ -9,10 +9,10 @@ def main():
     project_root = Path(__file__).parent.absolute()
 
     # --- Configuration ---
-    VERSION = "0.1.3-beta5"
-    APP_NAME = "NoClaw"
+    VERSION = "0.2.0"
+    APP_NAME = "PyOuroBoros"
 
-    print(f"🚀 Building {APP_NAME} v{VERSION} for {os_name}...")
+    print(f"🚀 Forging {APP_NAME} v{VERSION} for {os_name}...")
 
     # Base configuration for all platforms
     # We include all new mixins and external dependencies
@@ -30,7 +30,7 @@ def main():
         "--collect-all=ruff",
         "--collect-all=mypy",
         "--collect-all=ollama",
-        "noclaw_launcher.py",
+        "pyob_launcher.py",
     ]
 
     if os_name == "darwin":
@@ -41,7 +41,7 @@ def main():
             + common
             + [
                 "--windowed",
-                "--icon=no-claw.icns",
+                "--icon=pyob.icns",
             ]
         )
         dist_output = project_root / "dist" / f"{APP_NAME}.app"

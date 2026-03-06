@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="no-claw.png" alt="NoClaw" width="200" />
+  <img src="pyob.png" alt="PyOB" width="512" />
 </p>
 <div align="center">
 
-# 🐙 NoClaw
+# ∞ PyOuroBorus
 
 ### The Self-Healing, Symbolic Autonomous Code Architect
 
@@ -12,21 +12,21 @@
 [![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-000000?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.ai)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)]()
 
-**NoClaw is a high-fidelity autonomous agent that performs surgical code modifications, cross-file dependency tracking, and self-healing verification — all without destroying your codebase.**
+**PYOB is a high-fidelity autonomous agent that performs surgical code modifications, cross-file dependency tracking, and self-healing verification — all without destroying your codebase.**
 
-[Getting Started](#-getting-started) · [How It Works](#phase-1-initial-assessment--codebase-scan) · [Architecture](#system-overview) · [Documentation](#noclaw--complete-technical-documentation)
+[Getting Started](#-getting-started) · [How It Works](#phase-1-initial-assessment--codebase-scan) · [Architecture](#system-overview) · [Documentation](#pyob--complete-technical-documentation)
 
 ---
 
 </div>
 
-## 🧠 What is NoClaw?
+## 🧠 What is PyOB?
 
-NoClaw is an **autonomous code review and feature engineering system** that continuously analyzes, patches, and evolves your codebase through a multi-stage verification pipeline. Unlike "black-box" coding assistants that rewrite entire files, NoClaw operates with **surgical XML-based edits**, a **persistent symbolic dependency ledger**, and **human-in-the-loop checkpoints** — ensuring your project is never left in a broken state.
+PYOB is an **autonomous code review and feature engineering system** that continuously analyzes, patches, and evolves your codebase through a multi-stage verification pipeline. Unlike "black-box" coding assistants that rewrite entire files, PyOB operates with **surgical XML-based edits**, a **persistent symbolic dependency ledger**, and **human-in-the-loop checkpoints** — ensuring your project is never left in a broken state.
 
 ### Key Differentiators
 
-| Feature | Traditional AI Assistants | NoClaw |
+| Feature | Traditional AI Assistants | PYOB |
 |---|---|---|
 | **Edit Strategy** | Full file rewrites | Surgical `<SEARCH>/<REPLACE>` XML blocks |
 | **Dependency Awareness** | None | Symbolic ledger (`SYMBOLS.json`) with ripple detection |
@@ -43,7 +43,7 @@ NoClaw is an **autonomous code review and feature engineering system** that cont
 Every proposed change uses exact `<SEARCH>/<REPLACE>` blocks matched against the source. If even one anchor fails to align, the **entire patch is rejected** and auto-regenerated — never leaving partial, broken edits.
 
 ### 🔗 Symbolic Ripple Engine
-NoClaw maintains a live dependency graph (`SYMBOLS.json`). When a function signature changes in `logic.py`, every file that references it is automatically queued for synchronized updates via the **cascade system**.
+PYOB maintains a live dependency graph (`SYMBOLS.json`). When a function signature changes in `logic.py`, every file that references it is automatically queued for synchronized updates via the **cascade system**.
 
 ### 🛡️ 4-Layer Verification Pipeline
 1. **Atomic XML Matching** — Strict `<SEARCH>` anchor validation
@@ -70,11 +70,11 @@ Interactive terminal checkpoints at every stage:
 
 ## 🚀 Getting Started
 
-NoClaw can be used either as a pre-compiled standalone application (Recommended) or by running the source code directly.
+PyOB can be used either as a pre-compiled standalone application (Recommended) or by running the source code directly.
 
 ### 📋 Prerequisites
 
-Regardless of installation method, NoClaw utilizes external tools for code verification and local LLM fallback.
+Regardless of installation method, PyOB utilizes external tools for code verification and local LLM fallback.
 
 | Requirement | Purpose | Required? |
 |---|---|---|
@@ -87,16 +87,16 @@ Regardless of installation method, NoClaw utilizes external tools for code verif
 
 ### 📦 Option 1: Standalone Installation (End-Users)
 
-Download the latest pre-built binaries from the **[Releases Page](https://github.com/vicsanity623/NoClaw/releases)**.
+Download the latest pre-built binaries from the **[Releases Page](https://github.com/vicsanity623/PyOB/releases)**.
 
 #### **macOS (.dmg)**
-1. **Download and Mount:** Open `NoClaw-v0.1.1.dmg`.
-2. **Install:** Drag the **NoClaw** icon into your `/Applications` folder.
-3. **Launch:** Open NoClaw via Spotlight (`Cmd + Space` > "NoClaw").
-4. **Setup:** A Terminal window will open automatically. Follow the prompts to enter your Gemini API keys and select your AI models. These settings are saved to `~/.noclaw_config`.
+1. **Download and Mount:** Open `PyOB-v0.2.0.dmg`.
+2. **Install:** Drag the **PyOB** icon into your `/Applications` folder.
+3. **Launch:** Open PyOB via Spotlight (`Cmd + Space` > "PyOB").
+4. **Setup:** A Terminal window will open automatically. Follow the prompts to enter your Gemini API keys and select your AI models. These settings are saved to `~/.pyob_config`.
 
 #### **Windows (.exe)**
-1. **Download:** Save `NoClaw.exe` to a known directory.
+1. **Download:** Save `PyOB.exe` to a known directory.
 2. **Launch:** Double-click the executable or run it via PowerShell/CMD.
 3. **Setup:** Follow the on-screen prompts to configure your API keys and model preferences.
 
@@ -104,13 +104,13 @@ Download the latest pre-built binaries from the **[Releases Page](https://github
 
 ### 🛠️ Option 2: Running from Source (Developers)
 
-Use this method if you wish to modify NoClaw or contribute to its development.
+Use this method if you wish to modify PyOB or contribute to its development.
 
 #### **1. Environment Setup**
 ```bash
 # Clone the repository
-git clone https://github.com/vicsanity623/NoClaw.git
-cd NoClaw
+git clone https://github.com/vicsanity623/PyOB.git
+cd PyOB
 
 # Install Python dependencies (Python 3.10+ required)
 pip install requests ollama
@@ -128,26 +128,26 @@ ollama pull qwen3-coder:30b
 #### **3. Execution**
 Run the launcher directly. On the first run, you will be prompted to configure your API keys and model settings.
 ```bash
-python noclaw_launcher.py
+python PyOB_launcher.py
 ```
 
 ---
 
 ### 🎯 Quick Start Workflow
 
-Once launched and configured, NoClaw follows this operational flow:
+Once launched and configured, PyOB follows this operational flow:
 
 1.  **Project Targeting:** Enter the full path to the project you wish to analyze.
-2.  **Bootstrap:** NoClaw generates `ANALYSIS.md` (project map) and `SYMBOLS.json` (dependency graph).
+2.  **Bootstrap:** PyOB generates `ANALYSIS.md` (project map) and `SYMBOLS.json` (dependency graph).
 3.  **Autonomous Loop:** The system targets files based on dependency ripple logic.
-4.  **Interactive Checkpoints:** NoClaw will pause for your approval before applying any surgical XML edits.
+4.  **Interactive Checkpoints:** PyOB will pause for your approval before applying any surgical XML edits.
     -   Type `FULL_DIFF` to see the proposed changes.
     -   Type `EDIT_XML` or `EDIT_CODE` to refine the output.
     -   Hit `ENTER` to commit the patch.
 5.  **Verification:** The system runs the 4-layer pipeline (XML Match → Lint → PIR → Runtime Test) to ensure the code is functional.
 6.  **Persistence:** Your `MEMORY.md` and `HISTORY.md` are updated to maintain context for the next iteration.
 
-NoClaw will:
+PyOB will:
 1. 🔍 **Bootstrap** — Generate `ANALYSIS.md` (project map) and `SYMBOLS.json` (dependency graph)
 2. 🎯 **Target** — Intelligently select the next file to review based on history and dependencies
 3. 🔬 **Analyze** — Scan for bugs, lint errors, and architectural gaps
@@ -242,7 +242,7 @@ Scans all supported files (`.py`, `.js`, `.ts`, `.html`, `.css`, `.json`, `.sh`)
 If no bugs were found in Phase 1, the AI analyzes a randomly selected file and proposes one interactive, user-facing feature with a `<SNIPPET>` code block.
 
 ### Phase 3: Downstream Cascade Check
-After any modification, NoClaw runs `mypy` across the workspace. If type errors surface in dependent files, it generates **cascade fixes** using the `PCF.md` prompt template.
+After any modification, PyOB runs `mypy` across the workspace. If type errors surface in dependent files, it generates **cascade fixes** using the `PCF.md` prompt template.
 
 ### Phase 4: Runtime Verification
 Identifies the project entry point (`if __name__ == "__main__":` or `main.py`/`app.py`), launches it for 10 seconds, and monitors `stdout`/`stderr` for crashes. Auto-installs missing pip packages on `ModuleNotFoundError`.
@@ -257,7 +257,7 @@ Aggressively summarizes `MEMORY.md` to prevent context bloat, consolidating repe
 
 ## 📋 Prompt Templates
 
-NoClaw uses 8 specialized prompt templates, auto-generated as `.md` files in the target directory:
+PyOB uses 8 specialized prompt templates, auto-generated as `.md` files in the target directory:
 
 | Template | Full Name | Purpose |
 |---|---|---|
@@ -286,7 +286,7 @@ Gemini API keys are configured in `core_utils.py` in the `GEMINI_API_KEYS` list.
 | Temperature | `0.1` | `core_utils.py` → `stream_gemini()` / `stream_ollama()` |
 
 ### Ignored Paths
-NoClaw automatically skips certain directories and files to avoid self-modification and virtual environments:
+PyOB automatically skips certain directories and files to avoid self-modification and virtual environments:
 
 <details>
 <summary><b>Ignored Directories</b></summary>
@@ -309,7 +309,7 @@ NoClaw automatically skips certain directories and files to avoid self-modificat
 
 ## 🧪 How the XML Edit Engine Works
 
-NoClaw's edit engine is a multi-strategy matcher that ensures reliable code modifications:
+PyOB's edit engine is a multi-strategy matcher that ensures reliable code modifications:
 
 ```
 1. Exact Match        →  Direct string replacement
@@ -348,7 +348,7 @@ For in-depth technical documentation covering the verification pipeline, symboli
 ## 📁 Project Structure
 
 ```
-NoClaw/
+PyOB/
 ├── entrance.py              # 🧠 Entrance Controller — master loop & symbolic orchestration
 ├── autoreviewer.py          # 🔧 Auto Reviewer — 6-phase pipeline & edit engine
 ├── core_utils.py            # ⚙️ Core Utilities — LLM streaming, XML parser, key rotation
@@ -382,9 +382,9 @@ your-project/
 
 </div>
 
-# NoClaw — Complete Technical Documentation
+# PyOB — Complete Technical Documentation
 
-> **Version**: 1.0 · **Last Updated**: March 2026
+> **Version**: 2.0 · **Last Updated**: March 2026
 > **Architecture**: Python 3.10+ · Gemini 2.5 Flash / Ollama Local LLM
 
 ---
@@ -415,7 +415,7 @@ your-project/
 
 ## 1. System Philosophy: Constrained Surgical Autonomy
 
-NoClaw is built on the principle of **constrained agency**. Rather than giving an AI free reign to rewrite files, NoClaw forces every modification through:
+PyOB is built on the principle of **constrained agency**. Rather than giving an AI free reign to rewrite files, PyOB forces every modification through:
 
 1. **Surgical XML blocks** — Small, verifiable `<SEARCH>/<REPLACE>` patches instead of full file rewrites
 2. **Symbolic verification** — A persistent dependency ledger that tracks the global impact of every change
@@ -618,7 +618,7 @@ The core review and modification engine. Inherits from both `CoreUtilsMixin` and
 
 ##### `get_valid_edit()` — The Core Edit Loop
 
-This is the most complex method in NoClaw. It handles:
+This is the most complex method in PyOB. It handles:
 
 1. **Pre-LLM Checkpoint**: User can `EDIT_PROMPT`, `AUGMENT_PROMPT`, or `SKIP`
 2. **Key Rotation**: Cycles through available Gemini keys; falls back to Ollama
@@ -665,7 +665,7 @@ Provides foundational infrastructure shared across all components.
 | `HISTORY_FILE` | `"HISTORY.md"` | Change history filename |
 | `SYMBOLS_FILE` | `"SYMBOLS.json"` | Dependency graph filename |
 | `IGNORE_DIRS` | `set` | Directories excluded from scanning |
-| `IGNORE_FILES` | `set` | Files excluded from scanning (includes NoClaw's own source files) |
+| `IGNORE_FILES` | `set` | Files excluded from scanning (includes PyOB's own source files) |
 | `SUPPORTED_EXTENSIONS` | `set` | `.py`, `.js`, `.ts`, `.html`, `.css`, `.json`, `.sh` |
 
 #### Class: `CoreUtilsMixin`
@@ -708,7 +708,7 @@ Manages the prompt template lifecycle and persistent memory.
 
 ## 4. The Verification & Healing Pipeline
 
-This is the most critical logic path in NoClaw, ensuring codebase integrity through four distinct layers.
+This is the most critical logic path in PyOB, ensuring codebase integrity through four distinct layers.
 
 ### Layer 1: Atomic XML Matching
 
@@ -731,7 +731,7 @@ Immediately after file modification via `run_linter_fix_loop()`:
 
 ### Layer 3: Context-Aware Self-Healing (PIR)
 
-If Layer 2 or Layer 4 detects an error, NoClaw initiates a **Post-Implementation Repair (PIR)**.
+If Layer 2 or Layer 4 detects an error, PyOB initiates a **Post-Implementation Repair (PIR)**.
 
 | Fixer Type | Context Provided |
 |---|---|
@@ -757,7 +757,7 @@ Controlled by both `autoreviewer.py` (`run_and_verify_app`) and `entrance.py` (`
 
 ## 5. Symbolic Dependency Management
 
-NoClaw tracks the "Global Impact" of code changes via `SYMBOLS.json`.
+PyOB tracks the "Global Impact" of code changes via `SYMBOLS.json`.
 
 ### Schema
 
@@ -893,7 +893,7 @@ If **any** of the `<EDIT>` blocks fails all 5 strategies:
 
 ### Template Architecture
 
-All 8 templates are defined as Python strings in `prompts_and_memory.py` → `_ensure_prompt_files()` and written to the target directory as `.md` files on every initialization. This ensures templates are always fresh and match the current NoClaw version.
+All 8 templates are defined as Python strings in `prompts_and_memory.py` → `_ensure_prompt_files()` and written to the target directory as `.md` files on every initialization. This ensures templates are always fresh and match the current PyOB version.
 
 ### Template Variable Substitution
 
@@ -946,7 +946,7 @@ for key, value in kwargs.items():
 
 ## 8. Human-in-the-Loop Bridging
 
-NoClaw allows for "Supervised Autonomy" through interactive terminal checkpoints.
+PyOB allows for "Supervised Autonomy" through interactive terminal checkpoints.
 
 ### Pre-LLM Checkpoints
 
@@ -1168,7 +1168,7 @@ if r not in self.cascade_queue:
 | `LOCAL_MODEL` | `"qwen3-coder:30b"` | Ollama model identifier |
 | `IGNORE_DIRS` | 12 directories | Directories excluded from scanning |
 | `IGNORE_FILES` | 14 files | Files excluded from scanning |
-| `SUPPORTED_EXTENSIONS` | 7 extensions | File types NoClaw can review |
+| `SUPPORTED_EXTENSIONS` | 7 extensions | File types PyOB can review |
 
 ### Timing Constants
 
@@ -1287,8 +1287,8 @@ Iteration N+1: cascade_queue is not empty
 |---|---|---|
 | `Warning: 'ollama' package not found` | Ollama Python package not installed | `pip install ollama` |
 | All keys rate-limited, no Ollama | Both backends unavailable | Install Ollama and pull `qwen3-coder:30b` |
-| `ruff` / `mypy` not found | Linting tools not installed | `pip install ruff mypy` (NoClaw will skip these checks gracefully) |
-| `Node.js not installed` | JS validation unavailable | Install Node.js (NoClaw will skip JS checks) |
+| `ruff` / `mypy` not found | Linting tools not installed | `pip install ruff mypy` (PyOB will skip these checks gracefully) |
+| `Node.js not installed` | JS validation unavailable | Install Node.js (PyOB will skip JS checks) |
 | Edits keep failing to match | AI generating incorrect `<SEARCH>` blocks | System auto-retries; if persistent, use `EDIT_XML` to fix manually |
 | App crashes during runtime test | Feature implementation introduced a bug | System auto-heals up to 3 times; then rolls back |
 | Memory growing too large | Many iterations without refactoring | Memory auto-refactors every 2 iterations; can manually delete `MEMORY.md` |
@@ -1296,7 +1296,7 @@ Iteration N+1: cascade_queue is not empty
 
 ### Logging
 
-NoClaw uses Python's built-in `logging` module at the `INFO` level:
+PyOB uses Python's built-in `logging` module at the `INFO` level:
 
 ```
 2026-03-04 12:30:45,123 | [1/5] Scanning game.py (Python) - Reading 245 lines into AI context...
@@ -1306,15 +1306,15 @@ All output includes timestamps for debugging timing-related issues.
 
 ---
 
-> **NoClaw** — Surgical precision, never destructive. 🦅
+> **PyOB** — Surgical precision, never destructive. 🦅
 
 
 <p align="center">
-  <a href="https://star-history.com/#vicsanity623/NoClaw&Date">
+  <a href="https://star-history.com/#vicsanity623/PyOB&Date">
     <picture>
-     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=vicsanity623/NoClaw&type=Date&theme=dark" />
-     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=vicsanity623/NoClaw&type=Date" />
-     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=vicsanity623/NoClaw&type=Date" />
+     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=vicsanity623/PyOB&type=Date&theme=dark" />
+     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=vicsanity623/PyOB&type=Date" />
+     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=vicsanity623/PyOB&type=Date" />
     </picture>
   </a>
 </p>

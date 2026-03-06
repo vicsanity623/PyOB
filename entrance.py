@@ -71,19 +71,19 @@ class EntranceController:
 
         # 4. Notify the user with a Cyberpunk banner
         print("\n" + "=" * 60)
-        print("⚡ NOCLAW OBSERVER IS LIVE")
+        print("⚡ PyOuroBoros (PyOB) OBSERVER IS LIVE")
         print("🔗 URL: http://localhost:5000")
         print(f"📂 FILE: {obs_path}")
         print("=" * 60 + "\n")
 
-    def reboot_noclaw(self):
+    def reboot_pyob(self):
         """Standard Hot-Reboot: Replaces the current process with a fresh one."""
-        logger.warning("🔄 SELF-EVOLUTION COMPLETE: Rebooting fresh NoClaw engine...")
+        logger.warning("🔄 SELF-EVOLUTION COMPLETE: Rebooting fresh PYOB engine...")
         # Ensure we pass the same arguments (like the target directory)
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def trigger_production_build(self):
-        """Advanced Build: Compiles NoClaw into a DMG and replaces the system version."""
+        """Advanced Build: Compiles PYOB into a DMG and replaces the system version."""
         build_script = os.path.join(self.target_dir, "build_pyinstaller_multiOS.py")
         if not os.path.exists(build_script):
             logger.error("❌ Build script not found. Skipping production deploy.")
@@ -95,7 +95,7 @@ class EntranceController:
             subprocess.run([sys.executable, build_script], check=True)
 
             # 2. Define Mac paths
-            app_name = "NoClaw.app"
+            app_name = "PyOuroBoros.app"
             dist_path = os.path.join(self.target_dir, "dist", app_name)
             applications_path = f"/Applications/{app_name}"
 
@@ -153,7 +153,7 @@ class EntranceController:
                 f"\n\n{'=' * 70}\n🎯 TARGETED PIPELINE LOOP (Iteration {iteration})\n{'=' * 70}"
             )
 
-            # Track if NoClaw's own logic was upgraded this turn
+            # Track if PYOB's own logic was upgraded this turn
             self_evolved = False
 
             try:
@@ -190,7 +190,7 @@ class EntranceController:
                     self.trigger_production_build()
                 else:
                     logger.warning("🐍 SCRIPT ENGINE EVOLVED: Initiating Hot-Reboot.")
-                    self.reboot_noclaw()
+                    self.reboot_pyob()
             # -------------------------------
 
             iteration += 1
@@ -225,7 +225,7 @@ class EntranceController:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             project_name = os.path.basename(self.target_dir)
             base_backup_path = (
-                Path.home() / "Documents" / "NoClaw_Backups" / project_name
+                Path.home() / "Documents" / "PYOB_Backups" / project_name
             )
             pod_path = base_backup_path / f"safety_pod_v{iteration}_{timestamp}"
 
@@ -674,7 +674,7 @@ OBSERVER_HTML = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NOCLAW // OBSERVER</title>
+    <title>PyOB // OBSERVER</title>
     <style>
         body { background: #050505; color: #00FF41; font-family: 'Menlo', monospace; margin: 0; padding: 20px; overflow-x: hidden; }
         .glow { text-shadow: 0 0 10px #00FF41, 0 0 20px #00FF41; }
@@ -690,7 +690,7 @@ OBSERVER_HTML = """
     </style>
 </head>
 <body>
-    <h1 class="glow">NOCLAW_OS // OBSERVER_DASHBOARD</h1>
+    <h1 class="glow">PYOB_OS // OBSERVER_DASHBOARD</h1>
     <div class="stat-bar border card">
         <div>ITERATION: <span id="iteration" class="glow">--</span></div>
         <div>LEDGER: <span id="ledger">--</span> symbols</div>

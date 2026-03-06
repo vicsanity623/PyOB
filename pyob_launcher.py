@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-CONFIG_FILE = Path.home() / ".noclaw_config"
+CONFIG_FILE = Path.home() / ".pyob_config"
 
 
 def load_config():
@@ -16,7 +16,7 @@ def load_config():
         except Exception:
             pass
 
-    print("🛠️  NoClaw First-Time Setup")
+    print("🛠️  PYOB First-Time Setup")
     print("═" * 40)
 
     # 1. API Keys
@@ -27,7 +27,7 @@ def load_config():
     # 2. Models with Warning
     print("\n🤖 Step 2: Model Configuration")
     print(
-        "⚠️  WARNING: NoClaw is optimized for 'gemini-2.5-flash' and 'qwen3-coder:30b'."
+        "⚠️  WARNING: PYOB is optimized for 'gemini-2.5-flash' and 'qwen3-coder:30b'."
     )
     print("   Changing these may result in parsing errors or logic loops.")
 
@@ -45,7 +45,7 @@ def load_config():
         json.dump(config, f, indent=4)
 
     print(f"\n✅ Configuration saved to {CONFIG_FILE}")
-    print("   (To change these later, simply delete that file and restart NoClaw.)\n")
+    print("   (To change these later, simply delete that file and restart PYOB.)\n")
     return config
 
 
@@ -61,16 +61,16 @@ if __name__ == "__main__":
         ensure_terminal()
 
     print("═" * 70)
-    print("                  NoClaw Launcher")
+    print("                  PYOB Launcher")
     print("═" * 70)
 
     # 1. Load Configuration
     config = load_config()
 
     # 2. Inject into Environment
-    os.environ["NOCLAW_GEMINI_KEYS"] = config.get("gemini_keys", "")
-    os.environ["NOCLAW_GEMINI_MODEL"] = config.get("gemini_model", "gemini-2.5-flash")
-    os.environ["NOCLAW_LOCAL_MODEL"] = config.get("local_model", "qwen3-coder:30b")
+    os.environ["PYOB_GEMINI_KEYS"] = config.get("gemini_keys", "")
+    os.environ["PYOB_GEMINI_MODEL"] = config.get("gemini_model", "gemini-2.5-flash")
+    os.environ["PYOB_LOCAL_MODEL"] = config.get("local_model", "qwen3-coder:30b")
 
     # 3. Import App Logic (After Env is set)
     from entrance import EntranceController
@@ -94,16 +94,16 @@ if __name__ == "__main__":
         input("\nPress Enter to exit...")
         sys.exit(1)
 
-    print(f"\n🚀 Starting NoClaw on: {target_dir}")
-    print(f"🧠 Gemini Model: {os.environ['NOCLAW_GEMINI_MODEL']}")
-    print(f"🏠 Local Model:  {os.environ['NOCLAW_LOCAL_MODEL']}")
+    print(f"\n🚀 Starting PYOB on: {target_dir}")
+    print(f"🧠 Gemini Model: {os.environ['PYOB_GEMINI_MODEL']}")
+    print(f"🏠 Local Model:  {os.environ['PYOB_LOCAL_MODEL']}")
     print("   (Terminal will stay open — press Ctrl+C to stop)\n")
 
     try:
         controller = EntranceController(target_dir)
         controller.run_master_loop()
     except KeyboardInterrupt:
-        print("\n\nNoClaw stopped by user.")
+        print("\n\nPYOB stopped by user.")
     except Exception as e:
         print(f"\n💥 Unexpected error: {e}")
         import traceback

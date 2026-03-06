@@ -22,10 +22,10 @@ except ImportError:
     OLLAMA_AVAILABLE = False
     print("Warning: 'ollama' package not found. Local LLM fallback disabled.")
 
-env_keys = os.environ.get("NOCLAW_GEMINI_KEYS", "")
+env_keys = os.environ.get("PYOB_GEMINI_KEYS", "")
 GEMINI_API_KEYS = [k.strip() for k in env_keys.split(",") if k.strip()]
-GEMINI_MODEL = os.environ.get("NOCLAW_GEMINI_MODEL", "gemini-2.5-flash")
-LOCAL_MODEL = os.environ.get("NOCLAW_LOCAL_MODEL", "qwen3-coder:30b")
+GEMINI_MODEL = os.environ.get("PYOB_GEMINI_MODEL", "gemini-2.5-flash")
+LOCAL_MODEL = os.environ.get("PYOB_LOCAL_MODEL", "qwen3-coder:30b")
 PR_FILE_NAME = "PEER_REVIEW.md"
 FEATURE_FILE_NAME = "FEATURE.md"
 FAILED_PR_FILE_NAME = "FAILED_PEER_REVIEW.md"
@@ -39,7 +39,8 @@ IGNORE_DIRS = {
     ".git",
     "autovenv",
     "build_env",
-    "--no-dashboard",
+    "build",  # PyInstaller build artifacts
+    "dist",  # PyInstaller output folder
     "docs",
     "venv",
     ".venv",
@@ -53,9 +54,10 @@ IGNORE_DIRS = {
     ".vscode",
     ".idea",
 }
+
 IGNORE_FILES = {
     "package-lock.json",
-    "noclaw_launcher.py",
+    "pyob_launcher.py",
     "build_pyinstaller_multiOS.py",
     "ROADMAP.md",
     "README.md",
@@ -101,7 +103,7 @@ class CyberpunkFormatter(logging.Formatter):
         return formatted_msg
 
 
-logger = logging.getLogger("NoClaw")
+logger = logging.getLogger("PyOuroBoros")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(CyberpunkFormatter())
@@ -609,7 +611,7 @@ class CoreUtilsMixin:
             "main.py",
             "app.py",
             "gui.py",
-            "noclaw_launcher.py",
+            "pyob_launcher.py",
         ]
         for f_name in priority_files:
             target = os.path.join(self.target_dir, f_name)

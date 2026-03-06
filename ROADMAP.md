@@ -1,7 +1,7 @@
-# 🦾 NoClaw Evolution Roadmap (v0.2.0)
+# 🦾 PyOB Evolution Roadmap (v0.2.0)
 
 ### 1. TDD Mode (Test-Driven Development)
-*   **What it does**: Forces NoClaw to write a failing test before writing any feature code, ensuring functional correctness instead of just "it didn't crash."
+*   **What it does**: Forces PyOB to write a failing test before writing any feature code, ensuring functional correctness instead of just "it didn't crash."
 *   **Implementation**: 
     *   Create a new prompt template `UT.md` (Unit Test). 
     *   In Phase 3, the AI must generate a `tests/test_feature.py` file first.
@@ -22,16 +22,16 @@
     *   If the critique is negative, the system auto-regenerates using the critique as feedback.
 
 ### 4. Auto-Dependency Locking
-*   **What it does**: Ensures that the project's `requirements.txt` or `pyproject.toml` is always up-to-date with the libraries NoClaw auto-installs.
+*   **What it does**: Ensures that the project's `requirements.txt` or `pyproject.toml` is always up-to-date with the libraries PyOB auto-installs.
 *   **Implementation**: 
     *   Update the `_fix_runtime_errors` method in `autoreviewer.py`.
     *   After a successful `pip install`, run `pip freeze > requirements.txt` or call `poetry add <pkg>` to lock the version.
 
 ### 5. Self-Evolution (Recursive Mode)
-*   **What it does**: Allows NoClaw to analyze and improve its own source code, effectively making itself smarter over time.
+*   **What it does**: Allows PyOB to analyze and improve its own source code, effectively making itself smarter over time.
 *   **Implementation**: 
-    *   Launch NoClaw by pointing it at its own root directory: `python entrance.py .`
-    *   Update `IGNORE_FILES` to allow editing of `core_utils.py`, etc., but keep a "Hard Backup" of the last working NoClaw version to prevent accidental self-deletion.
+    *   Launch PyOB by pointing it at its own root directory: `python entrance.py .`
+    *   Update `IGNORE_FILES` to allow editing of `core_utils.py`, etc., but keep a "Hard Backup" of the last working PyOB version to prevent accidental self-deletion.
 
 ### 6. Cyberpunk Hardware Extensions
 *   **What it does**: Expands the target application's (System Monitor) capabilities to include GPU tracking, network packet monitoring, and audio visualization.
