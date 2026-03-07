@@ -34,16 +34,16 @@ class AutoReviewer(
 
     def __init__(self, target_dir: str):
         self.target_dir = os.path.abspath(target_dir)
-        self.pr_file = os.path.join(self.target_dir, PR_FILE_NAME)
-        self.feature_file = os.path.join(self.target_dir, FEATURE_FILE_NAME)
-        self.failed_pr_file = os.path.join(self.target_dir, FAILED_PR_FILE_NAME)
-        self.failed_feature_file = os.path.join(
-            self.target_dir, FAILED_FEATURE_FILE_NAME
-        )
-        self.memory_file = os.path.join(self.target_dir, MEMORY_FILE_NAME)
-        self.analysis_path = os.path.join(self.target_dir, ANALYSIS_FILE)
-        self.history_path = os.path.join(self.target_dir, HISTORY_FILE)
-        self.symbols_path = os.path.join(self.target_dir, SYMBOLS_FILE)
+        self.pyob_dir = os.path.join(self.target_dir, ".pyob")
+        os.makedirs(self.pyob_dir, exist_ok=True)
+        self.pr_file = os.path.join(self.pyob_dir, PR_FILE_NAME)
+        self.feature_file = os.path.join(self.pyob_dir, FEATURE_FILE_NAME)
+        self.failed_pr_file = os.path.join(self.pyob_dir, FAILED_PR_FILE_NAME)
+        self.failed_feature_file = os.path.join(self.pyob_dir, FAILED_FEATURE_FILE_NAME)
+        self.memory_file = os.path.join(self.pyob_dir, MEMORY_FILE_NAME)
+        self.analysis_path = os.path.join(self.pyob_dir, ANALYSIS_FILE)
+        self.history_path = os.path.join(self.pyob_dir, HISTORY_FILE)
+        self.symbols_path = os.path.join(self.pyob_dir, SYMBOLS_FILE)
         self.memory = self.load_memory()
         self.session_context: list[str] = []
         self._ensure_prompt_files()

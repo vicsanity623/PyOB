@@ -33,10 +33,12 @@ class TargetedReviewer(AutoReviewer):
 class EntranceController:
     def __init__(self, target_dir: str):
         self.target_dir = os.path.abspath(target_dir)
+        self.pyob_dir = os.path.join(self.target_dir, ".pyob")  # Add this
+        os.makedirs(self.pyob_dir, exist_ok=True)
         self.skip_dashboard = "--no-dashboard" in sys.argv
-        self.analysis_path = os.path.join(self.target_dir, "ANALYSIS.md")
-        self.history_path = os.path.join(self.target_dir, "HISTORY.md")
-        self.symbols_path = os.path.join(self.target_dir, "SYMBOLS.json")
+        self.analysis_path = os.path.join(self.pyob_dir, "ANALYSIS.md")
+        self.history_path = os.path.join(self.pyob_dir, "HISTORY.md")
+        self.symbols_path = os.path.join(self.pyob_dir, "SYMBOLS.json")
         self.llm_engine = AutoReviewer(self.target_dir)
         self.ledger = self.load_ledger()
         self.cascade_queue: list[str] = []
@@ -48,7 +50,7 @@ class EntranceController:
             self.start_dashboard()
 
     def start_dashboard(self):
-        obs_path = os.path.join(self.target_dir, "observer.html")
+        obs_path = os.path.join(self.pyob_dir, "observer.html")
         with open(obs_path, "w", encoding="utf-8") as f:
             f.write(OBSERVER_HTML)
 

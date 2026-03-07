@@ -3,6 +3,7 @@ __pycache__
 *_cache
 .DS_STORE
 src/pyob.egg-info
+.pyob
 dist
 build
 ALF.md

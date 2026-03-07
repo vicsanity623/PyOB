@@ -35,11 +35,14 @@ MEMORY_FILE_NAME = "MEMORY.md"
 ANALYSIS_FILE = "ANALYSIS.md"
 HISTORY_FILE = "HISTORY.md"
 SYMBOLS_FILE = "SYMBOLS.json"
+PYOB_DATA_DIR = ".pyob"
 
 IGNORE_DIRS = {
     ".git",
+    ".pyob",
     "autovenv",
     "build_env",
+    "pyob.egg-info",
     "build",
     "dist",
     "docs",
@@ -48,6 +51,7 @@ IGNORE_DIRS = {
     "code",
     ".mypy_cache",
     ".ruff_cache",
+    ".pytest_cache",
     "patch_test",
     "env",
     "__pycache__",
@@ -76,6 +80,13 @@ IGNORE_FILES = {
     "PCF.md",
     "PIR.md",
     "build_pyinstaller_multiOS.py",
+    "check.sh",  # Don't let AI rewrite the validation script
+    ".pyob_config",  # Don't let AI see your API keys
+    ".DS_Store",
+    ".gitignore",  # Prevent AI from messing with git rules
+    "pyob.icns",
+    "pyob.ico",
+    "pyob.png",
     "ROADMAP.md",
     "README.md",
     "DOCUMENTATION.md",
