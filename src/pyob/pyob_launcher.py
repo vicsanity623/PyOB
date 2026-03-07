@@ -1,7 +1,7 @@
-import sys
-import os
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 CONFIG_FILE = Path.home() / ".pyob_config"
@@ -50,7 +50,7 @@ def ensure_terminal():
         sys.exit(0)
 
 
-if __name__ == "__main__":
+def main():
     if sys.platform == "darwin":
         ensure_terminal()
 
@@ -62,8 +62,8 @@ if __name__ == "__main__":
     os.environ["PYOB_GEMINI_MODEL"] = config.get("gemini_model", "gemini-2.5-flash")
     os.environ["PYOB_LOCAL_MODEL"] = config.get("local_model", "qwen3-coder:30b")
 
-    #  Import App Logic (After Env is set)
-    from entrance import EntranceController
+    # Absolute import for the package
+    from pyob.entrance import EntranceController
 
     if len(sys.argv) > 1:
         target_dir = sys.argv[1]
@@ -100,3 +100,7 @@ if __name__ == "__main__":
         traceback.print_exc()
     finally:
         input("\nPress Enter to close this window...")
+
+
+if __name__ == "__main__":
+    main()

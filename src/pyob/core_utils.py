@@ -1,18 +1,19 @@
+import ast
+import json
+import logging
 import os
 import re
-import ast
-import subprocess
-import logging
-import sys
-import time
-import threading
-import json
-import requests
 import select
-import tty
-import termios
 import shutil
+import subprocess
+import sys
+import termios
 import textwrap
+import threading
+import time
+import tty
+
+import requests
 
 try:
     import ollama

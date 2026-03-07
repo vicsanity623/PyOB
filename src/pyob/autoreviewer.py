@@ -1,31 +1,30 @@
-import os
-import re
-import difflib
 import ast
-import subprocess
+import difflib
+import os
 import random
+import re
+import subprocess
 import sys
 import time
 
-from core_utils import (
-    logger,
+from pyob.core_utils import (
+    ANALYSIS_FILE,
+    FAILED_FEATURE_FILE_NAME,
+    FAILED_PR_FILE_NAME,
+    FEATURE_FILE_NAME,
+    GEMINI_API_KEYS,
+    HISTORY_FILE,
     IGNORE_DIRS,
     IGNORE_FILES,
-    SUPPORTED_EXTENSIONS,
-    CoreUtilsMixin,
-    GEMINI_API_KEYS,
-    PR_FILE_NAME,
-    FEATURE_FILE_NAME,
-    FAILED_PR_FILE_NAME,
-    FAILED_FEATURE_FILE_NAME,
     MEMORY_FILE_NAME,
-    ANALYSIS_FILE,
-    HISTORY_FILE,
+    PR_FILE_NAME,
+    SUPPORTED_EXTENSIONS,
     SYMBOLS_FILE,
+    CoreUtilsMixin,
+    logger,
 )
-
-from prompts_and_memory import PromptsAndMemoryMixin
-from reviewer_mixins import ValidationMixin, FeatureOperationsMixin
+from pyob.prompts_and_memory import PromptsAndMemoryMixin
+from pyob.reviewer_mixins import FeatureOperationsMixin, ValidationMixin
 
 
 class AutoReviewer(
@@ -125,15 +124,17 @@ class AutoReviewer(
             if custom_issues
             else ""
         )
-        return self.load_prompt(
-            "PP.md",
-            lang_name=lang_name,
-            lang_tag=lang_tag,
-            content=content,
-            memory_section=memory_section,
-            ruff_section=ruff_section,
-            mypy_section=mypy_section,
-            custom_issues_section=custom_issues_section,
+        return str(
+            self.load_prompt(
+                "PP.md",
+                lang_name=lang_name,
+                lang_tag=lang_tag,
+                content=content,
+                memory_section=memory_section,
+                ruff_section=ruff_section,
+                mypy_section=mypy_section,
+                custom_issues_section=custom_issues_section,
+            )
         )
 
     def get_valid_edit(

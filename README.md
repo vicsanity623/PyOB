@@ -75,9 +75,15 @@ Interactive terminal checkpoints at every stage:
 
 ---
 
-## 🚀 Getting Started
+Here is the updated **Getting Started** section for your `README.md`. 
 
-PyOB can be used either as a pre-compiled standalone application (Recommended) or by running the source code directly.
+I have refactored it to reflect the new professional `src/` layout, the Python 3.12 requirement, the `pyproject.toml` installation method, and the new `./check.sh` validation workflow.
+
+---
+
+### 🚀 Getting Started
+
+PyOB can be used either as a pre-compiled standalone application (Recommended for Users) or installed as an editable package from source (Recommended for Developers).
 
 ### 📋 Prerequisites
 
@@ -85,10 +91,11 @@ Regardless of installation method, PyOB utilizes external tools for code verific
 
 | Requirement | Purpose | Required? |
 |---|---|---|
+| **Python 3.12+** | Core Runtime | ✅ **Mandatory** |
 | **[Ollama](https://ollama.ai)** | Local model server (fallback) | ⚡ Recommended |
 | **`ruff`** | Python linting & formatting | ⚡ Recommended |
 | **`mypy`** | Static type checking | ⚡ Recommended |
-| **Node.js** | JavaScript syntax validation | Optional |
+| **`pytest`** | Unit testing suite | ⚡ Recommended |
 
 ---
 
@@ -97,41 +104,32 @@ Regardless of installation method, PyOB utilizes external tools for code verific
 Download the latest pre-built binaries from the **[Releases Page](https://github.com/vicsanity623/PyOB/releases)**.
 
 #### **macOS (.dmg)**
-1. **Download and Mount:** Open `PyOB-v0.2.0.dmg`.
-2. **Install:** Drag the **PyOB** icon into your `/Applications` folder.
-3. **Launch:** Open PyOB via Spotlight (`Cmd + Space` > "PyOB").
-4. **Setup:** A Terminal window will open automatically. Follow the prompts to enter your Gemini API keys and select your AI models. These settings are saved to `~/.pyob_config`.
-
-#### **Windows (.exe)**
-1. **Download:** Save `PyOB.exe` to a known directory.
-2. **Launch:** Double-click the executable or run it via PowerShell/CMD.
-3. **Setup:** Follow the on-screen prompts to configure your API keys and model preferences.
+1. **Download and Mount:** Open `Py-OB-v0.2.2.dmg`.
+2. **Install:** Drag the **Py-OB** icon into your `/Applications` folder.
+3. **Launch:** Open Py-OB via Spotlight (`Cmd + Space` > "Py-OB").
+4. **Setup:** A Terminal window will open automatically. Follow the prompts to configure your API keys.
 
 ---
 
 ### 🛠️ Option 2: Running from Source (Developers)
 
-Use this method if you wish to modify PyOB or contribute to its development.
+Use this method to modify PyOB, add features, or run the test suite. PyOB now uses a professional `src/` layout.
 
-#### **1. Environment Setup (iMac)**
+#### **1. Environment Setup**
 ```bash
 # Clone the repository
 git clone https://github.com/vicsanity623/PyOB.git
 cd PyOB
 
-brew install python@3.12
-
-# 2. Wipe the old environment
-deactivate 2>/dev/null
+# Create a clean Python 3.12 environment
 rm -rf build_env
-
-# 3. Create the 3.12 environment
 python3.12 -m venv build_env
-
-# 4. Activate and Install
 source build_env/bin/activate
+
+# Install PyOB in "Editable" mode with all dependencies
 pip install --upgrade pip
-pip install ruff mypy requests ollama pyinstaller psutil chardet charset-normalizer types-chardet
+pip install -e .
+pip install ruff mypy pytest
 ```
 
 #### **2. Local Model Preparation**
@@ -140,11 +138,21 @@ If you intend to use the local fallback feature, pull the recommended model:
 ollama pull qwen3-coder:30b
 ```
 
-#### **3. Execution**
-Run the launcher directly. On the first run, you will be prompted to configure your API keys and model settings.
+#### **3. Validation**
+Run the full validation suite (Linter + Type Checker + Tests) before running the agent:
 ```bash
-python PyOB_launcher.py
+./check.sh
 ```
+
+#### **4. Execution**
+Once installed via `pip install -e .`, you can launch PyOB from anywhere using the global command:
+*cd into the folder you want to scan first.
+*Do not run `pyob` from the pyob root folder unless of course you want it to evolve itself..
+```bash
+pyob
+```
+*To target a specific project directory immediately:* `pyob /path/to/your/project`
+*To target pyob itself run this from inside pyob root:* `pyob`
 
 ---
 
@@ -152,22 +160,20 @@ python PyOB_launcher.py
 
 1.  **Targeting:** Provide the path to the project you want PyOB to manage.
 2.  **Dashboard:** Open **`http://localhost:5000`** to watch the "Observer" dashboard in real-time.
-3.  **Approve:** When PyOB proposes a fix or feature, review the diff and hit `ENTER`.
-4.  **Observe:** Watch the **Cascade Queue** trigger as PyOB ripples changes through your files.
-5.  **Self-Evolution:** To have PyOB improve itself, target its own root: `python pyob_launcher.py .`
-6.  **Verification:** The system runs the 4-layer pipeline (XML Match → Lint → PIR → Runtime Test) to ensure the code is functional.
-7.  **Persistence:** Your `MEMORY.md` and `HISTORY.md` are updated to maintain context for the next iteration.
+3.  **Approve:** When PyOB proposes a fix or feature, review the diff in your terminal and hit `ENTER`.
+4.  **Self-Evolution:** To have PyOB improve itself, target its own root directory: `pyob .`
+5.  **Verification:** The system runs a 4-layer pipeline (XML Match → Lint → Runtime Test → Downstream Ripple Check) to ensure the code is functional.
+6.  **Auto-Locking:** Any dependencies PyOB installs during auto-repair are automatically locked into your `requirements.txt`.
 
+### 🔄 The Autonomous Loop
 PyOB will:
-1. 🔍 **Bootstrap** — Generate `ANALYSIS.md` (project map) and `SYMBOLS.json` (dependency graph)
-2. 🎯 **Target** — Intelligently select the next file to review based on history and dependencies
-3. 🔬 **Analyze** — Scan for bugs, lint errors, and architectural gaps
-4. 💡 **Propose** — Generate a `PEER_REVIEW.md` (bug fixes) or `FEATURE.md` (new features)
-5. ⏸️ **Checkpoint** — Wait for your approval before applying any changes
-6. ✅ **Verify** — Run the 4-layer verification pipeline and auto-heal if needed
-7. 🔗 **Cascade** — Detect and queue downstream dependency impacts
-8. 💾 **Persist** — Update `MEMORY.md` and `HISTORY.md` with session context
-9. 🔁 **Iterate** — Loop back to step 2 with a 2-minute cooldown
+1. 🔍 **Bootstrap** — Generate `ANALYSIS.md` (project map) and `SYMBOLS.json` (symbolic ledger).
+2. 🎯 **Target** — Intelligently select the next file to review based on history and symbolic ripples.
+3. 🔬 **Analyze** — Scan for bugs, type errors, and architectural bloat (>800 lines).
+4. 💡 **Propose** — Generate a `PEER_REVIEW.md` (fixes) or `FEATURE.md` (new logic).
+5. ✅ **Verify** — Perform a "Dry Run" and runtime check before finalizing any edit.
+6. 🔗 **Cascade** — Detect and queue downstream dependency impacts for immediate follow-up.
+7. 💾 **Persist** — Compress and update `MEMORY.md` to maintain context for the next iteration.
 
 ---
 

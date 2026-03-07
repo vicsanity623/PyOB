@@ -1,7 +1,7 @@
 import os
 import re
 
-from core_utils import logger
+from pyob.core_utils import logger
 
 
 class PromptsAndMemoryMixin:

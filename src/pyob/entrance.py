@@ -1,18 +1,19 @@
-import os
-import sys
 import ast
-import re
 import difflib
-import time
-import logging
 import json
-import subprocess
+import logging
+import os
+import re
 import shutil
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import subprocess
+import sys
 import threading
-from autoreviewer import AutoReviewer
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any
+
+from pyob.autoreviewer import AutoReviewer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -460,7 +461,7 @@ Reply ONLY with the relative file path.
             p = text.strip().strip("`").strip()
             return os.path.exists(os.path.join(self.target_dir, p)) and p != last_file
 
-        return (
+        return str(
             self.llm_engine.get_valid_llm_response(
                 prompt, val, context="Target Selector"
             )

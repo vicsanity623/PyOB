@@ -1,15 +1,15 @@
 import os
 import re
+import shutil
 import subprocess
 import sys
-import shutil
 
-from core_utils import (
-    logger,
+from pyob.core_utils import (
+    FEATURE_FILE_NAME,
     IGNORE_DIRS,
     IGNORE_FILES,
     PR_FILE_NAME,
-    FEATURE_FILE_NAME,
+    logger,
 )
 
 
@@ -245,6 +245,22 @@ class ValidationMixin:
                 logger.info(
                     f"✅ Successfully installed {pkg}. System will now retry launch."
                 )
+
+                # --- AUTO-DEPENDENCY LOCKING ---
+                try:
+                    req_path = os.path.join(
+                        getattr(self, "target_dir"), "requirements.txt"
+                    )
+                    subprocess.run(
+                        f'"{python_cmd}" -m pip freeze > "{req_path}"',
+                        shell=True,
+                        check=True,
+                    )
+                    logger.info("🔒 Auto-locked dependencies in requirements.txt")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to lock dependencies: {e}")
+                # -------------------------------
+
                 return
             except subprocess.CalledProcessError as e:
                 logger.error(f"❌ Failed to install {pkg} automatically: {e}")

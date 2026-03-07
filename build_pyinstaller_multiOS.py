@@ -14,10 +14,13 @@ def main():
         f"--name={APP_NAME}",
         "--clean",
         "--noconfirm",
+        "--paths=src",
+        "--collect-all=pyob",
         "--hidden-import=autoreviewer",
         "--hidden-import=reviewer_mixins",
         "--hidden-import=core_utils",
         "--hidden-import=prompts_and_memory",
+        "--hidden-import=pyob.entrance",
         "--hidden-import=requests",
         "--hidden-import=ollama",
         "--hidden-import=textwrap",
@@ -32,7 +35,7 @@ def main():
         "--collect-all=ollama",
         "--collect-all=charset_normalizer",
         "--collect-all=chardet",
-        "pyob_launcher.py",
+        "src/pyob/pyob_launcher.py",
     ]
 
     if os_name == "darwin":

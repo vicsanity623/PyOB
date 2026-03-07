@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyob"
+version = "0.2.2"
+description = "PyOuroBoros: An autonomous Python coding agent."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests",
+    "charset-normalizer",
+    "chardet",
+    "ollama"
+]
+
+[project.scripts]
+pyob = "pyob.pyob_launcher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"] # Flake8, Pyflakes, Warnings, isort
+ignore = ["E501"]             # Ignore line length violations (let formatter handle it)
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
