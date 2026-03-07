@@ -75,7 +75,7 @@ Interactive terminal checkpoints at every stage:
 
 ---
 
-Here is the updated **Getting Started** section for your `README.md`. 
+**Here is the updated **Getting Started** section.**
 
 I have refactored it to reflect the new professional `src/` layout, the Python 3.12 requirement, the `pyproject.toml` installation method, and the new `./check.sh` validation workflow.
 
