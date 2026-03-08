@@ -32,6 +32,16 @@ class TargetedReviewer(AutoReviewer):
 
 
 class EntranceController:
+    ENGINE_FILES = [
+        "autoreviewer.py",
+        "core_utils.py",
+        "prompts_and_memory.py",
+        "entrance.py",
+        "reviewer_mixins.py",
+        "pyob_code_parser.py",
+        "pyob_dashboard.py",
+    ]
+
     def __init__(self, target_dir: str):
         self.target_dir = os.path.abspath(target_dir)
         self.pyob_dir = os.path.join(self.target_dir, ".pyob")
@@ -41,10 +51,11 @@ class EntranceController:
         self.history_path = os.path.join(self.pyob_dir, "HISTORY.md")
         self.symbols_path = os.path.join(self.pyob_dir, "SYMBOLS.json")
         self.llm_engine = AutoReviewer(self.target_dir)
-        self.code_parser = CodeParser()  # Instantiate the new parser
+        self.code_parser = CodeParser()
         self.ledger = self.load_ledger()
         self.cascade_queue: list[str] = []
         self.cascade_diffs: dict[str, str] = {}
+        self.self_evolved_flag: bool = False
 
         self.current_iteration = 1
 
@@ -175,16 +186,6 @@ class EntranceController:
             self.self_evolved_flag = False
 
             if self.sync_with_remote():
-                engine_files = [
-                    "autoreviewer.py",
-                    "core_utils.py",
-                    "prompts_and_memory.py",
-                    "entrance.py",
-                    "reviewer_mixins.py",
-                    "pyob_code_parser.py",
-                    "pyob_dashboard.py",
-                ]
-
                 res = subprocess.run(
                     ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
                     cwd=self.target_dir,
@@ -192,7 +193,7 @@ class EntranceController:
                     text=True,
                 )
 
-                if any(ef in res.stdout for ef in engine_files):
+                if any(ef in res.stdout for ef in self.ENGINE_FILES):
                     logger.warning(
                         "🧠 REMOTE EVOLUTION: Engine files updated via sync. Rebooting..."
                     )
@@ -209,7 +210,7 @@ class EntranceController:
                     self.reboot_pyob()
 
             logger.info(
-                f"\n\n{'=' * 70}\n🎯 TARGETED PIPELINE LOOP (Iteration {iteration})\n{'=' * 70}"
+                f"\n\n{'=' * 70}\nTargeted Pipeline Loop (Iteration {iteration})\n{'=' * 70}"
             )
 
             try:
@@ -295,17 +296,7 @@ class EntranceController:
         if not target_rel_path:
             return
 
-        engine_files = [
-            "autoreviewer.py",
-            "core_utils.py",
-            "prompts_and_memory.py",
-            "entrance.py",
-            "reviewer_mixins.py",
-            "pyob_code_parser.py",
-            "pyob_dashboard.py",
-        ]
-
-        is_engine_file = any(f in target_rel_path for f in engine_files)
+        is_engine_file = any(f in target_rel_path for f in self.ENGINE_FILES)
 
         if is_engine_file:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -318,7 +309,7 @@ class EntranceController:
                 logger.warning(
                     f"🛡️ SELF-EVOLUTION: Sheltering engine source EXTERNALLY in {pod_path}"
                 )
-                for f_name in engine_files:
+                for f_name in self.ENGINE_FILES:
                     src = os.path.join(self.target_dir, "src", "pyob", f_name)
                     if not os.path.exists(src):
                         src = os.path.join(self.target_dir, f_name)
@@ -465,6 +456,10 @@ class EntranceController:
                 stderr=subprocess.PIPE,
                 text=True,
                 cwd=self.target_dir,
+                shell=True
+                if sys.platform == "win32" and cmd and cmd[0] == "start"
+                else False,
+                close_fds=sys.platform != "win32",
             )
 
             if entry_file.endswith(".html") or entry_file.endswith(".htm"):
