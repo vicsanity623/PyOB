@@ -23,8 +23,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff mypy pytest
           pip install -e .
+          pip install types-requests types-chardet
 
       - name: Run PyOB Validation Suite
         run: |
           chmod +x check.sh
+          mypy --install-types --non-interactive src/
           ./check.sh
