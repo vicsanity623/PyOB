@@ -73,6 +73,38 @@ class EntranceController:
         print(f"📂 FILE: {obs_path}")
         print("=" * 60 + "\n")
 
+    def sync_with_remote(self) -> bool:
+        """Fetches remote updates and merges main if we are behind."""
+        if not os.path.exists(os.path.join(self.target_dir, ".git")):
+            return False
+
+        logger.info("📡 Checking for remote updates from main...")
+        self._run_git_command(["git", "fetch", "origin"])
+
+        result = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD..origin/main"],
+            cwd=self.target_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        commits_behind = int(result.stdout.strip() or 0)
+
+        if commits_behind > 0:
+            logger.warning(
+                f"🔄 Project is behind main by {commits_behind} commits. Syncing..."
+            )
+
+            if self._run_git_command(["git", "merge", "origin/main"]):
+                logger.info("✅ Sync complete. Local files updated.")
+                return True
+            else:
+                logger.error(
+                    "❌ Sync failed (likely a merge conflict). Manual intervention required."
+                )
+
+        return False
+
     def reboot_pyob(self):
         """Standard Hot-Reboot: Replaces the current process with a fresh one."""
         logger.warning("🔄 SELF-EVOLUTION COMPLETE: Rebooting fresh PYOB engine...")
@@ -140,16 +172,9 @@ class EntranceController:
         iteration = 1
         while True:
             self.current_iteration = iteration
-            logger.info(
-                f"\n\n{'=' * 70}\n🎯 TARGETED PIPELINE LOOP (Iteration {iteration})\n{'=' * 70}"
-            )
+            self.self_evolved_flag = False
 
-            self_evolved = False
-
-            try:
-                self.execute_targeted_iteration(iteration)
-
-                history_text = self._read_file(self.history_path)
+            if self.sync_with_remote():
                 engine_files = [
                     "autoreviewer.py",
                     "core_utils.py",
@@ -160,26 +185,40 @@ class EntranceController:
                     "pyob_dashboard.py",
                 ]
 
-                if history_text:
-                    last_entry = history_text.split("##")[-1]
-                    if any(f"`{ef}`" in last_entry for ef in engine_files):
-                        self_evolved = True
+                res = subprocess.run(
+                    ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+                    cwd=self.target_dir,
+                    capture_output=True,
+                    text=True,
+                )
 
-            except KeyboardInterrupt:
-                logger.info("\nExiting Entrance Controller...")
-                break
-            except Exception as e:
-                logger.error(f"Unexpected error in master loop: {e}", exc_info=True)
+                if any(ef in res.stdout for ef in engine_files):
+                    logger.warning(
+                        "🧠 REMOTE EVOLUTION: Engine files updated via sync. Rebooting..."
+                    )
+                    self.self_evolved_flag = True
 
-            if self_evolved:
+            if self.self_evolved_flag:
                 if getattr(sys, "frozen", False):
                     logger.warning(
-                        "💎 COMPILED ENGINE EVOLVED: Initiating full Forge Build."
+                        "💎 COMPILED ENGINE EVOLVED: Initiating Forge Build."
                     )
                     self.trigger_production_build()
                 else:
                     logger.warning("🐍 SCRIPT ENGINE EVOLVED: Initiating Hot-Reboot.")
                     self.reboot_pyob()
+
+            logger.info(
+                f"\n\n{'=' * 70}\n🎯 TARGETED PIPELINE LOOP (Iteration {iteration})\n{'=' * 70}"
+            )
+
+            try:
+                self.execute_targeted_iteration(iteration)
+            except KeyboardInterrupt:
+                logger.info("\nExiting Entrance Controller...")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error in master loop: {e}", exc_info=True)
 
             iteration += 1
             logger.info("Iteration complete. Waiting for system cooldown...")
@@ -265,7 +304,10 @@ class EntranceController:
             "pyob_code_parser.py",
             "pyob_dashboard.py",
         ]
-        if any(f in target_rel_path for f in engine_files):
+
+        is_engine_file = any(f in target_rel_path for f in engine_files)
+
+        if is_engine_file:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             project_name = os.path.basename(self.target_dir)
             base_backup_path = Path.home() / "Documents" / "PYOB_Backups" / project_name
@@ -307,16 +349,6 @@ class EntranceController:
             with open(target_abs_path, "r", encoding="utf-8", errors="ignore") as f:
                 new_content = f.read()
 
-        all_text_context = " ".join(self.llm_engine.session_context).lower()
-        for other_file in self.llm_engine.scan_directory():
-            rel_other = os.path.relpath(other_file, self.target_dir)
-            if rel_other != target_rel_path and rel_other in all_text_context:
-                if rel_other not in self.cascade_queue:
-                    logger.warning(
-                        f"🧠 AI INTENT DETECTED: Queuing {rel_other} for follow-up."
-                    )
-                    self.cascade_queue.append(rel_other)
-
         logger.info(f"🔄 Refreshing metadata for `{target_rel_path}`...")
         self.update_analysis_for_single_file(target_abs_path, target_rel_path)
         self.update_ledger_for_file(target_rel_path, new_content)
@@ -353,8 +385,14 @@ class EntranceController:
                 )
             else:
                 logger.info("✅ Final verification successful. Application is stable.")
-                # ARCHIVE CHANGE IN GIT
                 self.handle_git_librarian(target_rel_path, iteration)
+
+                if is_engine_file:
+                    logger.warning(
+                        f"🚀 SELF-EVOLUTION: `{target_rel_path}` was successfully updated."
+                    )
+                    self.self_evolved_flag = True
+
             logger.info("=" * 60 + "\n")
 
     def _run_final_verification_and_heal(self, backup_state: dict) -> bool:
