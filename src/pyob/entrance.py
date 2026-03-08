@@ -427,6 +427,10 @@ class EntranceController:
                 stderr=subprocess.PIPE,
                 text=True,
                 cwd=self.target_dir,
+                shell=True
+                if sys.platform == "win32" and cmd and cmd[0] == "start"
+                else False,
+                close_fds=sys.platform != "win32",
             )
 
             if entry_file.endswith(".html") or entry_file.endswith(".htm"):
