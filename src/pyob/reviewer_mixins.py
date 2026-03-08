@@ -23,11 +23,16 @@ class ValidationMixin:
         success: bool = True
         try:
             subprocess.run(["ruff", "format", self.target_dir], capture_output=True)
+
+            subprocess.run(
+                ["ruff", "check", self.target_dir, "--fix"], capture_output=True
+            )
+
             res = subprocess.run(
                 ["ruff", "check", self.target_dir], capture_output=True, text=True
             )
             if res.returncode != 0:
-                logger.warning(f"⚠️ Ruff found errors:\n{res.stdout.strip()}")
+                logger.warning(f"⚠️ Ruff found logic errors:\n{res.stdout.strip()}")
                 py_fixed = False
                 for attempt in range(3):
                     file_errors: dict[str, list[str]] = {}
