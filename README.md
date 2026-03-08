@@ -20,6 +20,11 @@
 
 </div>
 
+
+## ‼️ NOTICE!
+This README.md and all Docs are written and edited by CodeOwners and Maintainers, PYOB does not view or makes self edits on these files. If you find any errors/typos or outdated information in this README.md or DOCUMENTATION.md then please submit an issues for it and someone will review and fix any discrepancies.
+There is currently only one person maintaining this repo and actively developing it so I have taken some time away from these docs and will update them soon. thanks for your understanding.
+
 ## 🧠 What is PyOB?
 
 PYOB is NOT a personal AI CHAT assistant. PyOB is an **autonomous code review and feature engineering system** that continuously analyzes, patches, and evolves your codebase through a multi-stage verification pipeline. Unlike "black-box" coding assistants that rewrite entire files, PyOB operates with **surgical XML-based edits**, a **persistent symbolic dependency ledger**, and **human-in-the-loop checkpoints** — ensuring your project is never left in a broken state. It never waits for you to send a message before it acts, it **already knows its purpose and goals**.
@@ -75,7 +80,7 @@ Interactive terminal checkpoints at every stage:
 
 ---
 
-Here is the updated **Getting Started** section for your `README.md`. 
+This is the updated **Getting Started** section for the latest version.
 
 I have refactored it to reflect the new professional `src/` layout, the Python 3.12 requirement, the `pyproject.toml` installation method, and the new `./check.sh` validation workflow.
 
