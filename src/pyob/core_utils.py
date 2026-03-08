@@ -661,11 +661,13 @@ class CoreUtilsMixin:
                 try:
                     with open(target, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
-                        if (
-                            target.endswith(".py")
-                            and 'if __name__ == "__main__":' in content
-                        ):
-                            return target
+                        if target.endswith(".py"):
+                            # Resilient check for both quote styles
+                            if (
+                                'if __name__ == "__main__":' in content
+                                or "if __name__ == '__main__':" in content
+                            ):
+                                return target
                         if target.endswith(".js") and len(content.strip()) > 10:
                             return target
                 except Exception:
@@ -688,7 +690,12 @@ class CoreUtilsMixin:
                         with open(
                             file_path, "r", encoding="utf-8", errors="ignore"
                         ) as f_obj:
-                            if 'if __name__ == "__main__":' in f_obj.read():
+                            content = f_obj.read()
+                            # Resilient check for both quote styles in fallback scan
+                            if (
+                                'if __name__ == "__main__":' in content
+                                or "if __name__ == '__main__':" in content
+                            ):
                                 return file_path
                     except Exception:
                         continue
