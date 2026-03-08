@@ -13,8 +13,14 @@ def load_config():
         try:
             with open(CONFIG_FILE, "r") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            print(
+                f"â ï¸  Warning: Configuration file {CONFIG_FILE} is invalid or inaccessible ({e}). Re-creating."
+            )
+        except Exception as e:
+            print(
+                f"â ï¸  Warning: An unexpected error occurred while loading config ({e}). Re-creating."
+            )
 
     print("🛠️  PYOB First-Time Setup")
     print("═" * 40)
