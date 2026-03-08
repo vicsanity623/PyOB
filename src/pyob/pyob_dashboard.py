@@ -23,6 +23,12 @@ OBSERVER_HTML = """
         .stat-bar { display: flex; justify-content: space-between; font-size: 1.2em; margin-bottom: 20px; }
         .queue-item { background: #00FF41; color: #000; padding: 2px 5px; margin: 2px; display: inline-block; font-size: 0.8em; }
         #iteration { font-size: 1.5em; color: #fff; }
+        /* New styles for patch review */
+        .patch-card { background: rgba(0, 255, 65, 0.1); border: 1px solid #008F11; padding: 10px; margin-bottom: 10px; }
+        .patch-content { font-family: 'Courier New', monospace; font-size: 0.8em; background: #000; border: 1px solid #004411; padding: 5px; margin-top: 5px; max-height: 200px; overflow-y: auto; }
+        .patch-actions button { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: none; }
+        .approve-btn { background: #00FF41; color: #000; }
+        .reject-btn { background: #FF0000; color: #fff; }
     </style>
 </head>
 <body>
@@ -38,6 +44,14 @@ OBSERVER_HTML = """
         <div class="border card"><div class="label">RECENT HISTORY (HISTORY.md):</div><div id="history" class="data">--</div></div>
     </div>
     <div class="border card"><div class="label">LATEST ARCHITECTURAL ANALYSIS:</div><div id="analysis" class="data">--</div></div>
+    <!-- New section for Pending Architectural Patches -->
+    <div class="border card">
+        <div class="label">PENDING ARCHITECTURAL PATCHES:</div>
+        <div id="pendingPatches" class="data" style="height: auto; min-height: 150px;">
+            <!-- Patches will be loaded here -->
+            No pending patches.
+        </div>
+    </div>
     <div class="border card">
         <div class="label">MANUAL TARGET OVERRIDE:</div>
         <input type="text" id="manualTargetFile" placeholder="e.g., src/pyob/new_feature.py" style="width: calc(100% - 120px); padding: 8px; margin-right: 10px; background: #000; border: 1px solid #00FF41; color: #00FF41;">
@@ -57,7 +71,16 @@ OBSERVER_HTML = """
                 const queueDiv = document.getElementById('queue');
                 queueDiv.innerHTML = data.cascade_queue.length > 0 ? data.cascade_queue.map(f => `<span class='queue-item'>${f}</span>`).join('') : "IDLE // NO PENDING CASCADES";
                 document.getElementById('status').innerText = data.cascade_queue.length > 0 ? "EVOLVING" : "READY";
-            } catch (e) { document.getElementById('status').innerText = "OFFLINE"; }
+
+                // Fetch and render pending patches
+                const patchesResponse = await fetch('/api/pending_patches');
+                const patchesData = await patchesResponse.json();
+                renderPatches(patchesData.patches);
+
+            } catch (e) {
+                console.error("Error updating stats:", e);
+                document.getElementById('status').innerText = "OFFLINE";
+            }
         }
 
         async function setManualTarget() {
@@ -86,6 +109,45 @@ OBSERVER_HTML = """
             } catch (e) {
                 targetMessageDiv.innerText = `Network error: ${e.message}`;
                 targetMessageDiv.style.color = 'red';
+            }
+        }
+
+        // New function to render patches
+        function renderPatches(patches) {
+            const patchesDiv = document.getElementById('pendingPatches');
+            if (patches.length === 0) {
+                patchesDiv.innerHTML = "No pending patches.";
+                return;
+            }
+            patchesDiv.innerHTML = patches.map(patch => `
+                <div class="patch-card">
+                    <div class="label">Patch ID: ${patch.id}</div>
+                    <pre class="patch-content">${patch.content}</pre>
+                    <div class="patch-actions" style="margin-top: 10px;">
+                        <button class="approve-btn" onclick="reviewPatch('${patch.id}', 'approve')">Approve</button>
+                        <button class="reject-btn" onclick="reviewPatch('${patch.id}', 'reject')">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // New function to send patch review action
+        async function reviewPatch(patchId, action) {
+            try {
+                const response = await fetch('/api/review_patch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patch_id: patchId, action: action })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`Patch ${patchId} ${action}d successfully.`);
+                    updateStats(); // Refresh dashboard to reflect changes
+                } else {
+                    alert(`Error ${action}ing patch ${patchId}: ${data.error || 'Unknown error'}`);
+                }
+            } catch (e) {
+                alert(`Network error while ${action}ing patch ${patchId}: ${e.message}`);
             }
         }
 
@@ -130,6 +192,43 @@ class ObserverHandler(BaseHTTPRequestHandler):
                 ],
             }
             self.wfile.write(json.dumps(status).encode())
+        # New GET endpoint for pending patches
+        elif self.path == "/api/pending_patches":
+            if self.controller is None:
+                self.send_response(503)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "Controller not initialized"}).encode()
+                )
+                return
+            try:
+                pending_patches = (
+                    self.controller.get_pending_patches()
+                )  # Assumes this method exists in EntranceController
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"patches": pending_patches}).encode())
+            except AttributeError:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": "Controller method 'get_pending_patches' not found. Ensure entrance.py is updated."
+                        }
+                    ).encode()
+                )
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
+                )
         elif self.path == "/" or self.path == "/observer.html":
             self.send_response(200)
             self.send_header("Content-type", "text/html")
@@ -197,6 +296,86 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     json.dumps(
                         {
                             "error": "Controller method 'set_manual_target_file' not found. Ensure entrance.py is updated."
+                        }
+                    ).encode()
+                )
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
+                )
+        # New POST endpoint for reviewing patches
+        elif self.path == "/api/review_patch":
+            if self.controller is None:
+                self.send_response(503)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "Controller not initialized"}).encode()
+                )
+                return
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode("utf-8"))
+                patch_id = data.get("patch_id")
+                action = data.get("action")  # 'approve' or 'reject'
+
+                if not patch_id or not action:
+                    self.send_response(400)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(
+                        json.dumps(
+                            {"error": "Missing 'patch_id' or 'action' in request body"}
+                        ).encode()
+                    )
+                    return
+                if action not in ["approve", "reject"]:
+                    self.send_response(400)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(
+                        json.dumps(
+                            {"error": "Action must be 'approve' or 'reject'"}
+                        ).encode()
+                    )
+                    return
+
+                self.controller.process_patch_review(
+                    patch_id, action
+                )  # Assumes this method exists in EntranceController
+
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "message": f"Patch {patch_id} {action}d successfully",
+                            "patch_id": patch_id,
+                            "action": action,
+                        }
+                    ).encode()
+                )
+
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+            except AttributeError:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": "Controller method 'process_patch_review' not found. Ensure entrance.py is updated."
                         }
                     ).encode()
                 )
