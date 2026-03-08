@@ -427,11 +427,9 @@ class EntranceController:
 
                 if os.path.exists(venv_python):
                     python_cmd = venv_python
-                elif getattr(sys, "frozen", False):
-                    python_cmd = (
-                        shutil.which("python3") or shutil.which("python") or "python3"
-                    )
                 else:
+                    # Use the current Python executable (interpreter or frozen app)
+                    # This ensures consistency whether PyOB is run as a script or a frozen app.
                     python_cmd = sys.executable
 
                 cmd = [python_cmd, entry_file]
