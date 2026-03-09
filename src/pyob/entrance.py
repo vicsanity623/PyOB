@@ -736,7 +736,7 @@ Reply ONLY with the relative file path.
             try:
                 with open(f, "r", encoding="utf-8", errors="ignore") as f_obj:
                     return f_obj.read()
-            except Exception:
+            except OSError:
                 return ""
         return ""
 
