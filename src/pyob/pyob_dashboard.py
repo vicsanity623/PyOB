@@ -99,6 +99,11 @@ OBSERVER_HTML = """
             <button onclick="setManualTarget()">FORCE TARGET</button>
         </div>
         <div class="card">
+            <div class="label">Manual Cascade Injection</div>
+            <input type="text" id="cascadeItem" placeholder="e.g., src/pyob/new_feature.py or 'Refactor dashboard'">
+            <button onclick="addCascadeItem()" style="margin-top: 10px;">ADD TO QUEUE</button>
+        </div>
+        <div class="card">
             <div class="label">Queue Status</div>
             <div id="queue" class="data-box" style="height: 200px;">IDLE</div> <!-- Increased height for interactive queue -->
         </div>
@@ -219,6 +224,32 @@ OBSERVER_HTML = """
             } catch (e) {
                 console.error("Failed to save Logic Memory:", e);
                 alert("Error saving Logic Memory. Check console for details.");
+            }
+        }
+
+        async function addCascadeItem() {
+            const item = document.getElementById('cascadeItem').value;
+            if (!item) {
+                alert('Please enter an item to add to the cascade queue.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/cascade_queue/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item: item })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`'${item}' added to cascade queue.`);
+                    document.getElementById('cascadeItem').value = ''; // Clear input
+                    await updateStats(); // Refresh queue display
+                } else {
+                    alert(`Failed to add item to queue: ${result.error}`);
+                }
+            } catch (e) {
+                console.error("Failed to add item to cascade queue:", e);
+                alert("Error adding item to cascade queue. Check console for details.");
             }
         }
 
@@ -676,6 +707,69 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     json.dumps(
                         {
                             "error": "Controller method 'remove_cascade_queue_item' not found. Ensure entrance.py is updated."
+                        }
+                    ).encode()
+                )
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
+                )
+        # NEW POST endpoint for adding items to cascade queue
+        elif self.path == "/api/cascade_queue/add":
+            if self.controller is None:
+                self.send_response(503)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "Controller not initialized"}).encode()
+                )
+                return
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode("utf-8"))
+                item = data.get("item")
+
+                if not item:
+                    self.send_response(400)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(
+                        json.dumps({"error": "Missing 'item' in request body"}).encode()
+                    )
+                    return
+
+                self.controller.add_to_cascade_queue(item)
+
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "message": f"Item '{item}' added to cascade queue successfully"
+                        }
+                    ).encode()
+                )
+
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+            except AttributeError:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": "Controller method 'add_to_cascade_queue' not found. Ensure entrance.py is updated."
                         }
                     ).encode()
                 )
