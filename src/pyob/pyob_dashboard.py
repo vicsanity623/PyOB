@@ -1,7 +1,10 @@
 import json
 import os
 from http.server import BaseHTTPRequestHandler
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyob.entrance import EntranceController
 
 OBSERVER_HTML = """
 <!DOCTYPE html>
@@ -117,7 +120,7 @@ OBSERVER_HTML = """
 
 
 class ObserverHandler(BaseHTTPRequestHandler):
-    controller: Any = None
+    controller: "EntranceController" | None = None
 
     def do_GET(self):
         if self.path == "/api/status":
@@ -147,6 +150,9 @@ class ObserverHandler(BaseHTTPRequestHandler):
                 "history": self.controller._read_file(self.controller.history_path)[
                     -5000:
                 ],
+                "patches_count": len(self.controller.get_pending_patches())
+                if hasattr(self.controller, "get_pending_patches")
+                else 0,
             }
             self.wfile.write(json.dumps(status).encode())
         # New GET endpoint for pending patches
@@ -347,5 +353,5 @@ class ObserverHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-    def log_message(self, format: str, *args: Any) -> None:
+    def log_message(self, format: str, *args: object) -> None:
         return
