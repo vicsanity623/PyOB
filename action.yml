@@ -1,6 +1,9 @@
 name: 'PyOB Autonomous Architect'
 description: 'Autonomous code review, surgical patching, and symbolic dependency tracking.'
 author: 'vicsanity623'
+branding:
+  icon: 'cpu'
+  color: 'green'
 inputs:
   gemini_keys:
     description: 'Comma-separated list of Gemini API keys'
