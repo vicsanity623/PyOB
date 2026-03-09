@@ -34,8 +34,12 @@ jobs:
           PYOB_GEMINI_KEYS: ${{ secrets.PYOB_GEMINI_KEYS }}
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
+          # 1. Identity
           git config --global user.email "pyob-bot@users.noreply.github.com"
           git config --global user.name "pyob-bot"
-          curl -s https://pinggy.io/s | sh -s -- -p 5000 -R0 & 
+
+          # 2. Simplified HUD Tunnel (Backgrounded safely)
+          (curl -s https://pinggy.io/s | sh -s -- -p 5000 -R0) & 
           
+          # 3. Launch
           pyob . --iterations 5
