@@ -475,7 +475,7 @@ class CoreUtilsMixin:
 
             if validator(response_text):
                 if is_cloud:
-                    time.sleep(2) 
+                    time.sleep(2)
                 return response_text
             else:
                 logger.warning("LLM response failed validation. Retrying...")
