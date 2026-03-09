@@ -64,7 +64,7 @@ IGNORE_DIRS = {
 IGNORE_FILES = {
     "package-lock.json",
     "action.yml",
-    "Dockerfile"'
+    "Dockerfile",
     "PEER_REVIEW.md",
     "FEATURE.md",
     "FAILED_PEER_REVIEW.md",
