@@ -407,17 +407,12 @@ class CoreUtilsMixin:
             ]
             if not available_keys:
                 if os.environ.get("GITHUB_ACTIONS") == "true":
-                    logger.error(
-                        "🚫 CLOUD ERROR: No Gemini API keys available and Ollama is not supported in GitHub Actions."
-                    )
-                    logger.error(
-                        "👉 Ensure PYOB_GEMINI_KEYS is set in this repository's secrets."
-                    )
-                    sys.exit(1)
-
+                    logger.warning("⏳ CLOUD NOTICE: All 8 keys are currently rate-limited. Sleeping for 2 minutes...")
+                    time.sleep(120) # Wait for a cooldown to expire
+                    continue # Loop back and check available_keys again
+                
                 if not use_ollama:
-                    logger.warning(
-                        "🚫 All Gemini keys are currently rate-limited. Falling back to Local Ollama."
+                    logger.warning("🚫 All Gemini keys are currently rate-limited. Falling back to Local Ollama."
                     )
                     use_ollama = True
             else:
