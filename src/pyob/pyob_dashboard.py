@@ -38,7 +38,7 @@ OBSERVER_HTML = """
         }
         .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; background: #222; }
         .evolving { color: var(--accent); border: 1px solid var(--accent); box-shadow: 0 0 10px #00ffa344; }
-        input { background: #000; border: 1px solid #2a2a30; color: var(--accent); padding: 10px; border-radius: 4px; width: 100%; font-family: 'JetBrains Mono'; margin-bottom: 10px; }
+        input, textarea { background: #000; border: 1px solid #2a2a30; color: var(--accent); padding: 10px; border-radius: 4px; width: 100%; font-family: 'JetBrains Mono'; margin-bottom: 10px; }
         button { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         button:hover { filter: brightness(1.2); }
     </style>
@@ -56,7 +56,8 @@ OBSERVER_HTML = """
         </div>
         <div class="card">
             <div class="label">Logic Memory (MEMORY.md)</div>
-            <div id="memory" class="data-box">Initializing brain...</div>
+            <textarea id="memory" class="data-box" style="height: 250px;">Initializing brain...</textarea>
+            <button onclick="saveMemory()" style="margin-top: 10px;">SAVE MEMORY</button>
         </div>
         <div class="card">
             <div class="label">System Logs (HISTORY.md)</div>
@@ -93,7 +94,7 @@ OBSERVER_HTML = """
                 const isEvolving = data.cascade_queue?.length > 0 || data.patches_count > 0;
                 pill.innerText = isEvolving ? "EVOLVING" : "STABLE";
                 pill.className = isEvolving ? "status-pill evolving" : "status-pill";
-                document.getElementById('memory').innerText = data.memory || "Brain empty.";
+                document.getElementById('memory').value = data.memory || "Brain empty."; // Changed to .value for textarea
                 document.getElementById('history').innerText = data.history || "No logs.";
                 document.getElementById('analysis').innerText = data.analysis || "Parsing...";
                 const queueDiv = document.getElementById('queue');
@@ -154,6 +155,27 @@ OBSERVER_HTML = """
             } catch (e) {
                 console.error(`Failed to ${action} patch ${patchId}:`, e);
                 alert(`Failed to ${action} patch ${patchId}. Check console for details.`);
+            }
+        }
+
+        async function saveMemory() {
+            const memoryContent = document.getElementById('memory').value;
+            try {
+                const response = await fetch('/api/update_memory', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: memoryContent })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Logic Memory saved successfully!');
+                    await updateStats(); // Refresh to ensure consistency
+                } else {
+                    alert(`Failed to save Logic Memory: ${result.error}`);
+                }
+            } catch (e) {
+                console.error("Failed to save Logic Memory:", e);
+                alert("Error saving Logic Memory. Check console for details.");
             }
         }
 
@@ -385,6 +407,69 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     json.dumps(
                         {
                             "error": "Controller method 'process_patch_review' not found. Ensure entrance.py is updated."
+                        }
+                    ).encode()
+                )
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
+                )
+        # NEW POST endpoint for updating Logic Memory
+        elif self.path == "/api/update_memory":
+            if self.controller is None:
+                self.send_response(503)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "Controller not initialized"}).encode()
+                )
+                return
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode("utf-8"))
+                new_memory_content = data.get("content")
+
+                if new_memory_content is None:
+                    self.send_response(400)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(
+                        json.dumps(
+                            {"error": "Missing 'content' in request body"}
+                        ).encode()
+                    )
+                    return
+
+                self.controller.update_memory(new_memory_content)
+
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {"message": "Logic Memory updated successfully"}
+                    ).encode()
+                )
+
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+            except AttributeError:
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": "Controller method 'update_memory' not found. Ensure entrance.py is updated."
                         }
                     ).encode()
                 )
