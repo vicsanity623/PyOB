@@ -10,6 +10,9 @@ CONFIG_FILE = Path.home() / ".pyob_config"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_LOCAL_MODEL = "qwen3-coder:30b"
 
+# OBSERVER_PATCH_REVIEW_HTML content has been moved to pyob_dashboard.py
+# or a dedicated UI template file, as it is UI-specific content.
+
 
 def load_config():
     """Load config from file or environment, or prompt user if missing."""

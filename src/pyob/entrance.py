@@ -51,6 +51,9 @@ class EntranceController:
         self.analysis_path = os.path.join(self.pyob_dir, "ANALYSIS.md")
         self.history_path = os.path.join(self.pyob_dir, "HISTORY.md")
         self.symbols_path = os.path.join(self.pyob_dir, "SYMBOLS.json")
+        self.memory_path = os.path.join(
+            self.pyob_dir, "MEMORY.md"
+        )  # For interactive memory editor
         self.llm_engine = AutoReviewer(self.target_dir)
         self.code_parser = CodeParser()
         self.ledger = self.load_ledger()
@@ -567,7 +570,7 @@ class EntranceController:
         changed_text = "\n".join(
             [line for line in diff if line.startswith("+") or line.startswith("-")]
         )
-        potential_symbols = set(re.findall(r"([a-zA-Z0-9_$]{4,})", changed_text))
+        potential_symbols = set(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", changed_text))
         impacted_files = []
         for sym in potential_symbols:
             if self.ledger["definitions"].get(sym) == source_file:
