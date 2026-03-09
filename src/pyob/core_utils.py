@@ -39,6 +39,7 @@ PYOB_DATA_DIR = ".pyob"
 
 IGNORE_DIRS = {
     ".git",
+    ".github",
     ".pyob",
     "autovenv",
     "build_env",
@@ -62,6 +63,8 @@ IGNORE_DIRS = {
 
 IGNORE_FILES = {
     "package-lock.json",
+    "action.yml",
+    "Dockerfile"'
     "PEER_REVIEW.md",
     "FEATURE.md",
     "FAILED_PEER_REVIEW.md",
