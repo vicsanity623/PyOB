@@ -7,15 +7,19 @@ from pathlib import Path
 def main():
     os_name = platform.system().lower()
     project_root = Path(__file__).parent.absolute()
-    VERSION = "0.2.6"
+    VERSION = "0.3.0"
     APP_NAME = "Py-OB"
     print(f"🚀 Forging {APP_NAME} v{VERSION} for {os_name}...")
+
     common = [
         f"--name={APP_NAME}",
         "--clean",
         "--noconfirm",
         "--paths=src",
         "--collect-all=pyob",
+        "--collect-all=requests",
+        "--collect-all=charset_normalizer",
+        "--collect-all=chardet",
         "--hidden-import=pyob.autoreviewer",
         "--hidden-import=pyob.core_utils",
         "--hidden-import=pyob.prompts_and_memory",
@@ -23,20 +27,15 @@ def main():
         "--hidden-import=pyob.entrance",
         "--hidden-import=pyob.pyob_code_parser",
         "--hidden-import=pyob.pyob_dashboard",
-        "--hidden-import=requests",
         "--hidden-import=ollama",
         "--hidden-import=textwrap",
         "--hidden-import=pathlib",
-        "--hidden-import=charset_normalizer",
-        "--hidden-import=chardet",
         "--copy-metadata=requests",
         "--copy-metadata=charset-normalizer",
         "--copy-metadata=chardet",
         "--collect-all=ruff",
         "--collect-all=mypy",
         "--collect-all=ollama",
-        "--collect-all=charset_normalizer",
-        "--collect-all=chardet",
         "src/pyob/pyob_launcher.py",
     ]
 

@@ -57,7 +57,6 @@ def load_config():
 
 def ensure_terminal():
     if ".app/Contents/MacOS" in sys.executable and not os.isatty(sys.stdin.fileno()):
-        # Reconstruct the command to run the script with its original arguments
         script_path = shlex.quote(sys.argv[0])
         args = " ".join(shlex.quote(arg) for arg in sys.argv[1:])
         full_command = f"{sys.executable} {script_path} {args}".strip()
@@ -78,19 +77,25 @@ def main():
     os.environ["PYOB_GEMINI_MODEL"] = config.get("gemini_model", DEFAULT_GEMINI_MODEL)
     os.environ["PYOB_LOCAL_MODEL"] = config.get("local_model", DEFAULT_LOCAL_MODEL)
 
-    # Absolute import for the package
     from pyob.entrance import EntranceController
 
     if len(sys.argv) > 1:
-        target_dir = sys.argv[1]
+        arg = sys.argv[1]
+        if ".app/Contents/MacOS" in arg or arg == sys.executable:
+            target_dir = input(
+                "\nEnter the FULL PATH to your target project directory\n"
+                "(or just press Enter to use the current folder): "
+            ).strip()
+        else:
+            target_dir = arg
     else:
         target_dir = input(
             "\nEnter the FULL PATH to your target project directory\n"
             "(or just press Enter to use the current folder): "
         ).strip()
 
-        if not target_dir:
-            target_dir = "."
+    if not target_dir:
+        target_dir = "."
 
     target_dir = os.path.abspath(target_dir)
 
