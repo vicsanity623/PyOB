@@ -144,6 +144,9 @@ class CoreUtilsMixin:
     key_cooldowns: dict[str, float]
 
     def get_user_approval(self, prompt_text: str, timeout: int = 220) -> str:
+        if not sys.stdin.isatty() or os.environ.get("GITHUB_ACTIONS") == "true":
+            logger.info("🤖 Headless environment detected: Auto-approving action.")
+            return "PROCEED"
         print(f"\n{prompt_text}")
         start_time = time.time()
         input_str = ""
