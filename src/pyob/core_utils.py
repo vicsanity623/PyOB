@@ -392,6 +392,10 @@ class CoreUtilsMixin:
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
         attempts = 0
         use_ollama = False
+        logger.info(
+            f"📊 Engine check: Found {len(self.key_cooldowns)} Gemini API keys in current environment."
+        )
+
         while True:
             key = None
             now = time.time()
@@ -399,6 +403,15 @@ class CoreUtilsMixin:
                 k for k, cooldown in self.key_cooldowns.items() if now > cooldown
             ]
             if not available_keys:
+                if os.environ.get("GITHUB_ACTIONS") == "true":
+                    logger.error(
+                        "🚫 CLOUD ERROR: No Gemini API keys available and Ollama is not supported in GitHub Actions."
+                    )
+                    logger.error(
+                        "👉 Ensure PYOB_GEMINI_KEYS is set in this repository's secrets."
+                    )
+                    sys.exit(1)
+
                 if not use_ollama:
                     logger.warning(
                         "🚫 All Gemini keys are currently rate-limited. Falling back to Local Ollama."
