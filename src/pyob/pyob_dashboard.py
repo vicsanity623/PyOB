@@ -67,6 +67,10 @@ OBSERVER_HTML = """
             <div id="analysis" class="data-box" style="height: 350px;">Scanning structure...</div>
         </div>
         <div class="card">
+            <div class="label">Pending Patches</div>
+            <div id="pending-patches" class="data-box" style="height: 250px;">Loading pending patches...</div>
+        </div>
+        <div class="card">
             <div class="label">Manual Override</div>
             <input type="text" id="manualTargetFile" placeholder="src/pyob/target.py">
             <button onclick="setManualTarget()">FORCE TARGET</button>
@@ -94,7 +98,28 @@ OBSERVER_HTML = """
                 document.getElementById('analysis').innerText = data.analysis || "Parsing...";
                 const queueDiv = document.getElementById('queue');
                 queueDiv.innerText = data.cascade_queue?.length > 0 ? data.cascade_queue.join('\\n') : "EMPTY";
-            } catch (e) { document.getElementById('status-pill').innerText = "OFFLINE"; }
+
+                // Fetch pending patches and render them
+                const patchesResponse = await fetch('/api/pending_patches');
+                const patchesData = await patchesResponse.json();
+                const pendingPatchesDiv = document.getElementById('pending-patches');
+                if (patchesData.patches && patchesData.patches.length > 0) {
+                    pendingPatchesDiv.innerHTML = patchesData.patches.map(patch => `
+                        <div style="margin-bottom: 10px; padding: 8px; border: 1px solid #333; border-radius: 4px;">
+                            <div style="font-weight: bold; color: var(--accent);">Patch ID: ${patch.id}</div>
+                            <pre style="white-space: pre-wrap; word-break: break-all; font-size: 0.75rem; color: #ccc;">${patch.description || 'No description provided.'}</pre>
+                            <button style="width: 48%; margin-right: 4%; background: #00cc66;" onclick="reviewPatch('${patch.id}', 'approve')">Approve</button>
+                            <button style="width: 48%; background: #ff3333;" onclick="reviewPatch('${patch.id}', 'reject')">Reject</button>
+                        </div>
+                    `).join('');
+                } else {
+                    pendingPatchesDiv.innerText = "No pending patches.";
+                }
+
+            } catch (e) {
+                console.error("Error updating stats:", e);
+                document.getElementById('status-pill').innerText = "OFFLINE";
+            }
         }
 
         async function setManualTarget() {
@@ -106,6 +131,15 @@ OBSERVER_HTML = """
                 body: JSON.stringify({ target_file: targetFile })
             });
             document.getElementById('manualTargetFile').value = '';
+        }
+
+        async function reviewPatch(patchId, action) {
+            await fetch('/api/review_patch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patch_id: patchId, action: action })
+            });
+            updateStats(); // Refresh the dashboard after review
         }
 
         setInterval(updateStats, 3000);
