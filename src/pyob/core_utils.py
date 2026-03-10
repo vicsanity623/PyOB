@@ -438,7 +438,9 @@ class CoreUtilsMixin:
         first_chunk_received[0] = True
         final_time = time.time() - gen_start_time
         if response_text and not response_text.startswith("ERROR_CODE_"):
-            print(f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]")
+            print(
+                f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]"
+            )
         return response_text
 
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
@@ -460,9 +462,13 @@ class CoreUtilsMixin:
             # --- STEP 1: ENGINE SELECTION ---
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
+                logger.info(
+                    f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
+                )
             elif is_cloud:
-                logger.warning("⏳ Gemini limited. Pivoting to GitHub Models (Phi-4)...")
+                logger.warning(
+                    "⏳ Gemini limited. Pivoting to GitHub Models (Phi-4)..."
+                )
             else:
                 logger.info("🏠 Using Local Ollama Engine...")
 
@@ -470,7 +476,7 @@ class CoreUtilsMixin:
             response_text = self._stream_single_llm(prompt, key=key, context=context)
 
             # --- STEP 3: POST-EXECUTION SAFETY GATE ---
-            
+
             # Handle Rate Limits (429)
             if "429" in response_text or "QUOTA_EXCEEDED" in response_text:
                 if key:
@@ -479,23 +485,25 @@ class CoreUtilsMixin:
                 else:
                     logger.warning("🚫 GitHub Models rate-limited. Sleeping 2m...")
                     time.sleep(120)
-                
+
                 attempts += 1
-                time.sleep(10) # Anti-spam breather
+                time.sleep(10)  # Anti-spam breather
                 continue
 
             # Handle Empty Responses (Mandatory Bucket Refill)
             if not response_text or response_text.startswith("ERROR_CODE_"):
                 wait = 60 if is_cloud else 10
-                logger.warning(f"⚠️ API Error/Empty. Mandatory {wait}s bucket refill nap...")
+                logger.warning(
+                    f"⚠️ API Error/Empty. Mandatory {wait}s bucket refill nap..."
+                )
                 time.sleep(wait)
                 attempts += 1
                 continue
 
             # --- STEP 4: VALIDATION ---
             if validator(response_text):
-                if is_cloud: 
-                    time.sleep(5) # Success breather
+                if is_cloud:
+                    time.sleep(5)  # Success breather
                 return response_text
             else:
                 # If the AI answer was garbage, wait before next key.
