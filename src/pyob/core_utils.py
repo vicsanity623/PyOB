@@ -446,64 +446,68 @@ class CoreUtilsMixin:
         return response_text
 
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
+        """
+        LLM Orchestrator (v0.3.3):
+        - NO REDIRECT TO OLLAMA IN CLOUD.
+        - MANDATORY 60s BUCKET REFILL ON EMPTY RESPONSES.
+        - FORCED 15s ROTATION DELAY TO PREVENT MACHINE GUN SPAM.
+        """
         attempts = 0
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
+        logger.info(f"📊 Engine check: Found {len(self.key_cooldowns)} Gemini keys.")
 
         while True:
             key = None
             now = time.time()
             available_keys = [k for k, cd in self.key_cooldowns.items() if now > cd]
 
+            # 1. Selection
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(
-                    f"Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
-                )
+                logger.info(f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
             elif is_cloud:
                 logger.warning("⏳ Gemini keys limited. Using GitHub Models (Phi-4)...")
             else:
                 logger.info("🏠 Using Local Ollama Engine...")
 
+            # 2. Execution
             response_text = self._stream_single_llm(prompt, key=key, context=context)
 
+            # 3. Cloud Resilience (The Pivot)
             if is_cloud:
-                if key and (
-                    not response_text or response_text.startswith("ERROR_CODE_")
-                ):
+                # If Gemini blipped, try Phi-4 immediately
+                if key and (not response_text or response_text.startswith("ERROR_CODE_")):
                     if "429" in response_text:
                         self.key_cooldowns[key] = time.time() + 1200
-                    logger.warning(
-                        "☁️ Gemini failed/limited. Pivoting to GitHub Models (Phi-4)..."
-                    )
-                    response_text = self._stream_single_llm(
-                        prompt, key=None, context=context
-                    )
+                    logger.warning("☁️ Gemini limited. Pivoting to GitHub Models (Phi-4) immediately...")
+                    response_text = self._stream_single_llm(prompt, key=None, context=context)
 
+                # If BOTH dry, sleep 60s. This is the only path back to the top.
                 if not response_text or response_text.startswith("ERROR_CODE_"):
-                    wait = 60
-                    logger.warning(
-                        f"⚠️ All engines exhausted. Sleeping {wait}s for refill..."
-                    )
-                    time.sleep(wait)
+                    logger.warning("⚠️ All Cloud Engines exhausted. Refilling token buckets (60s)...")
+                    time.sleep(60)
                     attempts += 1
                     continue
 
+            # 4. Standard 429 Handling (Key rotation)
             if response_text.startswith("ERROR_CODE_429"):
                 if key:
                     self.key_cooldowns[key] = time.time() + 1200
+                logger.warning("⚠️ Rate limit 429. Rotating keys...")
+                time.sleep(5)
                 attempts += 1
-                time.sleep(2)
                 continue
 
+            # 5. Validation & Breath
             if validator(response_text):
                 if is_cloud:
-                    time.sleep(5)
+                    time.sleep(5) # Final success breather
                 return response_text
-
-            loop_wait = 15 if is_cloud else 2
-            logger.warning(
-                f"⚠️ Attempt failed. Mandatory {loop_wait}s breather before next rotation..."
-            )
+            
+            # 6. Global Machine-Gun Protection
+            # If we reached here, the answer was invalid. Wait before trying the NEXT key.
+            loop_wait = 15 if is_cloud else 5
+            logger.warning(f"⚠️ Response invalid. Mandatory {loop_wait}s breather...")
             time.sleep(loop_wait)
             attempts += 1
 
