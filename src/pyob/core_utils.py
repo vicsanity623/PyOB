@@ -421,7 +421,8 @@ class CoreUtilsMixin:
                 sys.stdout.write("\r\033[K")
                 sys.stdout.flush()
                 source = f"Gemini ...{key[-4:]}" if key else "GitHub Models"
-                if not key and not is_cloud: source = "Local Ollama"
+                if not key and not is_cloud:
+                    source = "Local Ollama"
                 print(f"🤖 AI Output ({source}): ", end="", flush=True)
 
         response_text = ""
@@ -485,9 +486,10 @@ class CoreUtilsMixin:
 
             # 4. Final Validation
             if validator(response_text):
-                if is_cloud: time.sleep(2) # Success breather
+                if is_cloud:
+                    time.sleep(2) # Success breather
                 return response_text
-            
+
             logger.warning("LLM response failed internal validation. Retrying in 5s...")
             time.sleep(5)
             attempts += 1
