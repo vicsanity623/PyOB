@@ -439,14 +439,18 @@ class CoreUtilsMixin:
         first_chunk_received[0] = True
         final_time = time.time() - gen_start_time
         if response_text and not response_text.startswith("ERROR_CODE_"):
-            print(f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]")
+            print(
+                f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]"
+            )
         return response_text
 
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
         attempts = 0
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
 
-        logger.info(f"📊 Engine check: Found {len(self.key_cooldowns)} Gemini API keys.")
+        logger.info(
+            f"📊 Engine check: Found {len(self.key_cooldowns)} Gemini API keys."
+        )
 
         while True:
             key = None
@@ -454,32 +458,44 @@ class CoreUtilsMixin:
             available_keys = [
                 k for k, cooldown in self.key_cooldowns.items() if now > cooldown
             ]
-            
+
             # --- 1. ENGINE SELECTION LOGIC ---
             if available_keys:
                 # Use Gemini (Primary)
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(f"Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
-                response_text = self._stream_single_llm(prompt, key=key, context=context)
-            
+                logger.info(
+                    f"Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
+                )
+                response_text = self._stream_single_llm(
+                    prompt, key=key, context=context
+                )
+
             elif is_cloud:
                 # ALL GEMINI KEYS LIMITED -> TRY GITHUB MODELS (Secondary)
-                logger.warning("⏳ Gemini keys limited. Pivoting to GitHub Models (Phi-4)...")
-                response_text = self._stream_single_llm(prompt, key=None, context=context)
-                
+                logger.warning(
+                    "⏳ Gemini keys limited. Pivoting to GitHub Models (Phi-4)..."
+                )
+                response_text = self._stream_single_llm(
+                    prompt, key=None, context=context
+                )
+
                 # If GitHub Models ALSO fails or returns an error
                 if not response_text or response_text.startswith("ERROR_CODE_"):
-                    logger.warning("🚫 All Cloud AI engines exhausted. Sleeping 5 minutes for cooldown...")
+                    logger.warning(
+                        "🚫 All Cloud AI engines exhausted. Sleeping 5 minutes for cooldown..."
+                    )
                     time.sleep(300)
                     continue
-            
+
             else:
                 # LOCAL IMAC -> FALLBACK TO OLLAMA
                 logger.info("🏠 Using Local Ollama Engine...")
-                response_text = self._stream_single_llm(prompt, key=None, context=context)
+                response_text = self._stream_single_llm(
+                    prompt, key=None, context=context
+                )
 
             # --- 2. RESPONSE VALIDATION & ROTATION ---
-            
+
             # Handle standard Gemini Rate Limit (429)
             if response_text.startswith("ERROR_CODE_429"):
                 if key:
@@ -490,7 +506,9 @@ class CoreUtilsMixin:
 
             # Handle Empty or Generic Error Responses
             if not response_text or response_text.startswith("ERROR_CODE_"):
-                logger.warning(f"⚠️ LLM Error detected ({response_text[:20]}...). Retrying in 10s...")
+                logger.warning(
+                    f"⚠️ LLM Error detected ({response_text[:20]}...). Retrying in 10s..."
+                )
                 time.sleep(10)
                 attempts += 1
                 continue
