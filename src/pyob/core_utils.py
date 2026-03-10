@@ -384,7 +384,10 @@ class CoreUtilsMixin:
             if key is not None:
                 response_text = self.stream_gemini(prompt, key, on_chunk)
             else:
-                is_cloud = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("IS_CLOUD") == "true"
+                is_cloud = (
+                    os.environ.get("GITHUB_ACTIONS") == "true"
+                    or os.environ.get("IS_CLOUD") == "true"
+                )
                 if is_cloud:
                     first_chunk_received[0] = True
                     return "ERROR_CODE_CLOUD_OLLAMA_BLOCKED"
@@ -407,7 +410,10 @@ class CoreUtilsMixin:
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
         attempts = 0
         use_ollama = False
-        is_cloud = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("IS_CLOUD") == "true"
+        is_cloud = (
+            os.environ.get("GITHUB_ACTIONS") == "true"
+            or os.environ.get("IS_CLOUD") == "true"
+        )
 
         logger.info(
             f"📊 Engine check: Found {len(self.key_cooldowns)} Gemini API keys."
@@ -428,11 +434,11 @@ class CoreUtilsMixin:
                         "⏳ Sleeping for 1 hour before restarting Gemini API attempts..."
                     )
                     time.sleep(3600)  # Sleep exactly 1 hour
-                    
+
                     # Force restart Gemini API attempt by wiping all cooldown timers
                     for k in self.key_cooldowns:
                         self.key_cooldowns[k] = 0
-                        
+
                     continue
 
                 if not use_ollama:
@@ -457,7 +463,9 @@ class CoreUtilsMixin:
             ):
                 if "429" in response_text and key:
                     self.key_cooldowns[key] = time.time() + 3600
-                    logger.warning("⚠️ Key rate-limited. Cooldown set to 1 hour. Rotating...")
+                    logger.warning(
+                        "⚠️ Key rate-limited. Cooldown set to 1 hour. Rotating..."
+                    )
                 else:
                     logger.warning(
                         "⚠️ Gemini error/empty response. Sleeping 10s before retry..."
