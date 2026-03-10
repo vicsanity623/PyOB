@@ -446,19 +446,8 @@ class CoreUtilsMixin:
         return response_text
 
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
-        """
-        Elite LLM Orchestrator (v0.3.2):
-        - Prevents high-frequency Machine Gun API spam.
-        - Immediate Cloud Pivot (Gemini -> GitHub Models).
-        - Enforces mandatory 60s bucket refills on cloud failure.
-        - Multi-tier wait logic for rate-limit protection.
-        """
         attempts = 0
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
-
-        logger.info(
-            f"📊 Engine check: Found {len(self.key_cooldowns)} Gemini API keys."
-        )
 
         while True:
             key = None
@@ -467,9 +456,7 @@ class CoreUtilsMixin:
 
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(
-                    f"Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
-                )
+                logger.info(f"Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
             elif is_cloud:
                 logger.warning("⏳ Gemini keys limited. Using GitHub Models (Phi-4)...")
             else:
@@ -477,61 +464,36 @@ class CoreUtilsMixin:
 
             response_text = self._stream_single_llm(prompt, key=key, context=context)
 
-            if is_cloud and (
-                not response_text or response_text.startswith("ERROR_CODE_")
-            ):
-                if key is not None:
+            if is_cloud:
+                if key and (not response_text or response_text.startswith("ERROR_CODE_")):
                     if "429" in response_text:
                         self.key_cooldowns[key] = time.time() + 1200
-                        logger.warning(f"⚠️ Key {key[-4:]} rate-limited. Pivoting...")
-
-                    logger.warning(
-                        "☁️ Gemini blipped/limited. Pivoting to GitHub Models (Phi-4) immediately..."
-                    )
-                    response_text = self._stream_single_llm(
-                        prompt, key=None, context=context
-                    )
+                    logger.warning("☁️ Gemini failed/limited. Pivoting to GitHub Models (Phi-4)...")
+                    response_text = self._stream_single_llm(prompt, key=None, context=context)
 
                 if not response_text or response_text.startswith("ERROR_CODE_"):
-                    wait_time = 60
-                    logger.warning(
-                        f"⚠️ All Cloud Engines exhausted. Sleeping {wait_time}s to refill tokens..."
-                    )
-                    time.sleep(wait_time)
+                    wait = 60
+                    logger.warning(f"⚠️ All engines exhausted. Sleeping {wait}s for refill...")
+                    time.sleep(wait)
                     attempts += 1
                     continue
 
             if response_text.startswith("ERROR_CODE_429"):
                 if key:
                     self.key_cooldowns[key] = time.time() + 1200
-                    logger.warning(f"⚠️ Key {key[-4:]} rate-limited (429). Rotating...")
-                else:
-                    logger.warning(
-                        "🚫 GitHub Models rate-limited. Sleeping 2 minutes..."
-                    )
-                    time.sleep(120)
                 attempts += 1
-                continue
-
-            if is_cloud and key:
-                logger.info("⏳ Rotating keys... (10s anti-spam breather)")
-                time.sleep(10)
-
-            if not response_text or response_text.startswith("ERROR_CODE_"):
-                logger.warning("⚠️ Generic LLM error. Retrying in 10s...")
-                time.sleep(10)
-                attempts += 1
+                time.sleep(2)
                 continue
 
             if validator(response_text):
                 if is_cloud:
                     time.sleep(5)
                 return response_text
-            else:
-                wait = 15 if is_cloud else 5
-                logger.warning(f"⚠️ Response failed validation. Backing off {wait}s...")
-                time.sleep(wait)
-                attempts += 1
+
+            loop_wait = 15 if is_cloud else 2
+            logger.warning(f"⚠️ Attempt failed. Mandatory {loop_wait}s breather before next rotation...")
+            time.sleep(loop_wait)
+            attempts += 1
 
     def _get_user_prompt_augmentation(self, initial_text: str = "") -> str:
         import tempfile
