@@ -371,14 +371,16 @@ class CoreUtilsMixin:
             for line in response.iter_lines():
                 if line:
                     decoded_line = line.decode("utf-8").replace("data: ", "")
-                    if decoded_line == "[DONE]": break
+                    if decoded_line == "[DONE]":
+                        break
                     try:
                         chunk = json.loads(decoded_line)
                         content = chunk["choices"][0]["delta"].get("content", "")
                         if content:
                             full_text += content
                             on_chunk() 
-                    except: continue
+                    except Exception:
+                        continue
             return full_text
         except Exception as e:
             return f"ERROR_CODE_EXCEPTION: {e}"
