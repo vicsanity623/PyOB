@@ -482,7 +482,8 @@ class CoreUtilsMixin:
                     continue
 
             if response_text.startswith("ERROR_CODE_429"):
-                if key: self.key_cooldowns[key] = time.time() + 1200
+                if key:
+                    self.key_cooldowns[key] = time.time() + 1200
                 attempts += 1
                 continue
 
