@@ -393,13 +393,15 @@ class CoreUtilsMixin:
         first_chunk_received[0] = True
         final_time = time.time() - gen_start_time
         if response_text and not response_text.startswith("ERROR_CODE_"):
-            print(f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]")
+            print(
+                f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]"
+            )
         return response_text
 
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
         attempts = 0
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
-        
+
         while True:
             key = None
             now = time.time()
@@ -408,13 +410,19 @@ class CoreUtilsMixin:
             # 1. Selection
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
+                logger.info(
+                    f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
+                )
             elif is_cloud:
                 # NO GITHUB MODELS -> PERFORM SMART SLEEP UNTIL A GEMINI KEY WAKES UP
                 wait_times = [cd - now for cd in self.key_cooldowns.values()]
                 # Minimum 60s, Maximum 20m
-                sleep_duration = max(60, min(min(wait_times) if wait_times else 120, 1200))
-                logger.warning(f"⏳ All keys rate-limited. Napping {int(sleep_duration)}s for refill...")
+                sleep_duration = max(
+                    60, min(min(wait_times) if wait_times else 120, 1200)
+                )
+                logger.warning(
+                    f"⏳ All keys rate-limited. Napping {int(sleep_duration)}s for refill..."
+                )
                 time.sleep(sleep_duration)
                 continue
             else:
@@ -428,7 +436,7 @@ class CoreUtilsMixin:
                 if "429" in response_text and key:
                     self.key_cooldowns[key] = time.time() + 1200
                     logger.warning(f"⚠️ Key {key[-4:]} banned for 20m.")
-                
+
                 # Mandatory Wait for ALL cloud errors (Ensures token bucket refills)
                 wait = 60 if is_cloud else 5
                 logger.warning(f"⚠️ API Error/Empty. Sleeping {wait}s...")
@@ -439,7 +447,7 @@ class CoreUtilsMixin:
             # 4. Validation
             if validator(response_text):
                 if is_cloud:
-                    time.sleep(5) # Success breather
+                    time.sleep(5)  # Success breather
                 return response_text
             else:
                 # Failed validation (AI was too chatty). Wait before next key.
