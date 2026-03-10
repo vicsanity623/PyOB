@@ -599,7 +599,7 @@ class EntranceController:
 
         analysis = self._read_file(self.analysis_path)
         history = self._read_file(self.history_path) or "No history yet."
-        
+
         last_file = ""
         history_lines = history.strip().split("\n")
         for line in reversed(history_lines):
@@ -634,8 +634,8 @@ src/pyob/core_utils.py
 
         def val(text: str) -> bool:
             """Smarter validation that extracts a path from conversational AI."""
-            p = text.strip().replace("`", "").replace('"', '').replace("*", "")
-            
+            p = text.strip().replace("`", "").replace('"', "").replace("*", "")
+
             if " " in p:
                 parts = p.split()
                 for part in parts:
@@ -651,12 +651,12 @@ src/pyob/core_utils.py
             prompt, val, context="Target Selector"
         )
 
-        final_path = response.strip().replace("`", "").replace('"', '').replace("*", "")
+        final_path = response.strip().replace("`", "").replace('"', "").replace("*", "")
         if " " in final_path:
-             for part in final_path.split():
-                    if "/" in part or part.endswith(".py"):
-                        final_path = part
-                        break
+            for part in final_path.split():
+                if "/" in part or part.endswith(".py"):
+                    final_path = part
+                    break
 
         return str(final_path)
 
@@ -668,8 +668,7 @@ src/pyob/core_utils.py
         )
         proj_prompt = f"Write a 2-sentence summary of this project based on these files:\n{structure_map}"
         project_summary = self.llm_engine.get_valid_llm_response(
-            proj_prompt, lambda t:
-            len(t) > 5, context="Project Genesis"
+            proj_prompt, lambda t: len(t) > 5, context="Project Genesis"
         ).strip()
         content = f"# 🧠 Project Analysis\n\n**Project Summary:**\n{project_summary}\n\n---\n\n## 📂 File Directory\n\n"
         for f_path in all_files:
@@ -683,8 +682,7 @@ src/pyob/core_utils.py
             )
             sum_prompt = f"Provide a one-sentence plain text summary of what the file `{rel}` does. \n\nCRITICAL: Do NOT include any HTML tags, <details> blocks, or code signatures in your response. Just the sentence.\n\nFile Structure for context:\n{structure_dropdowns}"
             desc = self.llm_engine.get_valid_llm_response(
-                sum_prompt, lambda t:
-                "<details>" not in t and len(t) > 5, context=rel
+                sum_prompt, lambda t: "<details>" not in t and len(t) > 5, context=rel
             ).strip()
             content += (
                 f"### `{rel}`\n**Summary:** {desc}\n\n{structure_dropdowns}\n---\n"
