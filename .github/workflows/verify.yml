@@ -37,7 +37,12 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "🪄 PyOB: Automated Lint & Format Fixes"
-          branch: ${{ github.head_ref }}
+          # FORCE the bot's identity to prevent the mismatch
+          commit_user_name: "pyob-bot"
+          commit_user_email: "pyob-bot@users.noreply.github.com"
+          commit_author: "pyob-bot <pyob-bot@users.noreply.github.com>"
+          # Force the push to use the bot token
+          push_options: '--force'
 
       - name: Run PyOB Validation Suite
         run: |
