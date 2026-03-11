@@ -363,7 +363,13 @@ class CoreUtilsMixin:
         )
 
         data = {
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a code generation engine. Output ONLY raw code, no conversational filler, no markdown introductions.",
+                },
+                {"role": "user", "content": prompt},
+            ],
             "model": actual_model,
             "stream": True,
             "temperature": 0.1,
@@ -545,15 +551,22 @@ class CoreUtilsMixin:
             # --- 4. VALIDATION GATE ---
             if validator(response_text):
                 if is_cloud:
-                    time.sleep(5)  # Success breather
+                    time.sleep(5)
                 return response_text
+            else:
+                # If it failed validation, TRY TO CLEAN IT and re-validate
+                clean_text = re.sub(
+                    r"^(Here is the code:)|(I suggest:)|(```)",
+                    "",
+                    response_text,
+                    flags=re.IGNORECASE,
+                )
+                if validator(clean_text):
+                    return clean_text
 
-            loop_wait = 15 if is_cloud else 2
-            logger.warning(
-                f"⚠️ Response invalid. Mandatory {loop_wait}s breather before next rotation..."
-            )
-            time.sleep(loop_wait)
-            attempts += 1
+                logger.warning("⚠️ Response invalid. Backing off 15s...")
+                time.sleep(15)
+                attempts += 1
 
     def _get_user_prompt_augmentation(self, initial_text: str = "") -> str:
         import tempfile
