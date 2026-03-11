@@ -462,10 +462,9 @@ class CoreUtilsMixin:
             return f"ERROR_CODE_EXCEPTION: {e}"
 
         first_chunk_received[0] = True
-        final_time = time.time() - gen_start_time
         if response_text and not response_text.startswith("ERROR_CODE_"):
             print(
-                f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {final_time:.1f}s]"
+                f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {time.time() - gen_start_time:.1f}s]"
             )
         return response_text
 
@@ -473,24 +472,29 @@ class CoreUtilsMixin:
         attempts = 0
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
 
+        # A simple pass-through callback for when we call stream methods directly
+        def empty_chunk():
+            pass
+
         while True:
             key = None
             now = time.time()
             available_keys = [k for k, cd in self.key_cooldowns.items() if now > cd]
 
-            # --- 1. ENGINE SELECTION ---
+            # 1. Selection & Execution
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
                 logger.info(
-                    f"Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
+                    f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
                 )
                 response_text = self._stream_single_llm(
                     prompt, key=key, context=context
                 )
             elif is_cloud:
-                logger.warning("⏳ Gemini keys limited. Using GitHub Models (Phi-4)...")
+                gh_model = "Llama-3" if attempts > 0 else "Phi-4"
+                logger.warning(f"☁️ Pivoting to GitHub Models ({gh_model})...")
                 response_text = self._stream_single_llm(
-                    prompt, key=None, context=context, gh_model="Phi-4"
+                    prompt, key=None, context=context, gh_model=gh_model
                 )
             else:
                 logger.info("🏠 Using Local Ollama Engine...")
@@ -498,63 +502,33 @@ class CoreUtilsMixin:
                     prompt, key=None, context=context
                 )
 
-            # --- 2. CLOUD CASCADE (Gemini -> Phi-4 -> Llama-3 -> Sleep) ---
-            if is_cloud:
-                # If Gemini failed
-                if key and (
-                    not response_text or response_text.startswith("ERROR_CODE_")
-                ):
-                    if "429" in response_text or "QUOTA_EXCEEDED" in response_text:
-                        self.key_cooldowns[key] = time.time() + 1200
-                    logger.warning(
-                        "☁️ Gemini failed. Pivoting to GitHub Models (Phi-4)..."
-                    )
-                    response_text = self._stream_single_llm(
-                        prompt, key=None, context=context, gh_model="Phi-4"
-                    )
-
-                # If Phi-4 failed
-                if not response_text or response_text.startswith("ERROR_CODE_"):
-                    logger.warning(
-                        "☁️ Phi-4 failed. Pivoting to GitHub Models (Llama-3)..."
-                    )
-                    response_text = self._stream_single_llm(
-                        prompt, key=None, context=context, gh_model="Llama-3"
-                    )
-
-                # If ALL models failed (Mandatory 120s Visual Sleep)
-                if not response_text or response_text.startswith("ERROR_CODE_"):
-                    logger.warning(
-                        "⚠️ All AI engines exhausted. Entering 120s cooldown..."
-                    )
-                    for i in range(120, 0, -10):
-                        print(f"⏳ Cooldown: {i} seconds remaining...")
-                        time.sleep(10)
-                    attempts += 1
-                    continue
-
-            # --- 3. STANDARD ERROR HANDLING (For Local iMac) ---
-            if not is_cloud and response_text.startswith("ERROR_CODE_429"):
-                if key:
-                    self.key_cooldowns[key] = time.time() + 1200
-                attempts += 1
-                time.sleep(2)
-                continue
-
-            if not is_cloud and (
+            # 2. Cloud Resilience (Handle Errors)
+            if is_cloud and (
                 not response_text or response_text.startswith("ERROR_CODE_")
             ):
+                if "429" in response_text and key:
+                    self.key_cooldowns[key] = time.time() + 1200
+
+                wait = 60
+                logger.warning(f"⚠️ API Error/Empty. Mandatory {wait}s nap...")
+                time.sleep(wait)
                 attempts += 1
-                time.sleep(10)
                 continue
 
-            # --- 4. VALIDATION GATE ---
+            # 3. Standard Local Errors
+            if not is_cloud and response_text.startswith("ERROR_CODE_"):
+                if "429" in response_text and key:
+                    self.key_cooldowns[key] = time.time() + 1200
+                time.sleep(10)
+                attempts += 1
+                continue
+
+            # 4. Validation
             if validator(response_text):
                 if is_cloud:
                     time.sleep(5)
                 return response_text
             else:
-                # If it failed validation, TRY TO CLEAN IT and re-validate
                 clean_text = re.sub(
                     r"^(Here is the code:)|(I suggest:)|(```)",
                     "",
@@ -564,8 +538,9 @@ class CoreUtilsMixin:
                 if validator(clean_text):
                     return clean_text
 
-                logger.warning("⚠️ Response invalid. Backing off 15s...")
-                time.sleep(15)
+                wait = 20 if is_cloud else 5
+                logger.warning(f"⚠️ Invalid format. Backing off {wait}s...")
+                time.sleep(wait)
                 attempts += 1
 
     def _get_user_prompt_augmentation(self, initial_text: str = "") -> str:
