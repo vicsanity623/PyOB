@@ -404,7 +404,7 @@ class CoreUtilsMixin:
             return f"ERROR_CODE_EXCEPTION: {e}"
 
     def _stream_single_llm(
-        self, prompt: str, key: str | None = None, context: str = ""
+        self, prompt: str, key: str | None = None, context: str = "", gh_model: str = "Phi-4"
     ) -> str:
         input_tokens = len(prompt) // 4
         first_chunk_received = [False]
@@ -494,9 +494,7 @@ class CoreUtilsMixin:
                 # GitHub Models logic
                 gh_model = "Llama-3" if attempts > 0 else "Phi-4"
                 logger.warning(f"☁️ Pivoting to GitHub Models ({gh_model})...")
-                response_text = self._stream_single_llm(
-                    prompt, key=None, context=context, gh_model=gh_model
-                )
+                response_text = self.stream_github_models(prompt, on_chunk, model_name=gh_model)
             else:
                 logger.info("🏠 Using Local Ollama Engine...")
                 response_text = self._stream_single_llm(
