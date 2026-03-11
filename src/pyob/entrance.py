@@ -446,104 +446,60 @@ class EntranceController:
             is_py = entry_file.endswith(".py")
 
             if is_py:
-                # Python execution logic
                 venv_python = os.path.join(self.target_dir, "build_env", "bin", "python3")
                 python_cmd = venv_python if os.path.exists(venv_python) else sys.executable
                 cmd = [python_cmd, entry_file]
                 if os.path.basename(entry_file) == "entrance.py":
                     cmd.append("--no-dashboard")
-
             elif is_js:
                 cmd = ["npm", "start"] if entry_file.endswith("package.json") else ["node", entry_file]
-
             elif is_html:
-                # IMPORTANT: For HTML, we do NOT run Python. 
-                # We perform a simple existence check or skip if in Cloud.
                 if os.environ.get("GITHUB_ACTIONS") == "true":
-                    logger.info("📄 HTML detected in Cloud. Skipping browser launch.")
                     return True
                 cmd = ["open", entry_file] if sys.platform == "darwin" else ["start", entry_file]
 
             if not cmd:
-                logger.warning(f"Could not determine launch command for {rel_entry_file}")
                 return True
 
-            # EXECUTION
             start_time = time.time()
             try:
-                # If HTML/JS or not Python, we don't 'execute' like a script in CI
-                if is_html and os.environ.get("GITHUB_ACTIONS") == "true":
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    cwd=self.target_dir,
+                    shell=(True if (sys.platform == "win32" and cmd and cmd[0] == "start") or 
+                                   (sys.platform == "darwin" and cmd and cmd[0] == "open") else False),
+                    close_fds=sys.platform != "win32"
+                )
+
+                if is_html:
+                    time.sleep(5)
                     return True
 
-                process = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=self.target_dir
-                shell=(
-                    True
-                    if (
-                        (sys.platform == "win32" and cmd and cmd[0] == "start")
-                        or (sys.platform == "darwin" and cmd and cmd[0] == "open")
-                        or (
-                            sys.platform not in ["win32", "darwin"]
-                            and cmd
-                            and cmd[0] == "xdg-open"
-                        )
-                    )
-                    else False
-                ),
-                close_fds=sys.platform != "win32",
-            )
-
-            if entry_file.endswith(".html") or entry_file.endswith(".htm"):
-                time.sleep(5)
-                logger.info(
-                    "✅ Static HTML entry opened in browser. Verification complete."
-                )
-                return True
-
-            stdout, stderr = "", ""
-            try:
                 stdout, stderr = process.communicate(timeout=10)
             except subprocess.TimeoutExpired:
                 process.terminate()
                 stdout, stderr = process.communicate()
+            except Exception as e:
+                logger.error(f"Execution failed: {e}")
+                stdout, stderr = "", str(e)
 
             duration = time.time() - start_time
-
-            has_error_logs = any(
-                kw in stderr or kw in stdout
-                for kw in [
-                    "Traceback",
-                    "Exception",
-                    "Error:",
-                    "ModuleNotFoundError",
-                    "ImportError",
-                    "ReferenceError",
-                ]
-            )
-
+            has_error_logs = any(kw in stderr or kw in stdout for kw in ["Traceback", "Exception", "Error:", "ModuleNotFoundError", "ImportError", "ReferenceError"])
             is_crash_code = process.returncode not in (0, 15, -15, None)
 
             if is_crash_code or has_error_logs:
-                logger.warning(f"⚠️ App crashed or threw errors after {duration:.1f}s!")
-                logger.warning(
-                    f"--- STDERR ---\n{stderr}\n--- STDOUT ---\n{stdout}\n--------------"
-                )
+                logger.warning(f"⚠️ App crashed after {duration:.1f}s!")
                 if attempt < 2:
-                    logger.info("Attempting auto-repair...")
-                    self.llm_engine._fix_runtime_errors(
-                        stderr + "\n" + stdout, entry_file
-                    )
+                    self.llm_engine._fix_runtime_errors(stderr + "\n" + stdout, entry_file)
                 else:
                     logger.error("❌ Exhausted all 3 auto-fix attempts.")
             else:
-                logger.info(
-                    f"✅ App ran successfully for {duration:.1f}s without tracebacks."
-                )
+                logger.info(f"✅ App ran successfully for {duration:.1f}s.")
                 return True
 
-        logger.warning(
-            "Restoring workspace to pre-iteration state due to unfixable crash."
-        )
         self.llm_engine.restore_workspace(backup_state)
         return False
 
