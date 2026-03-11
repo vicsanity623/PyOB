@@ -231,6 +231,7 @@ class AutoReviewer(
                 continue
             if response_text.startswith("ERROR_CODE_") or not response_text.strip():
                 logger.warning("⚠️ API Error or Empty Response. Rotating...")
+                time.sleep(60)
                 attempts += 1
                 continue
             new_code, explanation, edit_success = self.apply_xml_edits(
@@ -254,10 +255,12 @@ class AutoReviewer(
                 logger.warning(
                     f"⚠️ Partial edit failure in {display_name} ({edit_count} blocks found, but some missed targets). Auto-regenerating..."
                 )
+                time.sleep(60)
                 attempts += 1
                 continue
             if require_edit and new_code == source_code:
                 logger.warning("Search block mismatch. Rotating...")
+                time.sleep(60)
                 attempts += 1
                 continue
             if not require_edit and new_code == source_code:
@@ -277,6 +280,7 @@ class AutoReviewer(
                         logger.warning(
                             f"⚠️ AI provided no edit and didn't state: [{display_name}] looks good. Rotating..."
                         )
+                    time.sleep(60)
                     attempts += 1
                     continue
             if new_code != source_code:
