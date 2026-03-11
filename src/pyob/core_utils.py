@@ -493,72 +493,72 @@ class CoreUtilsMixin:
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
 
         while True:
-            response_text = None
             key = None
+            now = time.time()
+            available_keys = [k for k, cd in self.key_cooldowns.items() if now > cd]
 
-            # --- PHASE 1: ATTEMPT GEMINI KEYS ---
-            available_keys = [
-                k for k, cd in self.key_cooldowns.items() if time.time() > cd
-            ]
+            # --- STEP 1: ENGINE SELECTION & EXECUTION ---
+            response_text = None
+            
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(
-                    f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
-                )
-                response_text = self._stream_single_llm(
-                    prompt, key=key, context=context
-                )
+                logger.info(f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
+                response_text = self._stream_single_llm(prompt, key=key, context=context)
+            elif is_cloud:
+                # Always try Phi-4 first in cloud if Gemini is exhausted
+                logger.warning("⏳ Gemini keys limited. Pivoting to GitHub Models (Phi-4)...")
+                response_text = self._stream_single_llm(prompt, key=None, context=context, gh_model="Phi-4")
+            else:
+                logger.info("🏠 Using Local Ollama Engine...")
+                response_text = self._stream_single_llm(prompt, key=None, context=context)
 
-            # --- PHASE 2: PIVOT TO GITHUB MODELS (If Gemini fails or limited) ---
-            # We pivot if Gemini wasn't attempted, or if it returned an error
+            # --- STEP 2: POST-EXECUTION ERROR HANDLING & PIVOT ---
+            
+            # If the API returned an error code (429, 413, 500, etc.) OR the response was empty
             if not response_text or response_text.startswith("ERROR_CODE_"):
-                # Try Phi-4 first
-                logger.warning("☁️ Pivoting to GitHub Models (Phi-4)...")
-                response_text = self._stream_single_llm(
-                    prompt, key=None, context=context, gh_model="Phi-4"
-                )
-
-                # If Phi-4 fails, try Llama-3
-                if not response_text or response_text.startswith("ERROR_CODE_"):
-                    logger.warning(
-                        "☁️ Phi-4 failed. Pivoting to GitHub Models (Llama-3)..."
-                    )
-                    response_text = self._stream_single_llm(
-                        prompt, key=None, context=context, gh_model="Llama-3"
-                    )
-
-            # --- PHASE 3: FINAL EVALUATION & SLEEP ---
-
-            # If after all relays, we still have an error, THEN we sleep
-            if not response_text or response_text.startswith("ERROR_CODE_"):
-                # Handle 429 specifically
+                
+                # A. Handle Gemini Rate Limit (429)
                 if "429" in response_text and key:
                     self.key_cooldowns[key] = time.time() + 1200
+                    logger.warning(f"⚠️ Key {key[-4:]} rate-limited. Rotating...")
+                
+                # B. The Cascade Pivot (Executed if Gemini failed OR if it was Phi-4/Llama-3 that failed)
+                # This single block handles ALL cloud failures before sleeping.
+                if is_cloud:
+                    if key: # Gemini failed, so we move to GitHub Models
+                        logger.warning("☁️ Gemini failed/limited. Pivoting to GitHub Models...")
+                        # We don't need to check Phi-4 vs Llama-3 here; the _stream_single_llm handles the Llama-3 fallback internally.
+                        response_text = self._stream_single_llm(prompt, key=None, context=context, gh_model="Llama-3") # Try Llama-3 as backup to Phi-4
+                        
+                    # C. MANDATORY SLEEP (The machine-gun killer)
+                    if not response_text or response_text.startswith("ERROR_CODE_"):
+                        wait = 60
+                        logger.warning(f"⚠️ All Cloud Engines failed. Sleeping {wait}s for bucket refill...")
+                        time.sleep(wait)
+                        attempts += 1
+                        continue # Loop back to try Gemini keys again after the nap
 
-                wait = 60  # Mandatory bucket refill
-                logger.warning(f"⚠️ All relay engines exhausted. Sleeping {wait}s...")
+            # D. Generic Error Handling (For local Ollama or other initial failures)
+            if not response_text or response_text.startswith("ERROR_CODE_"):
+                wait = 10 if not is_cloud else 5 # Shorter wait for local testing
+                logger.warning(f"⚠️ Generic LLM error. Backing off {wait}s...")
                 time.sleep(wait)
                 attempts += 1
                 continue
 
-            # --- PHASE 4: VALIDATION ---
+            # --- STEP 3: VALIDATION GATE ---
             if validator(response_text):
                 if is_cloud:
-                    time.sleep(2)
+                    time.sleep(5) # Success breather
                 return response_text
             else:
-                # Cleanup hallucinated conversational filler
-                clean_text = re.sub(
-                    r"^(Here is the code:)|(I suggest:)|(```)",
-                    "",
-                    response_text,
-                    flags=re.IGNORECASE,
-                )
+                clean_text = re.sub(r"^(Here is the code:)|(I suggest:)|(```)", "", response_text, flags=re.IGNORECASE)
                 if validator(clean_text):
                     return clean_text
-
-                logger.warning("⚠️ Response invalid. Backing off 15s...")
-                time.sleep(15)
+                
+                wait = 15 if is_cloud else 5
+                logger.warning(f"⚠️ Response invalid. Backing off {wait}s...")
+                time.sleep(wait)
                 attempts += 1
 
     def _get_user_prompt_augmentation(self, initial_text: str = "") -> str:
