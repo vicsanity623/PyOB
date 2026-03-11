@@ -31,7 +31,10 @@ class PromptsAndMemoryMixin:
                 f.write(content)
 
     def load_prompt(self, filename: str, **kwargs: str) -> str:
-        filepath = os.path.join(self.target_dir, ".pyob", filename)
+        # Use a consistent path resolution
+        data_dir = os.path.join(self.target_dir, ".pyob")
+        filepath = os.path.join(data_dir, filename)
+        
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 template = f.read()
@@ -39,7 +42,7 @@ class PromptsAndMemoryMixin:
                 template = template.replace(f"{{{key}}}", str(value))
             return template
         except Exception as e:
-            logger.error(f"Failed to load prompt {filename}: {e}")
+            logger.error(f"Failed to load prompt {filename} from {filepath}: {e}")
             return ""
 
     def _get_impactful_history(self) -> str:
