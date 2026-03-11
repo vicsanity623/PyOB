@@ -145,17 +145,21 @@ class ValidationMixin:
     def run_and_verify_app(self, context_of_change: str = "") -> bool:
         # 1. MANDATORY VALIDATION GATE: Fix formatting, THEN validate
         logger.info("🧪 PHASE 3.5: Running full validation suite (./check.sh --fix)...")
-        
+
         # This will auto-fix trailing whitespaces and formatting errors
         subprocess.run(["./check.sh", "--fix"], capture_output=True, text=True)
-        
+
         # This checks if anything is still broken
         res = subprocess.run(["./check.sh"], capture_output=True, text=True)
-        
+
         if res.returncode != 0:
-            logger.warning(f"⚠️ Validation suite failed after auto-fix!\n{res.stdout.strip()}")
+            logger.warning(
+                f"⚠️ Validation suite failed after auto-fix!\n{res.stdout.strip()}"
+            )
             # Feed the remaining errors back to the AI
-            self._fix_runtime_errors(res.stdout + "\n" + res.stderr, "Validation Suite", context_of_change)
+            self._fix_runtime_errors(
+                res.stdout + "\n" + res.stderr, "Validation Suite", context_of_change
+            )
             return False
 
         # 2. RUNTIME SMOKE TEST
@@ -190,19 +194,27 @@ class ValidationMixin:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     stdout, stderr = process.communicate()
-            
-            error_keywords = ["Traceback", "Exception:", "Error:", "NameError:", "AttributeError:"]
+
+            error_keywords = [
+                "Traceback",
+                "Exception:",
+                "Error:",
+                "NameError:",
+                "AttributeError:",
+            ]
             has_crash = any(kw in stderr or kw in stdout for kw in error_keywords) or (
                 process.returncode != 0 and process.returncode not in (0, 15, -15, None)
             )
-            
+
             if not has_crash:
                 logger.info("✅ App ran successfully for 10 seconds.")
                 return True
-                
+
             logger.warning(f"⚠️ App crashed!\n{stderr}")
-            self._fix_runtime_errors(stderr + "\n" + stdout, entry_file, context_of_change)
-            
+            self._fix_runtime_errors(
+                stderr + "\n" + stdout, entry_file, context_of_change
+            )
+
         logger.error("❌ Exhausted runtime auto-fix attempts.")
         return False
 
