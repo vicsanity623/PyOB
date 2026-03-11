@@ -462,9 +462,9 @@ class CoreUtilsMixin:
                 response_text.startswith("ERROR_CODE_") or not response_text.strip()
             ):
                 if "429" in response_text and key:
-                    self.key_cooldowns[key] = time.time() + 3600
+                    self.key_cooldowns[key] = time.time() + 120
                     logger.warning(
-                        "⚠️ Key rate-limited. Cooldown set to 1 hour. Rotating..."
+                        "⚠️ Key rate-limited. Cooldown set to 2 Min. Rotating..."
                     )
                 else:
                     logger.warning(
