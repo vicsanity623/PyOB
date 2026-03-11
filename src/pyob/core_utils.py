@@ -493,13 +493,12 @@ class CoreUtilsMixin:
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
 
         while True:
-            response_text = None
             key = None
+            now = time.time()
+            available_keys = [k for k, cd in self.key_cooldowns.items() if now > cd]
+            response_text = None
 
-            # --- PHASE 1: ATTEMPT GEMINI KEYS ---
-            available_keys = [
-                k for k, cd in self.key_cooldowns.items() if time.time() > cd
-            ]
+            # --- STEP 1: ENGINE SELECTION & EXECUTION ---
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
                 logger.info(
@@ -508,46 +507,73 @@ class CoreUtilsMixin:
                 response_text = self._stream_single_llm(
                     prompt, key=key, context=context
                 )
-
-            # --- PHASE 2: PIVOT TO GITHUB MODELS (If Gemini fails or limited) ---
-            # We pivot if Gemini wasn't attempted, or if it returned an error
-            if not response_text or response_text.startswith("ERROR_CODE_"):
-                # Try Phi-4 first
-                logger.warning("☁️ Pivoting to GitHub Models (Phi-4)...")
+            elif is_cloud:
+                logger.warning(
+                    "⏳ Gemini limited. Pivoting to GitHub Models (Phi-4)..."
+                )
                 response_text = self._stream_single_llm(
                     prompt, key=None, context=context, gh_model="Phi-4"
                 )
+            else:
+                logger.info("🏠 Using Local Ollama Engine...")
+                response_text = self._stream_single_llm(
+                    prompt, key=None, context=context
+                )
 
-                # If Phi-4 fails, try Llama-3
-                if not response_text or response_text.startswith("ERROR_CODE_"):
-                    logger.warning(
-                        "☁️ Phi-4 failed. Pivoting to GitHub Models (Llama-3)..."
-                    )
-                    response_text = self._stream_single_llm(
-                        prompt, key=None, context=context, gh_model="Llama-3"
-                    )
+            # --- STEP 2: POST-EXECUTION SAFETY & RELAY LOGIC ---
 
-            # --- PHASE 3: FINAL EVALUATION & SLEEP ---
-
-            # If after all relays, we still have an error, THEN we sleep
             if not response_text or response_text.startswith("ERROR_CODE_"):
-                # Handle 429 specifically
+                # A. Handle Gemini Rate Limit (429)
                 if "429" in response_text and key:
                     self.key_cooldowns[key] = time.time() + 1200
+                    logger.warning(f"⚠️ Key {key[-4:]} rate-limited. Rotating...")
 
-                wait = 60  # Mandatory bucket refill
-                logger.warning(f"⚠️ All relay engines exhausted. Sleeping {wait}s...")
+                # B. The Cascade Pivot (Executed if Gemini failed OR if it was Phi-4 that failed)
+                if is_cloud:
+                    # If Gemini failed (or Phi-4 failed in the previous loop iteration if we came from the outer 'continue')
+                    # We need to know if we just tried Gemini or are already on the cloud fallback.
+                    if key:  # This means Gemini just failed. Try Phi-4.
+                        logger.warning(
+                            "☁️ Gemini failed/limited. Pivoting to GitHub Models (Phi-4)..."
+                        )
+                        response_text = self._stream_single_llm(
+                            prompt, key=None, context=context, gh_model="Phi-4"
+                        )
+
+                    # If Phi-4 also failed (or we already pivoted to Llama-3 last time)
+                    if not response_text or response_text.startswith("ERROR_CODE_"):
+                        # This logic branch handles the Llama-3 attempt now.
+                        logger.warning(
+                            "☁️ Phi-4 failed. Pivoting to GitHub Models (Llama-3)..."
+                        )
+                        response_text = self._stream_single_llm(
+                            prompt, key=None, context=context, gh_model="Llama-3"
+                        )
+
+                    # C. MANDATORY SLEEP (If ALL cloud engines fail)
+                    if not response_text or response_text.startswith("ERROR_CODE_"):
+                        wait = 60
+                        logger.warning(
+                            f"⚠️ All Cloud Engines failed. Sleeping {wait}s for refill..."
+                        )
+                        time.sleep(wait)
+                        attempts += 1
+                        continue  # Loop back to try Gemini keys again after the nap
+
+            # D. Generic Error Handling (For local Ollama or other initial failures)
+            if not response_text or response_text.startswith("ERROR_CODE_"):
+                wait = 10 if not is_cloud else 5
+                logger.warning(f"⚠️ Generic LLM error. Backing off {wait}s...")
                 time.sleep(wait)
                 attempts += 1
                 continue
 
-            # --- PHASE 4: VALIDATION ---
+            # --- STEP 4: VALIDATION GATE ---
             if validator(response_text):
                 if is_cloud:
-                    time.sleep(2)
+                    time.sleep(5)
                 return response_text
             else:
-                # Cleanup hallucinated conversational filler
                 clean_text = re.sub(
                     r"^(Here is the code:)|(I suggest:)|(```)",
                     "",
@@ -557,8 +583,9 @@ class CoreUtilsMixin:
                 if validator(clean_text):
                     return clean_text
 
-                logger.warning("⚠️ Response invalid. Backing off 15s...")
-                time.sleep(15)
+                wait = 15 if is_cloud else 5
+                logger.warning(f"⚠️ Response invalid. Backing off {wait}s...")
+                time.sleep(wait)
                 attempts += 1
 
     def _get_user_prompt_augmentation(self, initial_text: str = "") -> str:
