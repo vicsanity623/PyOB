@@ -24,7 +24,7 @@
 
 ## 🧠 What is PyOB?
 
-PYOB is NOT a personal AI CHAT assistant. PyOB is an **autonomous code review and feature engineering system** that continuously analyzes, patches, and evolves your codebase through a multi-stage verification pipeline. Unlike "black-box" coding assistants that rewrite entire files, PyOB operates with **surgical XML-based edits**, a **persistent symbolic dependency ledger**, and **automated GitHub integration** — ensuring your project is never left in a broken state. It **already knows its purpose and goals**.
+PyOB is NOT a personal AI CHAT assistant. PyOB is an **autonomous code review and feature engineering system** that continuously analyzes, patches, and evolves your codebase through a multi-stage verification pipeline. Unlike "black-box" coding assistants that rewrite entire files, PyOB operates with **surgical XML-based edits**, a **persistent symbolic dependency ledger**, and **automated GitHub integration** — ensuring your project is never left in a broken state. It **already knows its purpose and goals**.
 
 ### Key Differentiators
 
