@@ -346,22 +346,21 @@ class CoreUtilsMixin:
     def stream_github_models(
         self, prompt: str, on_chunk, model_name: str = "Phi-4"
     ) -> str:
-        """Fallback to GitHub Models API with dynamic model selection."""
+        """Fallback to GitHub Models API (Phi-4 or Llama-3)."""
         token = os.environ.get("GITHUB_TOKEN")
         if not token:
             return "ERROR_CODE_TOKEN_MISSING"
 
-        # Determine model ID based on the passed name
+        # 1. Define all scope variables at the top
+        endpoint = "https://models.inference.ai.azure.com/chat/completions"
         actual_model = (
-            "microsoft/Phi-4"
-            if model_name == "Phi-4"
-            else "Meta-Llama-3.3-70B-Instruct"
+            "Phi-4" if model_name == "Phi-4" else "Meta-Llama-3.3-70B-Instruct"
         )
 
-        endpoint = "https://models.inference.ai.azure.com/chat/completions"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
+            "x-ms-model-name": actual_model,  # Crucial for Azure routing
         }
 
         data = {
@@ -379,11 +378,12 @@ class CoreUtilsMixin:
 
         full_text = ""
         try:
+            # 2. Perform the request using the variables now guaranteed to be in scope
             response = requests.post(
                 endpoint, headers=headers, json=data, stream=True, timeout=120
             )
+
             if response.status_code != 200:
-                # Log the specific error for debugging
                 logger.error(
                     f"❌ GitHub Models ({actual_model}) Error {response.status_code}: {response.text}"
                 )
@@ -394,15 +394,14 @@ class CoreUtilsMixin:
                     decoded = line.decode("utf-8").replace("data: ", "")
                     if decoded == "[DONE]":
                         break
-                    if decoded.startswith("{"):
-                        try:
-                            chunk = json.loads(decoded)
-                            content = chunk["choices"][0]["delta"].get("content", "")
-                            if content:
-                                full_text += content
-                                on_chunk()
-                        except (KeyError, json.JSONDecodeError):
-                            continue
+                    try:
+                        chunk = json.loads(decoded)
+                        content = chunk["choices"][0]["delta"].get("content", "")
+                        if content:
+                            full_text += content
+                            on_chunk()
+                    except Exception:
+                        continue
             return full_text
         except Exception as e:
             logger.error(f"❌ GitHub Models Exception: {e}")
