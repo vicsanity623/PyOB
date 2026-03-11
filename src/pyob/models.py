@@ -63,7 +63,7 @@ def stream_ollama(prompt: str, on_chunk: Callable[[], None]) -> str:
         logger.error(
             "🚫 SECURITY VIOLATION: Ollama called in Cloud environment. ABORTING."
         )
-        time.sleep(60)
+        time.sleep(60)  # CRITICAL: Hard sleep kills outer loop machine-gun attempts
         return "ERROR_CODE_CLOUD_OLLAMA_FORBIDDEN"
 
     if not OLLAMA_AVAILABLE:
@@ -87,7 +87,7 @@ def stream_ollama(prompt: str, on_chunk: Callable[[], None]) -> str:
                 response_text += content
     except Exception as e:
         logger.error(f"Ollama Error: {e}")
-        time.sleep(15)
+        time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {e}"
     return response_text
 
@@ -156,6 +156,7 @@ def stream_github_models(
         return full_text
     except Exception as e:
         logger.error(f"❌ GitHub Models Exception: {e}")
+        time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {str(e)}"
 
 
@@ -211,6 +212,7 @@ def stream_single_llm(
         elif is_cloud:
             response_text = stream_github_models(prompt, on_chunk, model_name=gh_model)
 
+            # Immediately intercept 413, pause 60s, and force Gemini usage so outer loops don't panic
             if response_text and "413" in response_text:
                 first_chunk_received[0] = True
                 sys.stdout.write("\r\033[K")
@@ -229,14 +231,16 @@ def stream_single_llm(
                 else:
                     response_text = "ERROR_CODE_413_NO_GEMINI_FALLBACK"
 
+            # Force mandatory sleep if ANY cloud error escapes, breaking infinite loop triggers
             if response_text and response_text.startswith("ERROR_CODE_"):
-                time.sleep(15)
+                time.sleep(30)
+
         else:
             response_text = stream_ollama(prompt, on_chunk)
     except Exception as e:
         first_chunk_received[0] = True
         if is_cloud:
-            time.sleep(15)
+            time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {e}"
 
     first_chunk_received[0] = True
