@@ -656,37 +656,51 @@ class FeatureOperationsMixin:
         if len(file_sections) < 3:
             logger.error("No valid file patches found in PR.md to apply.")
             return False
+            
         all_success = True
+        patches_to_apply = [] # Store changes to apply only if ALL blocks are valid
+
         for i in range(1, len(file_sections), 2):
             rel_path = file_sections[i].strip()
             section_content = file_sections[i + 1]
             target_path = os.path.join(self.target_dir, rel_path)
+            
             if not os.path.exists(target_path):
-                logger.error(f"Target file {rel_path} not found for patching.")
+                logger.error(f"Target file {rel_path} not found.")
                 all_success = False
                 continue
+
             with open(target_path, "r", encoding="utf-8") as f:
                 source_code = f.read()
-            new_code, _, _ = getattr(self, "apply_xml_edits")(
-                source_code, section_content
-            )
-            if new_code == source_code:
-                logger.error(
-                    f"❌ Failed to apply XML patch for {rel_path}. The SEARCH blocks did not match."
-                )
+
+            new_code, _, success = getattr(self, "apply_xml_edits")(source_code, section_content)
+            
+            # --- THE SAFETY GUARD ---
+            # If the bot deleted > 50% of the file, it's a hallucination
+            if len(new_code) < (len(source_code) * 0.5):
+                logger.error(f"🚫 EMERGENCY STOP: Patch for {rel_path} would delete too much code.")
+                all_success = False
+            
+            if not success or new_code == source_code:
+                logger.error(f"❌ Failed to apply XML patch for {rel_path}.")
                 all_success = False
             else:
+                patches_to_apply.append((target_path, new_code, rel_path))
+
+        if all_success:
+            # Apply all patches only after verifying they are all safe
+            for target_path, new_code, rel_path in patches_to_apply:
                 with open(target_path, "w", encoding="utf-8") as f:
                     f.write(new_code)
                 logger.info(f"✅ Successfully applied patch to {rel_path}.")
-        if all_success:
-            if not getattr(self, "run_linter_fix_loop")(
-                context_of_change=pr_content
-            ) or not getattr(self, "run_and_verify_app")(context_of_change=pr_content):
+                
+            # Verify the result
+            if not getattr(self, "run_linter_fix_loop")(context_of_change=pr_content) or \
+               not getattr(self, "run_and_verify_app")(context_of_change=pr_content):
+                logger.error("❌ Verification failed. Changes will be rolled back.")
                 return False
-            self.session_context.append(
-                "Applied automated patch XML edits directly into the codebase from an approved PR.md."
-            )
+                
+            self.session_context.append("Applied automated patch XML edits.")
             if os.path.exists(self.pr_file):
                 os.remove(self.pr_file)
             return True
