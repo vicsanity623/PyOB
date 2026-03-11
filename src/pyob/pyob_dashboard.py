@@ -295,17 +295,19 @@ OBSERVER_HTML = """
 
 
 class ObserverHandler(BaseHTTPRequestHandler):
+    # The 'controller' type is 'Any' to avoid circular dependencies with the main application controller.
     controller: Any = None
+
+    def _send_controller_not_initialized_error(self):
+        self.send_response(503)  # Service Unavailable
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": "Controller not initialized"}).encode())
 
     def do_GET(self):
         if self.path == "/api/status":
             if self.controller is None:
-                self.send_response(503)  # Service Unavailable
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(
-                    json.dumps({"error": "Controller not initialized"}).encode()
-                )
+                self._send_controller_not_initialized_error()
                 return
             self.send_response(200)
             self.send_header("Content-type", "application/json")
