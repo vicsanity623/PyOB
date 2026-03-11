@@ -404,7 +404,11 @@ class CoreUtilsMixin:
             return f"ERROR_CODE_EXCEPTION: {e}"
 
     def _stream_single_llm(
-        self, prompt: str, key: str | None = None, context: str = "", gh_model: str = "Phi-4"
+        self,
+        prompt: str,
+        key: str | None = None,
+        context: str = "",
+        gh_model: str = "Phi-4",
     ) -> str:
         input_tokens = len(prompt) // 4
         first_chunk_received = [False]
@@ -436,7 +440,9 @@ class CoreUtilsMixin:
                 first_chunk_received[0] = True
                 sys.stdout.write("\r\033[K")
                 sys.stdout.flush()
-                source = f"Gemini ...{key[-4:]}" if key else f"GitHub Models ({gh_model})"
+                source = (
+                    f"Gemini ...{key[-4:]}" if key else f"GitHub Models ({gh_model})"
+                )
                 if not key and not is_cloud:
                     source = "Local Ollama"
                 print(f"🤖 AI Output ({source}): ", end="", flush=True)
@@ -446,7 +452,9 @@ class CoreUtilsMixin:
             if key is not None:
                 response_text = self.stream_gemini(prompt, key, on_chunk)
             elif is_cloud:
-                response_text = self.stream_github_models(prompt, on_chunk, model_name=gh_model)
+                response_text = self.stream_github_models(
+                    prompt, on_chunk, model_name=gh_model
+                )
             else:
                 response_text = self.stream_ollama(prompt, on_chunk)
         except Exception as e:
@@ -455,15 +463,18 @@ class CoreUtilsMixin:
 
         first_chunk_received[0] = True
         if response_text and not response_text.startswith("ERROR_CODE_"):
-            print(f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {time.time() - gen_start_time:.1f}s]")
+            print(
+                f"\n\n[✅ Generation Complete: ~{len(response_text) // 4} tokens in {time.time() - gen_start_time:.1f}s]"
+            )
         return response_text
 
     def get_valid_llm_response(self, prompt: str, validator, context: str = "") -> str:
         attempts = 0
         is_cloud = os.environ.get("GITHUB_ACTIONS") == "true"
-        
+
         # A simple pass-through callback for when we call stream methods directly
-        def empty_chunk(): pass
+        def empty_chunk():
+            pass
 
         while True:
             key = None
@@ -473,21 +484,31 @@ class CoreUtilsMixin:
             # 1. Selection & Execution
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                logger.info(f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}")
-                response_text = self._stream_single_llm(prompt, key=key, context=context)
+                logger.info(
+                    f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
+                )
+                response_text = self._stream_single_llm(
+                    prompt, key=key, context=context
+                )
             elif is_cloud:
                 gh_model = "Llama-3" if attempts > 0 else "Phi-4"
                 logger.warning(f"☁️ Pivoting to GitHub Models ({gh_model})...")
-                response_text = self._stream_single_llm(prompt, key=None, context=context, gh_model=gh_model)
+                response_text = self._stream_single_llm(
+                    prompt, key=None, context=context, gh_model=gh_model
+                )
             else:
                 logger.info("🏠 Using Local Ollama Engine...")
-                response_text = self._stream_single_llm(prompt, key=None, context=context)
+                response_text = self._stream_single_llm(
+                    prompt, key=None, context=context
+                )
 
             # 2. Cloud Resilience (Handle Errors)
-            if is_cloud and (not response_text or response_text.startswith("ERROR_CODE_")):
+            if is_cloud and (
+                not response_text or response_text.startswith("ERROR_CODE_")
+            ):
                 if "429" in response_text and key:
                     self.key_cooldowns[key] = time.time() + 1200
-                
+
                 wait = 60
                 logger.warning(f"⚠️ API Error/Empty. Mandatory {wait}s nap...")
                 time.sleep(wait)
@@ -508,10 +529,15 @@ class CoreUtilsMixin:
                     time.sleep(5)
                 return response_text
             else:
-                clean_text = re.sub(r"^(Here is the code:)|(I suggest:)|(```)", "", response_text, flags=re.IGNORECASE)
+                clean_text = re.sub(
+                    r"^(Here is the code:)|(I suggest:)|(```)",
+                    "",
+                    response_text,
+                    flags=re.IGNORECASE,
+                )
                 if validator(clean_text):
                     return clean_text
-                
+
                 wait = 20 if is_cloud else 5
                 logger.warning(f"⚠️ Invalid format. Backing off {wait}s...")
                 time.sleep(wait)
