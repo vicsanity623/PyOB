@@ -343,7 +343,9 @@ class CoreUtilsMixin:
             logger.error(f"Ollama Error: {e}")
         return response_text
 
-    def stream_github_models(self, prompt: str, on_chunk, model_name: str = "Phi-4") -> str:
+    def stream_github_models(
+        self, prompt: str, on_chunk, model_name: str = "Phi-4"
+    ) -> str:
         """Fallback to GitHub Models API (Phi-4 or Llama-3)."""
         token = os.environ.get("GITHUB_TOKEN")
         if not token:
@@ -351,18 +353,23 @@ class CoreUtilsMixin:
 
         # 1. Define all scope variables at the top
         endpoint = "https://models.inference.ai.azure.com/chat/completions"
-        actual_model = "Phi-4" if model_name == "Phi-4" else "Meta-Llama-3.3-70B-Instruct"
-        
+        actual_model = (
+            "Phi-4" if model_name == "Phi-4" else "Meta-Llama-3.3-70B-Instruct"
+        )
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "x-ms-model-name": actual_model # Crucial for Azure routing
+            "x-ms-model-name": actual_model,  # Crucial for Azure routing
         }
-        
+
         data = {
             "messages": [
-                {"role": "system", "content": "You are a code generation engine. Output ONLY raw code, no intro/outro."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are a code generation engine. Output ONLY raw code, no intro/outro.",
+                },
+                {"role": "user", "content": prompt},
             ],
             "model": actual_model,
             "stream": True,
@@ -375,9 +382,11 @@ class CoreUtilsMixin:
             response = requests.post(
                 endpoint, headers=headers, json=data, stream=True, timeout=120
             )
-            
+
             if response.status_code != 200:
-                logger.error(f"❌ GitHub Models ({actual_model}) Error {response.status_code}: {response.text}")
+                logger.error(
+                    f"❌ GitHub Models ({actual_model}) Error {response.status_code}: {response.text}"
+                )
                 return f"ERROR_CODE_{response.status_code}"
 
             for line in response.iter_lines():
