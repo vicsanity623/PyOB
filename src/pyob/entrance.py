@@ -271,7 +271,9 @@ class EntranceController:
                 cmd, cwd=self.target_dir, capture_output=True, text=True
             )
             if result.returncode != 0:
-                logger.warning(f"Git Command Failed: {' '.join(cmd)}\n{result.stderr}")
+                logger.warning(
+                    f"Git Command Failed: {' '.join(cmd)}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+                )
                 return False
             return True
         except Exception as e:
@@ -475,6 +477,9 @@ class EntranceController:
             if not cmd:
                 return True
 
+            # Determine shell usage before Popen to satisfy Mypy type checker
+            use_shell = bool(cmd and (cmd[0] == "start" or cmd[0] == "open"))
+
             start_time = time.time()
             try:
                 process = subprocess.Popen(
@@ -483,12 +488,7 @@ class EntranceController:
                     stderr=subprocess.PIPE,
                     text=True,
                     cwd=self.target_dir,
-                    shell=(
-                        True
-                        if (sys.platform == "win32" and cmd and cmd[0] == "start")
-                        or (sys.platform == "darwin" and cmd and cmd[0] == "open")
-                        else False
-                    ),
+                    shell=use_shell,
                     close_fds=sys.platform != "win32",
                 )
 
