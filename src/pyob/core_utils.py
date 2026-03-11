@@ -326,10 +326,12 @@ class CoreUtilsMixin:
 
     def stream_ollama(self, prompt: str, on_chunk) -> str:
         if os.environ.get("GITHUB_ACTIONS") == "true":
-            logger.error("🚫 SECURITY VIOLATION: Ollama called in Cloud environment. ABORTING.")
+            logger.error(
+                "🚫 SECURITY VIOLATION: Ollama called in Cloud environment. ABORTING."
+            )
             return "ERROR_CODE_CLOUD_OLLAMA_FORBIDDEN"
         # -----------------------------
-        
+
         response_text = ""
         try:
             stream = ollama.chat(
