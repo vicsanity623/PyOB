@@ -137,7 +137,12 @@ class CoreUtilsMixin:
     key_cooldowns: dict[str, float]
 
     def get_user_approval(self, prompt_text: str, timeout: int = 220) -> str:
-        if not sys.stdin.isatty() or os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true" or "GITHUB_RUN_ID" in os.environ:
+        if (
+            not sys.stdin.isatty()
+            or os.environ.get("GITHUB_ACTIONS") == "true"
+            or os.environ.get("CI") == "true"
+            or "GITHUB_RUN_ID" in os.environ
+        ):
             logger.info("🤖 Headless environment detected: Auto-approving action.")
             return "PROCEED"
         print(f"\n{prompt_text}")
@@ -288,8 +293,14 @@ class CoreUtilsMixin:
                 pass
         return ""
 
-    def get_valid_llm_response(self, prompt: str, validator: Callable[[str], bool], context: str = "") -> str:
-        return str(get_valid_llm_response_engine(prompt, validator, self.key_cooldowns, context))
+    def get_valid_llm_response(
+        self, prompt: str, validator: Callable[[str], bool], context: str = ""
+    ) -> str:
+        return str(
+            get_valid_llm_response_engine(
+                prompt, validator, self.key_cooldowns, context
+            )
+        )
 
     def _get_user_prompt_augmentation(self, initial_text: str = "") -> str:
         import tempfile
