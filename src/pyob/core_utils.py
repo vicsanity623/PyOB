@@ -518,7 +518,8 @@ class CoreUtilsMixin:
 
             # 5. Validation & Cleanup
             if validator(response_text):
-                if is_cloud: time.sleep(5)
+                if is_cloud:
+                    time.sleep(5)
                 return response_text
             else:
                 clean_text = re.sub(r"^(Here is the code:)|(I suggest:)|(```)", "", response_text, flags=re.IGNORECASE)
