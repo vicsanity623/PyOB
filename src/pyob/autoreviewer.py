@@ -198,7 +198,11 @@ class AutoReviewer(
 
         attempts: int = int(0)
         use_ollama = False
-        is_cloud = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true" or "GITHUB_RUN_ID" in os.environ
+        is_cloud = (
+            os.environ.get("GITHUB_ACTIONS") == "true"
+            or os.environ.get("CI") == "true"
+            or "GITHUB_RUN_ID" in os.environ
+        )
 
         while True:
             key = None
@@ -209,13 +213,17 @@ class AutoReviewer(
 
             if not available_keys:
                 if is_cloud:
-                    logger.warning("☁️ Cloud environment: Gemini keys exhausted/limited. Sleeping 60s for refill...")
+                    logger.warning(
+                        "☁️ Cloud environment: Gemini keys exhausted/limited. Sleeping 60s for refill..."
+                    )
                     time.sleep(60)
                     attempts += 1
                     continue
                 else:
                     if not use_ollama:
-                        logger.warning("🚫 Gemini rate-limited. Falling back to Local Ollama.")
+                        logger.warning(
+                            "🚫 Gemini rate-limited. Falling back to Local Ollama."
+                        )
                         use_ollama = True
             else:
                 use_ollama = False
@@ -232,11 +240,13 @@ class AutoReviewer(
             )
 
             if "ERROR_CODE_413" in response_text:
-                logger.warning("⚠️ GitHub Models context too large (413). Sleeping 60s...")
+                logger.warning(
+                    "⚠️ GitHub Models context too large (413). Sleeping 60s..."
+                )
                 time.sleep(60)
                 attempts += 1
                 continue
-            
+
             if response_text.startswith("ERROR_CODE_429"):
                 if key:
                     logger.warning("⚠️ Key hit a 429 rate limit. Timeout 20m.")
@@ -244,7 +254,7 @@ class AutoReviewer(
                 time.sleep(60)
                 attempts += 1
                 continue
-                
+
             if response_text.startswith("ERROR_CODE_") or not response_text.strip():
                 logger.warning("⚠️ API Error or Empty Response. Backing off 60s...")
                 time.sleep(60)
@@ -264,26 +274,30 @@ class AutoReviewer(
 
             if not require_edit and ai_approved_code:
                 if edit_count > 0:
-                    logger.info("🤖 AI stated the code looks good, but hallucinated empty <EDIT> blocks. Ignoring them.")
+                    logger.info(
+                        "🤖 AI stated the code looks good, but hallucinated empty <EDIT> blocks. Ignoring them."
+                    )
                 return source_code, explanation, response_text
-            
+
             if edit_count > 0 and not edit_success:
-                logger.warning(f"⚠️ Partial edit failure in {display_name}. Auto-regenerating...")
+                logger.warning(
+                    f"⚠️ Partial edit failure in {display_name}. Auto-regenerating..."
+                )
                 time.sleep(30)
                 attempts += 1
                 continue
-                
+
             if require_edit and new_code == source_code:
                 logger.warning("Search block mismatch. Rotating...")
                 time.sleep(30)
                 attempts += 1
                 continue
-            
+
             if not require_edit and new_code == source_code:
                 if ai_approved_code:
                     return new_code, explanation, response_text
                 else:
-                    logger.warning(f"⚠️ AI provided no edit and no approval. Rotating...")
+                    logger.warning("⚠️ AI provided no edit and no approval. Rotating...")
                     time.sleep(30)
                     attempts += 1
                     continue
@@ -310,26 +324,40 @@ class AutoReviewer(
                         print(f"\033[94m{clean_line}\033[0m")
                     else:
                         print(clean_line)
-                
+
                 user_choice = self.get_user_approval(
                     "Hit ENTER to APPLY, type 'FULL_DIFF', 'EDIT_CODE', 'EDIT_XML', 'REGENERATE', or 'SKIP'.",
                     timeout=220,
                 )
-                
+
                 if user_choice == "SKIP":
                     return source_code, "Edit skipped by user.", ""
                 elif user_choice == "REGENERATE":
                     attempts += 1
                     continue
                 elif user_choice == "EDIT_XML":
-                    response_text = self._edit_prompt_with_external_editor(response_text)
-                    new_code, explanation, _ = self.apply_xml_edits(source_code, response_text)
+                    response_text = self._edit_prompt_with_external_editor(
+                        response_text
+                    )
+                    new_code, explanation, _ = self.apply_xml_edits(
+                        source_code, response_text
+                    )
                     return new_code, explanation, response_text
                 elif user_choice == "EDIT_CODE":
-                    file_ext = os.path.splitext(target_filepath)[1] if target_filepath else ".py"
-                    edited_code = self._launch_external_code_editor(new_code, file_suffix=file_ext)
-                    return edited_code, explanation + " (User refined code manually)", response_text
-                
+                    file_ext = (
+                        os.path.splitext(target_filepath)[1]
+                        if target_filepath
+                        else ".py"
+                    )
+                    edited_code = self._launch_external_code_editor(
+                        new_code, file_suffix=file_ext
+                    )
+                    return (
+                        edited_code,
+                        explanation + " (User refined code manually)",
+                        response_text,
+                    )
+
                 return new_code, explanation, response_text
 
     def scan_directory(self) -> list[str]:
