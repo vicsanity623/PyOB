@@ -37,15 +37,15 @@ def stream_gemini(prompt: str, api_key: str, on_chunk: Callable[[], None]) -> st
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.1},
     }
-    
+
     # We use a long timeout on the request, but we will monitor chunk arrival internally
     response = requests.post(url, headers=headers, json=data, stream=True, timeout=120)
     if response.status_code != 200:
         return f"ERROR_CODE_{response.status_code}: {response.text}"
-    
+
     response_text = ""
     last_chunk_time = time.time()
-    
+
     for line in response.iter_lines(decode_unicode=True):
         if not line:
             # Check for stall
@@ -53,9 +53,9 @@ def stream_gemini(prompt: str, api_key: str, on_chunk: Callable[[], None]) -> st
                 logger.warning("Gemini stream stalled. Forcing closure.")
                 break
             continue
-            
+
         if line.startswith("data: "):
-            last_chunk_time = time.time() # Reset stall timer
+            last_chunk_time = time.time()  # Reset stall timer
             try:
                 chunk_data = json.loads(line[6:])
                 text = chunk_data["candidates"][0]["content"]["parts"][0]["text"]
@@ -64,6 +64,7 @@ def stream_gemini(prompt: str, api_key: str, on_chunk: Callable[[], None]) -> st
             except (KeyError, IndexError, json.JSONDecodeError):
                 pass
     return response_text
+
 
 def stream_ollama(prompt: str, on_chunk: Callable[[], None]) -> str:
     if (
@@ -123,24 +124,28 @@ def stream_github_models(
 
     full_text = ""
     last_chunk_time = time.time()
-    
+
     try:
-        response = requests.post(endpoint, headers=headers, json=json.dumps(data), stream=True, timeout=120)
-        
+        response = requests.post(
+            endpoint, headers=headers, json=json.dumps(data), stream=True, timeout=120
+        )
+
         for line in response.iter_lines():
             if not line:
                 if time.time() - last_chunk_time > 30:
                     logger.warning("GitHub stream stalled. Forcing closure.")
                     break
                 continue
-                
+
             line_str = line.decode("utf-8").replace("data: ", "")
             if line_str.strip() == "[DONE]":
                 break
-            
+
             try:
                 chunk = json.loads(line_str)
-                content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                content = (
+                    chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                )
                 if content:
                     last_chunk_time = time.time()
                     full_text += content
@@ -150,6 +155,7 @@ def stream_github_models(
         return full_text
     except Exception as e:
         return f"ERROR_CODE_EXCEPTION: {str(e)}"
+
 
 def stream_single_llm(
     prompt: str,
