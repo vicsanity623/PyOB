@@ -14,11 +14,8 @@ from .core_utils import (
     FEATURE_FILE_NAME,
     GEMINI_API_KEYS,
     HISTORY_FILE,
-    IGNORE_DIRS,
-    IGNORE_FILES,
     MEMORY_FILE_NAME,
     PR_FILE_NAME,
-    SUPPORTED_EXTENSIONS,
     SYMBOLS_FILE,
     CoreUtilsMixin,
     logger,
@@ -30,11 +27,11 @@ from .scanner_mixins import ScannerMixin
 
 
 class AutoReviewer(
-    CoreUtilsMixin, 
-    PromptsAndMemoryMixin, 
-    ValidationMixin, 
+    CoreUtilsMixin,
+    PromptsAndMemoryMixin,
+    ValidationMixin,
     FeatureOperationsMixin,
-    ScannerMixin
+    ScannerMixin,
 ):
     _shared_cooldowns: dict[str, float] | None = None
 
