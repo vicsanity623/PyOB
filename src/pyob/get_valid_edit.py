@@ -120,7 +120,7 @@ class GetValidEditMixin:
                     attempts += 1
                     continue
 
-                logger.warning(fGemini limited. Pivoting to GitHub Models ({gh_model})...")
+                logger.warning(f"Gemini limited. Pivoting to GitHub Models ({gh_model})...")
                 response = getattr(self, "_stream_single_llm")(
                     prompt, key=None, context=display_name, gh_model=gh_model
                 )
