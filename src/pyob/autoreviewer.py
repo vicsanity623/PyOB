@@ -249,9 +249,7 @@ class AutoReviewer(
             )
 
             if "ERROR_CODE_413" in response_text:
-                logger.warning(
-                    "GitHub Models context too large (413). Sleeping 60s..."
-                )
+                logger.warning("GitHub Models context too large (413). Sleeping 60s...")
                 time.sleep(60)
                 attempts += 1
                 continue
