@@ -1,9 +1,6 @@
 import ast
-import difflib
 import os
 import random
-import re
-import subprocess
 import sys
 import time
 
@@ -21,6 +18,7 @@ from .core_utils import (
     logger,
 )
 from .feature_mixins import FeatureOperationsMixin
+from .get_valid_edit import GetValidEditMixin
 from .prompts_and_memory import PromptsAndMemoryMixin
 from .reviewer_mixins import ValidationMixin
 from .scanner_mixins import ScannerMixin
@@ -32,6 +30,7 @@ class AutoReviewer(
     ValidationMixin,
     FeatureOperationsMixin,
     ScannerMixin,
+    GetValidEditMixin,
 ):
     _shared_cooldowns: dict[str, float] | None = None
 
@@ -108,6 +107,8 @@ class AutoReviewer(
             logger.info("Manual target file cleared. Reverting to directory scan.")
 
     def run_linters(self, filepath: str) -> tuple[str, str]:
+        import subprocess
+
         ruff_out, mypy_out = "", ""
         try:
             ruff_out = subprocess.run(
@@ -154,210 +155,6 @@ class AutoReviewer(
                 custom_issues_section=custom_issues_section,
             )
         )
-
-    def get_valid_edit(
-        self,
-        prompt: str,
-        source_code: str,
-        require_edit: bool = True,
-        target_filepath: str = "",
-    ) -> tuple[str, str, str]:
-        if target_filepath:
-            display_name = os.path.relpath(target_filepath, self.target_dir)
-        else:
-            display_name = "System Update"
-        print("\n" + "=" * 50)
-        print(f"AI Generation Prompt Ready: [{display_name}]")
-        print("=" * 50)
-        print(
-            f"The AI has prepared a prompt for code generation/review of: {display_name}"
-        )
-        user_choice_pre_llm = self.get_user_approval(
-            "Hit ENTER to send as-is, type 'EDIT_PROMPT' to refine the full prompt, 'AUGMENT_PROMPT' to add quick instructions, or 'SKIP' to cancel.",
-            timeout=220,
-        )
-        if user_choice_pre_llm == "SKIP":
-            logger.info("AI generation skipped by user.")
-            return source_code, "AI generation skipped by user.", ""
-        elif user_choice_pre_llm == "EDIT_PROMPT":
-            logger.info("Opening full prompt in editor for manual refinement...")
-            prompt = self._edit_prompt_with_external_editor(prompt)
-            if not prompt.strip():
-                logger.warning("Edited prompt is empty. Skipping AI generation.")
-                return source_code, "Edited prompt is empty.", ""
-        elif user_choice_pre_llm == "AUGMENT_PROMPT":
-            logger.info("Opening augmentation editor to add quick instructions...")
-            augmentation_text = self._get_user_prompt_augmentation()
-            if augmentation_text.strip():
-                prompt += f"\n\n### User Augmentation:\n{augmentation_text.strip()}"
-                logger.info("Prompt augmented with user input.")
-            else:
-                logger.info("No augmentation provided.")
-
-        attempts: int = int(0)
-        use_ollama = False
-        is_cloud = (
-            os.environ.get("GITHUB_ACTIONS") == "true"
-            or os.environ.get("CI") == "true"
-            or "GITHUB_RUN_ID" in os.environ
-        )
-
-        while True:
-            key = None
-            now = time.time()
-            available_keys = [
-                k for k, cooldown in self.key_cooldowns.items() if now > cooldown
-            ]
-
-            if not available_keys:
-                if is_cloud:
-                    logger.warning(
-                        " Cloud environment: Keys exhausted. Checking if cooldowns can be cleared..."
-                    )
-                    for key in self.key_cooldowns:
-                        self.key_cooldowns[key] = 0.0
-
-                    time.sleep(60)
-                    attempts += 1
-                    continue
-                else:
-                    if not use_ollama:
-                        logger.warning(
-                            "Gemini rate-limited. Falling back to Local Ollama."
-                        )
-                        use_ollama = True
-            else:
-                use_ollama = False
-                key = available_keys[attempts % len(available_keys)]
-                logger.info(
-                    f"\n[Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(available_keys)} Available]"
-                )
-
-            if use_ollama:
-                logger.info("\n[Attempting Local Ollama]")
-
-            response_text = self._stream_single_llm(
-                prompt, key=key, context=display_name
-            )
-
-            if "ERROR_CODE_413" in response_text:
-                logger.warning("GitHub Models context too large (413). Sleeping 60s...")
-                time.sleep(60)
-                attempts += 1
-                continue
-
-            if response_text.startswith("ERROR_CODE_429"):
-                if key:
-                    logger.warning(" Key hit a 429 rate limit. Timeout 2m.")
-                    self.key_cooldowns[key] = time.time() + 120
-                time.sleep(60)
-                attempts += 1
-                continue
-
-            if response_text.startswith("ERROR_CODE_") or not response_text.strip():
-                logger.warning("API Error or Empty Response. Backing off 60s...")
-                time.sleep(60)
-                attempts += 1
-                continue
-
-            new_code, explanation, edit_success = self.apply_xml_edits(
-                source_code, response_text
-            )
-            edit_count = len(re.findall(r"<EDIT>", response_text, re.IGNORECASE))
-            lower_exp = explanation.lower()
-            ai_approved_code = (
-                "no fixes needed" in lower_exp
-                or "looks good" in lower_exp
-                or "no changes needed" in lower_exp
-            )
-
-            if not require_edit and ai_approved_code:
-                if edit_count > 0:
-                    logger.info(
-                        "AI stated the code looks good, but hallucinated empty <EDIT> blocks. Ignoring them."
-                    )
-                return source_code, explanation, response_text
-
-            if edit_count > 0 and not edit_success:
-                logger.warning(
-                    f"Partial edit failure in {display_name}. Auto-regenerating..."
-                )
-                time.sleep(30)
-                attempts += 1
-                continue
-
-            if require_edit and new_code == source_code:
-                logger.warning("Search block mismatch. Rotating...")
-                time.sleep(30)
-                attempts += 1
-                continue
-
-            if not require_edit and new_code == source_code:
-                if ai_approved_code:
-                    return new_code, explanation, response_text
-                else:
-                    logger.warning(" AI provided no edit and no approval. Rotating...")
-                    time.sleep(30)
-                    attempts += 1
-                    continue
-
-            if new_code != source_code:
-                print("\n" + "=" * 50)
-                print(f"AI Proposed Edit Ready for: [{display_name}]")
-                print("=" * 50)
-                diff_lines = list(
-                    difflib.unified_diff(
-                        source_code.splitlines(keepends=True),
-                        new_code.splitlines(keepends=True),
-                        fromfile="Original",
-                        tofile="Proposed",
-                    )
-                )
-                for line in diff_lines[2:22]:
-                    clean_line = line.rstrip()
-                    if clean_line.startswith("+"):
-                        print(f"\033[92m{clean_line}\033[0m")
-                    elif clean_line.startswith("-"):
-                        print(f"\033[91m{clean_line}\033[0m")
-                    elif clean_line.startswith("@@"):
-                        print(f"\033[94m{clean_line}\033[0m")
-                    else:
-                        print(clean_line)
-
-                user_choice = self.get_user_approval(
-                    "Hit ENTER to APPLY, type 'FULL_DIFF', 'EDIT_CODE', 'EDIT_XML', 'REGENERATE', or 'SKIP'.",
-                    timeout=220,
-                )
-
-                if user_choice == "SKIP":
-                    return source_code, "Edit skipped by user.", ""
-                elif user_choice == "REGENERATE":
-                    attempts += 1
-                    continue
-                elif user_choice == "EDIT_XML":
-                    response_text = self._edit_prompt_with_external_editor(
-                        response_text
-                    )
-                    new_code, explanation, _ = self.apply_xml_edits(
-                        source_code, response_text
-                    )
-                    return new_code, explanation, response_text
-                elif user_choice == "EDIT_CODE":
-                    file_ext = (
-                        os.path.splitext(target_filepath)[1]
-                        if target_filepath
-                        else ".py"
-                    )
-                    edited_code = self._launch_external_code_editor(
-                        new_code, file_suffix=file_ext
-                    )
-                    return (
-                        edited_code,
-                        explanation + " (User refined code manually)",
-                        response_text,
-                    )
-
-                return new_code, explanation, response_text
 
     def run_pipeline(self, current_iteration: int):
         if not self.session_context:
