@@ -22,14 +22,16 @@ class EntranceController(EntranceMixin):
     ENGINE_FILES = [
         "autoreviewer.py",
         "core_utils.py",
-        "prompts_and_memory.py",
+        "dashboard_html.py",
         "entrance.py",
-        "entrance_mixins.py",  # NEW
-        "reviewer_mixins.py",
-        "feature_mixins.py",  # NEW
+        "entrance_mixins.py",
+        "feature_mixins.py",
+        "models.py",
+        "prompts_and_memory.py",
         "pyob_code_parser.py",
         "pyob_dashboard.py",
-        "dashboard_html.py",  # NEW
+        "pyob-launcher.py",
+        "reviewer_mixins.py",
     ]
 
     def __init__(self, target_dir: str):
