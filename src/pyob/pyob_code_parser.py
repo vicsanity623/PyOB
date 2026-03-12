@@ -33,8 +33,12 @@ class CodeParser:
                     classes.append(f"class {node.name}")
                     for child in node.body:
                         if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                            args = [arg.arg for arg in child.args.args if arg.arg != "self"]
-                            functions.append(f"def {node.name}.{child.name}({', '.join(args)})")
+                            args = [
+                                arg.arg for arg in child.args.args if arg.arg != "self"
+                            ]
+                            functions.append(
+                                f"def {node.name}.{child.name}({', '.join(args)})"
+                            )
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if not any(f".{node.name}(" in fn for fn in functions):
                         args = [arg.arg for arg in node.args.args]
@@ -47,11 +51,13 @@ class CodeParser:
                     for t in node.targets:
                         if isinstance(t, ast.Name) and t.id.isupper():
                             consts.append(t.id)
-                            
+
             return self._format_dropdowns(imports, classes, functions, consts)
-            
+
         except SyntaxError as e:
-            logger.warning(f"AST parsing failed (SyntaxError: {e}). Falling back to Regex for structure map.")
+            logger.warning(
+                f"AST parsing failed (SyntaxError: {e}). Falling back to Regex for structure map."
+            )
             return self._parse_python_regex_fallback(code)
         except Exception as e:
             logger.error(f"Unexpected AST parse error: {e}")
@@ -60,10 +66,16 @@ class CodeParser:
     def _parse_python_regex_fallback(self, code: str) -> str:
         """Used when a Python file has syntax errors so the AI isn't blinded."""
         imports = re.findall(r"^(?:import|from)\s+[a-zA-Z0-9_\.]+", code, re.MULTILINE)
-        classes = [f"class {c}" for c in re.findall(r"^class\s+([a-zA-Z0-9_]+)", code, re.MULTILINE)]
-        functions = [f"def {f}()" for f in re.findall(r"^[ \t]*def\s+([a-zA-Z0-9_]+)", code, re.MULTILINE)]
+        classes = [
+            f"class {c}"
+            for c in re.findall(r"^class\s+([a-zA-Z0-9_]+)", code, re.MULTILINE)
+        ]
+        functions = [
+            f"def {f}()"
+            for f in re.findall(r"^[ \t]*def\s+([a-zA-Z0-9_]+)", code, re.MULTILINE)
+        ]
         consts = list(set(re.findall(r"^([A-Z_][A-Z0-9_]+)\s*=", code, re.MULTILINE)))
-        
+
         return self._format_dropdowns(imports, classes, functions, consts)
 
     def _parse_javascript(self, code: str) -> str:
@@ -84,7 +96,14 @@ class CodeParser:
         clean_fns = []
         seen = set()
         for name, params in raw_fns:
-            if name not in seen and name not in ["if", "for", "while", "return", "catch", "switch"]:
+            if name not in seen and name not in [
+                "if",
+                "for",
+                "while",
+                "return",
+                "catch",
+                "switch",
+            ]:
                 clean_fns.append(f"{name}({params.strip()})")
                 seen.add(name)
 
