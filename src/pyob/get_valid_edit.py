@@ -92,48 +92,80 @@ class GetValidEditMixin:
         is_cloud = (
             os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true"
         )
-        use_ollama = False
         key_cooldowns = getattr(self, "key_cooldowns", {})
 
         while True:
             now = time.time()
-            available_keys = [k for k, cd in key_cooldowns.items() if now > cd]
+            gemini_keys = [k for k in key_cooldowns.keys() if "github" not in k]
+            available_keys = [k for k in gemini_keys if now > key_cooldowns[k]]
             key = None
+            gh_model = "Llama-3"
 
-            if not available_keys:
-                if is_cloud:
-                    for k in key_cooldowns:
-                        key_cooldowns[k] = 0.0
-                    time.sleep(60)
+            if available_keys:
+                key = available_keys[attempts % len(available_keys)]
+                logger.info(
+                    f"\n[Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(gemini_keys)}]"
+                )
+                response = getattr(self, "_stream_single_llm")(
+                    prompt, key=key, context=display_name
+                )
+            elif is_cloud:
+                if now < key_cooldowns.get("github_llama", 0):
+                    gh_model = "Phi-4"
+                if gh_model == "Phi-4" and now < key_cooldowns.get("github_phi", 0):
+                    wait = 60
+                    logger.warning(
+                        f"All API limits exhausted. Sleeping {wait}s for Gemini refill..."
+                    )
+                    time.sleep(wait)
+                    attempts += 1
+                    continue
+
+                logger.warning(
+                    f"Gemini limited. Pivoting to GitHub Models ({gh_model})..."
+                )
+                response = getattr(self, "_stream_single_llm")(
+                    prompt, key=None, context=display_name, gh_model=gh_model
+                )
+            else:
+                logger.info("\n[Attempting Local Ollama]")
+                response = getattr(self, "_stream_single_llm")(
+                    prompt, key=None, context=display_name
+                )
+
+            if response.startswith("ERROR_CODE_429"):
+                if key:
+                    key_cooldowns[key] = time.time() + 60
+                    logger.warning("Key rate limited. Rotating instantly...")
+                    attempts += 1
+                    continue
+                elif "RateLimitReached" in response:
+                    import re
+
+                    match = re.search(r"wait (\d+) seconds", response)
+                    wait_time = int(match.group(1)) if match else 86400
+                    if gh_model == "Llama-3":
+                        key_cooldowns["github_llama"] = time.time() + wait_time + 60
+                    else:
+                        key_cooldowns["github_phi"] = time.time() + wait_time + 60
+                    logger.error(
+                        f"GITHUB QUOTA REACHED ({gh_model}). Cooldown: {wait_time}s"
+                    )
                     attempts += 1
                     continue
                 else:
-                    use_ollama = True
-            else:
-                use_ollama = False
-                key = available_keys[attempts % len(available_keys)]
-                logger.info(
-                    f"\n[Attempting Gemini API Key {attempts % len(available_keys) + 1}]"
-                )
-
-            if use_ollama:
-                logger.info("\n[Attempting Local Ollama]")
-
-            response = getattr(self, "_stream_single_llm")(
-                prompt, key=key, context=display_name
-            )
+                    time.sleep(60)
+                    attempts += 1
+                    continue
 
             if "ERROR_CODE_413" in response:
+                logger.warning("Payload too large (413). Backing off 60s...")
                 time.sleep(60)
                 attempts += 1
                 continue
-            if response.startswith("ERROR_CODE_429"):
-                if key:
-                    key_cooldowns[key] = time.time() + 120
-                time.sleep(60)
-                attempts += 1
-                continue
+
             if response.startswith("ERROR_CODE_") or not response.strip():
+                logger.warning("API Error or Empty Response. Sleeping 60s...")
                 time.sleep(60)
                 attempts += 1
                 continue
