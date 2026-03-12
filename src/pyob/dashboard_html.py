@@ -100,7 +100,7 @@ OBSERVER_HTML = """
         </div>
         <div class="card">
             <div class="label">Queue Status</div>
-            <div id="queue" class="data-box" style="height: 200px;">IDLE</div> <!-- Increased height for interactive queue -->
+            <div id="queue" class="data-box" style="height: 200px;">IDLE</div>
         </div>
     </div>
 
@@ -116,13 +116,12 @@ OBSERVER_HTML = """
                 const isEvolving = data.cascade_queue?.length > 0 || data.patches_count > 0;
                 pill.innerText = isEvolving ? "EVOLVING" : "STABLE";
                 pill.className = isEvolving ? "status-pill evolving" : "status-pill";
-                document.getElementById('memory').value = data.memory || "Brain empty."; // Changed to .value for textarea
+                document.getElementById('memory').value = data.memory || "Brain empty.";
                 document.getElementById('history').innerText = data.history || "No logs.";
                 document.getElementById('analysis').innerText = data.analysis || "Parsing...";
 
-                // --- START NEW QUEUE RENDERING LOGIC ---
                 const queueDiv = document.getElementById('queue');
-                queueDiv.innerHTML = ''; // Clear previous content
+                queueDiv.innerHTML = '';
                 if (data.cascade_queue && data.cascade_queue.length > 0) {
                     data.cascade_queue.forEach((item, index) => {
                         const itemElement = document.createElement('div');
@@ -130,8 +129,8 @@ OBSERVER_HTML = """
                         itemElement.innerHTML = `
                             <span style="flex-grow: 1;">${item}</span>
                             <div style="display: flex; gap: 5px;">
-                                <button class="move-btn" onclick="moveQueueItem('${item}', 'up')">Ã¢â€ â€˜</button>
-                                <button class="move-btn" onclick="moveQueueItem('${item}', 'down')">Ã¢â€ â€œ</button>
+                                <button class="move-btn" onclick="moveQueueItem('${item}', 'up')">&#x25B2;</button>
+                                <button class="move-btn" onclick="moveQueueItem('${item}', 'down')">&#x25BC;</button>
                                 <button class="remove-btn" onclick="removeQueueItem('${item}')">X</button>
                             </div>
                         `;
@@ -140,9 +139,8 @@ OBSERVER_HTML = """
                 } else {
                     queueDiv.innerText = "EMPTY";
                 }
-                // --- END NEW QUEUE RENDERING LOGIC ---
 
-                await updatePendingPatches(); // Refresh pending patches
+                await updatePendingPatches();
             } catch (e) { document.getElementById('status-pill').innerText = "OFFLINE"; console.error("Error updating stats:", e); }
         }
 
@@ -162,7 +160,7 @@ OBSERVER_HTML = """
                 const response = await fetch('/api/pending_patches');
                 const data = await response.json();
                 const patchesDiv = document.getElementById('pending-patches');
-                patchesDiv.innerHTML = ''; // Clear previous content
+                patchesDiv.innerHTML = '';
 
                 if (data.patches && data.patches.length > 0) {
                     data.patches.forEach(patch => {
@@ -193,11 +191,9 @@ OBSERVER_HTML = """
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ patch_id: patchId, action: action })
                 });
-                // Refresh stats and patches after review
                 await updateStats();
             } catch (e) {
                 console.error(`Failed to ${action} patch ${patchId}:`, e);
-                alert(`Failed to ${action} patch ${patchId}. Check console for details.`);
             }
         }
 
@@ -209,46 +205,33 @@ OBSERVER_HTML = """
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content: memoryContent })
                 });
-                const result = await response.json();
                 if (response.ok) {
                     alert('Logic Memory saved successfully!');
-                    await updateStats(); // Refresh to ensure consistency
-                } else {
-                    alert(`Failed to save Logic Memory: ${result.error}`);
+                    await updateStats();
                 }
             } catch (e) {
                 console.error("Failed to save Logic Memory:", e);
-                alert("Error saving Logic Memory. Check console for details.");
             }
         }
 
         async function addCascadeItem() {
             const item = document.getElementById('cascadeItem').value;
-            if (!item) {
-                alert('Please enter an item to add to the cascade queue.');
-                return;
-            }
+            if (!item) return;
             try {
                 const response = await fetch('/api/cascade_queue/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ item: item })
                 });
-                const result = await response.json();
                 if (response.ok) {
-                    alert(`'${item}' added to cascade queue.`);
-                    document.getElementById('cascadeItem').value = ''; // Clear input
-                    await updateStats(); // Refresh queue display
-                } else {
-                    alert(`Failed to add item to queue: ${result.error}`);
+                    document.getElementById('cascadeItem').value = '';
+                    await updateStats();
                 }
             } catch (e) {
                 console.error("Failed to add item to cascade queue:", e);
-                alert("Error adding item to cascade queue. Check console for details.");
             }
         }
 
-        // --- START NEW QUEUE INTERACTION FUNCTIONS ---
         async function moveQueueItem(itemId, direction) {
             try {
                 await fetch('/api/cascade_queue/move', {
@@ -256,30 +239,25 @@ OBSERVER_HTML = """
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ item_id: itemId, direction: direction })
                 });
-                await updateStats(); // Refresh queue after move
+                await updateStats();
             } catch (e) {
                 console.error(`Failed to move item ${itemId} ${direction}:`, e);
-                alert(`Failed to move item. Check console for details.`);
             }
         }
 
         async function removeQueueItem(itemId) {
-            if (!confirm(`Are you sure you want to remove "${itemId}" from the queue?`)) {
-                return;
-            }
+            if (!confirm(`Are you sure you want to remove "${itemId}" from the queue?`)) return;
             try {
                 await fetch('/api/cascade_queue/remove', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ item_id: itemId })
                 });
-                await updateStats(); // Refresh queue after removal
+                await updateStats();
             } catch (e) {
                 console.error(`Failed to remove item ${itemId}:`, e);
-                alert(`Failed to remove item. Check console for details.`);
             }
         }
-        // --- END NEW QUEUE INTERACTION FUNCTIONS ---
 
         setInterval(updateStats, 3000);
         updateStats();
