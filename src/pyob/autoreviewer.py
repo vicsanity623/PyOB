@@ -23,8 +23,9 @@ from pyob.core_utils import (
     CoreUtilsMixin,
     logger,
 )
+from pyob.feature_mixins import FeatureOperationsMixin
 from pyob.prompts_and_memory import PromptsAndMemoryMixin
-from pyob.reviewer_mixins import FeatureOperationsMixin, ValidationMixin
+from pyob.reviewer_mixins import ValidationMixin
 
 
 class AutoReviewer(

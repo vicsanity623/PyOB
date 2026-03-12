@@ -1,6 +1,6 @@
 import os
 
-from pyob.reviewer_mixins import FeatureOperationsMixin
+from pyob.feature_mixins import FeatureOperationsMixin
 
 
 # 1. Create a dummy class that implements the Mixin so we can test it independently
