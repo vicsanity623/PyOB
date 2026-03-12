@@ -90,8 +90,7 @@ class GetValidEditMixin:
         self, prompt: str, display_name: str, attempts: int
     ) -> tuple[str, int]:
         is_cloud = (
-            os.environ.get("GITHUB_ACTIONS") == "true"
-            or os.environ.get("CI") == "true"
+            os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true"
         )
         use_ollama = False
         key_cooldowns = getattr(self, "key_cooldowns", {})
@@ -142,7 +141,11 @@ class GetValidEditMixin:
             return response, attempts
 
     def _validate_llm_patch(
-        self, source_code: str, response_text: str, require_edit: bool, display_name: str
+        self,
+        source_code: str,
+        response_text: str,
+        require_edit: bool,
+        display_name: str,
     ) -> tuple[str, str, bool]:
         new_code, explanation, edit_success = getattr(self, "apply_xml_edits")(
             source_code, response_text

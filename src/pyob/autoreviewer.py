@@ -18,10 +18,10 @@ from .core_utils import (
     logger,
 )
 from .feature_mixins import FeatureOperationsMixin
+from .get_valid_edit import GetValidEditMixin
 from .prompts_and_memory import PromptsAndMemoryMixin
 from .reviewer_mixins import ValidationMixin
 from .scanner_mixins import ScannerMixin
-from .get_valid_edit import GetValidEditMixin
 
 
 class AutoReviewer(
