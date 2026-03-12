@@ -288,9 +288,7 @@ def get_valid_llm_response_engine(
                     prompt, key=None, context=context, gh_model="Phi-4"
                 )
             else:
-                logger.warning(
-                    "Gemini limited. Pivoting to GitHub Models (Llama-3)..."
-                )
+                logger.warning("Gemini limited. Pivoting to GitHub Models (Llama-3)...")
                 response_text = stream_single_llm(
                     prompt, key=None, context=context, gh_model="Llama-3"
                 )
