@@ -12,6 +12,7 @@ from typing import Optional
 
 from pyob.autoreviewer import AutoReviewer
 from pyob.pyob_code_parser import CodeParser
+
 from .entrance_mixins import EntranceMixin
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
