@@ -10,8 +10,9 @@ from http.server import HTTPServer
 from pathlib import Path
 from typing import Any
 
-from pyob.autoreviewer import AutoReviewer
-from pyob.pyob_dashboard import OBSERVER_HTML, ObserverHandler
+from .autoreviewer import AutoReviewer
+from .pyob_dashboard import ObserverHandler
+from .dashboard_html import OBSERVER_HTML
 
 logger = logging.getLogger(__name__)
 
