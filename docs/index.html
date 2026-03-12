@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyOuroBorus (PyOB) — Technical Documentation</title>
+    <title>PyOuroBoros (PyOB) // Technical HUD & API</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -11,214 +11,219 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
     
     <style>
-        :root { --accent: #38bdf8; --bg: #0f172a; --card: #1e293b; }
+        :root { --accent: #38bdf8; --bg: #0a0f1e; --card: #111827; --emerald: #10b981; --amber: #f59e0b; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #94a3b8; }
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border-right: 1px solid rgba(255,255,255,0.05); }
-        .prose code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; color: #e2e8f0; background: #1e293b; padding: 0.2rem 0.4rem; border-radius: 4px; }
-        .prose pre { background: #0b1120 !important; border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem !important; }
-        .prose h1, .prose h2, .prose h3 { color: #f8fafc; font-weight: 800; tracking: -0.025em; margin-top: 3rem; }
-        .prose h1 { font-size: 2.5rem; border-bottom: 1px solid #1e293b; padding-bottom: 1rem; }
-        .prose h2 { font-size: 1.8rem; border-left: 4px solid var(--accent); padding-left: 1rem; }
-        .prose table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
-        .prose th { background: #1e293b; color: white; text-align: left; padding: 12px; border: 1px solid #334155; }
-        .prose td { padding: 12px; border: 1px solid #334155; vertical-align: top; }
-        .sidebar-link { transition: 0.2s; border-left: 2px solid transparent; color: #64748b; }
-        .sidebar-link:hover, .sidebar-link.active { color: var(--accent); border-left: 2px solid var(--accent); background: rgba(56, 189, 248, 0.05); }
-        .feature-card { background: #1e293b; border: 1px solid #334155; transition: 0.3s; }
-        .feature-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .glass { background: rgba(10, 15, 30, 0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
+        .prose code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #38bdf8; background: #1e293b; padding: 0.2rem 0.4rem; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2); }
+        .prose pre { background: #010409 !important; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem !important; margin: 1.5rem 0 !important; }
+        .prose h1, .prose h2, .prose h3 { color: #f8fafc; font-weight: 800; letter-spacing: -0.025em; margin-top: 3.5rem; }
+        .prose h2 { font-size: 1.75rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.5rem; }
+        .prose h2 i { color: var(--accent); }
+        .sidebar-link { transition: 0.2s; border-left: 2px solid transparent; color: #64748b; font-size: 0.85rem; }
+        .sidebar-link:hover { color: #f8fafc; background: rgba(255,255,255,0.02); }
+        .sidebar-link.active { color: var(--accent); border-left: 2px solid var(--accent); background: rgba(56, 189, 248, 0.05); }
+        .feature-card { background: #111827; border: 1px solid #1f2937; position: relative; overflow: hidden; }
+        .feature-card::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.2; }
         
-        /* Search Overlay Style */
-        #search-results-container { display: none; }
-        #search-results-container.active { display: block; }
-        .search-highlight { color: #38bdf8; font-weight: bold; background: rgba(56, 189, 248, 0.1); }
-        
-        ::-webkit-scrollbar { width: 6px; }
+        .method-tag { font-family: 'JetBrains Mono'; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        .method-tag.get { color: var(--emerald); border-color: rgba(16, 185, 129, 0.3); }
+        .method-tag.post { color: var(--amber); border-color: rgba(245, 158, 11, 0.3); }
+
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body class="antialiased">
 
-    <!-- SEARCH OVERLAY (COMMAND PALETTE) -->
-    <div id="search-overlay" class="fixed inset-0 z-[100] hidden bg-slate-950/80 backdrop-blur-sm p-4 lg:p-20">
-        <div class="max-w-3xl mx-auto">
-            <div class="glass border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+    <!-- SEARCH OVERLAY -->
+    <div id="search-overlay" class="fixed inset-0 z-[100] hidden bg-slate-950/95 backdrop-blur-xl p-4 lg:p-20 flex-col items-center">
+        <div id="search-closer" class="absolute inset-0 z-[-1]"></div>
+        <div class="w-full max-w-4xl">
+            <div class="glass rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-sky-500/20">
                 <div class="p-6 border-b border-slate-800 flex items-center gap-4">
-                    <i data-lucide="search" class="text-sky-500 w-6 h-6"></i>
-                    <input type="text" id="docs-search-input" placeholder="Search documentation... (Press ESC to close)" 
+                    <i data-lucide="search" class="text-sky-500 w-6 h-6 shrink-0"></i>
+                    <input type="text" id="docs-search-input" placeholder="Search AST calls, methods, or modules (e.g. 'execute_targeted_iteration')..." 
                            class="bg-transparent border-none text-white text-xl w-full focus:ring-0 outline-none">
+                    <div class="hidden lg:block text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg text-slate-500 font-bold uppercase tracking-widest">ESC</div>
                 </div>
-                <div id="search-results-list" class="max-h-[60vh] overflow-y-auto p-2 space-y-1">
-                    <!-- Results injected here -->
-                    <p class="text-slate-500 text-center py-10">Start typing to find modules, logic, or troubleshooting...</p>
-                </div>
-                <div class="p-4 bg-slate-900/50 border-t border-slate-800 flex justify-between items-center">
-                    <div class="flex gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                        <span><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">ESC</kbd> Close</span>
-                        <span><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">↑↓</kbd> Navigate</span>
-                        <span><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">ENTER</kbd> Select</span>
+                <div id="search-results-list" class="max-h-[60vh] overflow-y-auto p-4 space-y-2 bg-slate-950/20">
+                    <div class="py-20 text-center">
+                        <p class="text-slate-500 font-medium">Deep Symbolic Search is active.</p>
+                        <p class="text-xs text-slate-600 mt-2">Index includes all 12 core modules and private mixins.</p>
                     </div>
-                    <img src="https://img.shields.io/badge/Search-Instant-sky" alt="Search">
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Mobile Header -->
-    <header class="lg:hidden glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-xl">
-        <div class="flex items-center gap-2">
-            <i data-lucide="infinity" class="text-sky-500 w-8 h-8"></i>
-            <span class="text-xl font-black text-white tracking-tighter">PyOB</span>
-        </div>
-        <button id="mobileMenuBtn" class="text-white"><i data-lucide="menu"></i></button>
-    </header>
-
-    <div class="max-w-[1600px] mx-auto flex">
+    <!-- MAIN APP STRUCTURE -->
+    <div class="max-w-[1800px] mx-auto flex">
         
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="hidden lg:block fixed w-80 h-screen glass z-40 overflow-y-auto px-8 py-10">
+        <aside id="sidebar" class="hidden lg:block fixed w-80 h-screen glass z-40 overflow-y-auto px-8 py-10 border-r border-slate-800">
             <div class="flex items-center gap-3 mb-12">
                 <i data-lucide="infinity" class="text-sky-500 w-10 h-10"></i>
                 <div>
                     <h1 class="text-2xl font-black text-white leading-none tracking-tighter">PyOB</h1>
-                    <p class="text-[10px] uppercase tracking-[0.3em] text-sky-500 font-bold mt-1">Architecture HUD</p>
+                    <p class="text-[10px] uppercase tracking-[0.3em] text-sky-500 font-bold mt-1">ENGINE MASTER</p>
                 </div>
             </div>
 
             <nav class="space-y-8">
-                <!-- Navigation links same as before -->
-                <div>
-                    <h5 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">The Basics</h5>
+                <section>
+                    <h5 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Core Architecture</h5>
                     <div class="space-y-1">
-                        <a href="#what-is-pyob" class="sidebar-link block py-2 px-4 text-sm">System Philosophy</a>
-                        <a href="#core-features" class="sidebar-link block py-2 px-4 text-sm">Core Features</a>
-                        <a href="#getting-started" class="sidebar-link block py-2 px-4 text-sm">Getting Started</a>
-                        <a href="#autonomous-loop" class="sidebar-link block py-2 px-4 text-sm text-sky-400 font-medium italic">The Ouroboros Loop</a>
+                        <a href="#system-philosophy" class="sidebar-link block py-2 px-4 rounded-lg">System Philosophy</a>
+                        <a href="#symbolic-ledger" class="sidebar-link block py-2 px-4 rounded-lg">Symbolic Ledger (AST)</a>
+                        <a href="#verification-pipeline" class="sidebar-link block py-2 px-4 rounded-lg">Verification Logic</a>
                     </div>
-                </div>
-
-                <div>
-                    <h5 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Technical Reference</h5>
-                    <div class="space-y-1 text-sm font-medium">
-                        <a href="#3-module-reference" class="sidebar-link block py-2 px-4">Module Reference</a>
-                        <a href="#4-the-verification--healing-pipeline" class="sidebar-link block py-2 px-4">Verification Pipeline</a>
-                        <a href="#5-symbolic-dependency-management" class="sidebar-link block py-2 px-4">Symbolic Ripple Engine</a>
-                        <a href="#6-the-xml-edit-engine" class="sidebar-link block py-2 px-4">XML Match Engine</a>
-                        <a href="#9-llm-backend--resilience" class="sidebar-link block py-2 px-4 text-indigo-400">Resilience & Sleep</a>
+                </section>
+                <section>
+                    <h5 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Module Reference</h5>
+                    <div class="grid grid-cols-1 gap-1">
+                        <a href="#mod-entrance" class="sidebar-link py-1 px-4">entrance.py</a>
+                        <a href="#mod-entrance-mixins" class="sidebar-link py-1 px-4">entrance_mixins.py</a>
+                        <a href="#mod-autoreviewer" class="sidebar-link py-1 px-4">autoreviewer.py</a>
+                        <a href="#mod-reviewer-mixins" class="sidebar-link py-1 px-4">reviewer_mixins.py</a>
+                        <a href="#mod-feature-mixins" class="sidebar-link py-1 px-4">feature_mixins.py</a>
+                        <a href="#mod-core-utils" class="sidebar-link py-1 px-4">core_utils.py</a>
+                        <a href="#mod-pyob-code-parser" class="sidebar-link py-1 px-4">pyob_code_parser.py</a>
+                        <a href="#mod-prompts-memory" class="sidebar-link py-1 px-4">prompts_and_memory.py</a>
+                        <a href="#mod-models" class="sidebar-link py-1 px-4">models.py</a>
+                        <a href="#mod-pyob-dashboard" class="sidebar-link py-1 px-4">pyob_dashboard.py</a>
+                        <a href="#mod-dashboard-html" class="sidebar-link py-1 px-4">dashboard_html.py</a>
+                        <a href="#mod-pyob-launcher" class="sidebar-link py-1 px-4">pyob_launcher.py</a>
                     </div>
-                </div>
-
-                <div>
-                    <h5 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Operations</h5>
-                    <div class="space-y-1 text-sm">
-                        <a href="#11-safety--rollback-mechanisms" class="sidebar-link block py-2 px-4">Safety & Rollback</a>
-                        <a href="#14-operational-workflow" class="sidebar-link block py-2 px-4">Operational Workflow</a>
-                        <a href="#15-troubleshooting" class="sidebar-link block py-2 px-4 text-red-400">Troubleshooting</a>
-                    </div>
-                </div>
+                </section>
             </nav>
         </aside>
 
-        <!-- MAIN CONTENT -->
-        <main class="flex-1 lg:ml-80 p-6 lg:p-20 relative">
+        <!-- CONTENT AREA -->
+        <main class="flex-1 lg:ml-80 p-6 lg:p-16 relative">
 
-            <!-- STICKY SEARCH TRIGGER -->
-            <div class="sticky top-0 z-30 mb-10 -mx-6 lg:-mx-20 px-6 lg:px-20 py-4 bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-800 flex justify-between items-center">
-                <div class="flex items-center gap-4 text-sm text-slate-500">
-                    <span class="flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i> Docs</span>
-                    <i data-lucide="chevron-right" class="w-3 h-3"></i>
-                    <span class="text-slate-300 font-medium">Technical Manual</span>
+            <!-- SEARCH TRIGGER -->
+            <button id="searchTrigger" class="w-full mb-12 flex items-center justify-between p-4 glass rounded-2xl border border-slate-800 hover:border-sky-500/50 transition-all group">
+                <div class="flex items-center gap-4">
+                    <i data-lucide="search" class="text-slate-500 group-hover:text-sky-500 transition-colors"></i>
+                    <span class="text-slate-400 font-medium">Search Technical Documentation...</span>
                 </div>
-                <button id="searchTrigger" class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-lg text-slate-500 hover:border-sky-500/50 transition group">
-                    <i data-lucide="search" class="w-4 h-4 group-hover:text-sky-500"></i>
-                    <span class="text-sm">Search documentation...</span>
-                    <kbd class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">/</kbd>
-                </button>
-            </div>
+                <kbd class="hidden lg:block text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-500 font-bold tracking-widest">/</kbd>
+            </button>
             
-            <!-- Hero Section -->
-            <section id="what-is-pyob" class="mb-24">
-                <div class="flex items-center gap-3 mb-6">
-                    <span class="bg-sky-500/10 text-sky-400 text-xs font-bold px-3 py-1 rounded-full border border-sky-500/20">Version 0.3.1 Stable</span>
-                    <span class="text-slate-500 text-xs tracking-widest uppercase font-bold">Verified Autonomous</span>
+            <section id="system-philosophy" class="mb-32">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="bg-sky-500/10 text-sky-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">v2.5.0-flash</span>
                 </div>
                 <h1 class="text-6xl lg:text-8xl font-black text-white tracking-tighter mb-8">
-                    PyOuro<span class="text-sky-500 italic">Borus</span>
+                    Deep Code <span class="text-sky-500">Evolution.</span>
                 </h1>
-                <p class="text-2xl text-slate-400 max-w-4xl font-light leading-relaxed">
-                    The <span class="text-white font-medium italic underline decoration-sky-500 underline-offset-8 uppercase tracking-tighter">Self-Healing</span>, Symbolic Autonomous Code Architect. 
+                <p class="text-2xl text-slate-400 max-w-4xl leading-relaxed">
+                    PyOB is an autonomous engine that uses <span class="text-white font-semibold">Abstract Syntax Tree (AST)</span> analysis to map, edit, and verify codebases with surgical precision.
                 </p>
             </section>
 
             <article id="docs-content" class="prose max-w-none lg:max-w-5xl text-slate-400 leading-relaxed">
-                <!-- CONTENT BLOCKS (Headings must have IDs for search) -->
-                <h2 id="summary-ai">🧠 What is PyOB?</h2>
-                <p>
-                    PyOB is an <strong>autonomous code review and feature engineering system</strong> that continuously analyzes, patches, and evolves your codebase through a multi-stage verification pipeline. Unlike "black-box" coding assistants that rewrite entire files, PyOB operates with <strong>surgical XML-based edits</strong>.
-                </p>
+                
+                <!-- SYMBOLIC LEDGER SECTION -->
+                <h2 id="symbolic-ledger"><i data-lucide="binary"></i> The Symbolic Ledger (AST)</h2>
+                <p>PyOB's core intelligence relies on its ability to see code as a tree rather than text. It utilizes the <code>ast</code> module to populate <code>SYMBOLS.json</code>.</p>
+                
+                <div class="p-6 glass rounded-2xl border-l-4 border-sky-500 my-8">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2"><i data-lucide="code-2" class="w-5 h-5"></i> update_ledger_for_file()</h4>
+                    <p class="text-sm mb-4">This method, located in <code>EntranceController</code>, parses Python files into <code>ast.FunctionDef</code> and <code>ast.ClassDef</code> nodes to track exactly where every symbol is defined.</p>
+                    <pre><code class="language-python"># Simplified AST walk logic from update_ledger_for_file
+tree = ast.parse(code)
+for n in ast.walk(tree):
+    if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+        self.ledger["definitions"][n.name] = rel_path
+    elif isinstance(n, ast.Assign):
+        # Tracking Uppercase Constants
+        for target in n.targets:
+            if isinstance(target, ast.Name) and target.id.isupper():
+                self.ledger["definitions"][target.id] = rel_path</code></pre>
+                </div>
 
-                <div class="overflow-x-auto my-12">
-                    <table>
+                <!-- MODULE REFERENCE -->
+                <h2 id="mod-entrance"><i data-lucide="log-in"></i> entrance.py / entrance_mixins.py</h2>
+                <p>The control hub. Responsible for the main loop, symbolic ripple detection, and external safety pods.</p>
+                
+                <div class="overflow-hidden glass rounded-xl border border-slate-800 my-6">
+                    <table class="m-0 border-none">
                         <thead>
-                            <tr><th>Feature</th><th>Traditional AI Assistants</th><th>PYOB</th></tr>
+                            <tr class="border-b border-slate-800">
+                                <th>Method Name</th>
+                                <th>Primary Logic</th>
+                            </tr>
                         </thead>
                         <tbody>
-                            <tr><td><strong>Edit Strategy</strong></td><td>Full file rewrites</td><td class="text-sky-400 font-bold">Surgical &lt;SEARCH&gt;/&lt;REPLACE&gt; XML</td></tr>
-                            <tr><td><strong>Dependency Awareness</strong></td><td>None</td><td class="text-sky-400 font-bold">Symbolic ledger (SYMBOLS.json)</td></tr>
+                            <tr>
+                                <td><code>execute_targeted_iteration</code></td>
+                                <td>Core loop. Backs up workspace, triggers reviewer pipeline, refreshes metadata.</td>
+                            </tr>
+                            <tr>
+                                <td><code>detect_symbolic_ripples</code></td>
+                                <td>Diffs old/new code, finds changed symbols, and queues all dependent files.</td>
+                            </tr>
+                            <tr>
+                                <td><code>reboot_pyob</code></td>
+                                <td>Verifies syntax integrity before performing an <code>os.execv</code> hot-restart.</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <h2 id="core-features">✨ Core Features</h2>
-                <div class="grid md:grid-cols-2 gap-6 my-10">
-                    <div class="feature-card p-8 rounded-2xl">
-                        <i data-lucide="scissors" class="text-sky-500 mb-4 w-8 h-8"></i>
-                        <h4 id="feature-surgical" class="text-white font-bold mb-2">Surgical XML Edits</h4>
-                        <p class="text-sm">Multi-Strategy Matcher. If any block fails to align, the entire patch is rejected.</p>
+                <h2 id="mod-reviewer-mixins"><i data-lucide="shield-check"></i> autoreviewer.py / reviewer_mixins.py</h2>
+                <p>The verification heart. It enforces Rule 7 (no 'src.' prefixes) and manages the 5-layer pipeline.</p>
+                <pre><code class="language-python"># The Verification Gate sequence
+if not self.run_linter_fix_loop():
+    return False # Linter/Syntax Error
+if not self.run_and_verify_app():
+    return False # Runtime Crash Detected
+if not self.check_downstream_breakages():
+    return False # Downstream Mypy Breakage</code></pre>
+
+                <!-- 12 FILE REFERENCE -->
+                <h2 id="file-api"><i data-lucide="layers"></i> Engine Module Map</h2>
+                <div class="grid md:grid-cols-2 gap-4 my-10">
+                    <div id="mod-pyob-code-parser" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Logic</span>
+                        <h4 class="text-white font-bold text-sm">pyob_code_parser.py</h4>
+                        <p class="text-xs mt-2">Generates HTML dropdowns from AST trees for AI context injections.</p>
                     </div>
-                    <div class="feature-card p-8 rounded-2xl">
-                        <i data-lucide="git-pull-request" class="text-indigo-400 mb-4 w-8 h-8"></i>
-                        <h4 id="feature-librarian" class="text-white font-bold mb-2">GitHub Librarian</h4>
-                        <p class="text-sm">Creates feature branches, commits as pyob-bot, and opens Pull Requests automatically.</p>
+                    <div id="mod-prompts-memory" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Data</span>
+                        <h4 class="text-white font-bold text-sm">prompts_and_memory.py</h4>
+                        <p class="text-xs mt-2">Handles <code>PIR.md</code>, <code>ALF.md</code>, and <code>PF.md</code> template loading.</p>
                     </div>
-                </div>
-
-                <h2 id="getting-started">🚀 Getting Started</h2>
-                <pre><code class="language-yaml">uses: vicsanity623/PyOB@main
-with:
-  gemini_keys: ${{ secrets.PYOB_GEMINI_KEYS }}</code></pre>
-
-                <h2 id="3-module-reference">🏗️ Module Reference</h2>
-                <h3 id="31-pyob_launcherpy">3.1 pyob_launcher.py — CLI Entry</h3>
-                <p>The environment bootstrapper. It configures the runtime and handles macOS terminal re-launching.</p>
-
-                <h3 id="32-entrancepy">3.2 entrance.py — Entrance Controller</h3>
-                <p>The master orchestrator. Manages symbolic targeting and Git lifecycle.</p>
-
-                <h2 id="4-the-verification--healing-pipeline">🛡️ 5-Layer Verification Pipeline</h2>
-                <div class="space-y-4 my-10">
-                    <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-700">
-                        <h5 id="layer-xml" class="text-white font-bold mb-2 flex items-center gap-2">Layer 1: Atomic XML Match</h5>
-                        <p class="text-sm">Exact, Stripped, Normalized, and Regex Fuzzy matching strategies.</p>
+                    <div id="mod-models" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Network</span>
+                        <h4 class="text-white font-bold text-sm">models.py</h4>
+                        <p class="text-xs mt-2">The "Heartbeat" router for Gemini, Llama-3 (GH), and Local Ollama.</p>
                     </div>
-                    <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-700">
-                        <h5 id="layer-broom" class="text-white font-bold mb-2 flex items-center gap-2">Layer 2: Syntactic "Broom"</h5>
-                        <p class="text-sm">Runs <code>ruff format</code> and <code>ruff check --fix</code> automatically.</p>
+                    <div id="mod-feature-mixins" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Logic</span>
+                        <h4 class="text-white font-bold text-sm">feature_mixins.py</h4>
+                        <p class="text-xs mt-2">Orchestrates multi-file creation and architectural feature implementation.</p>
                     </div>
                 </div>
 
-                <h2 id="9-llm-backend--resilience">🌀 LLM Backend & Smart Sleep</h2>
-                <p>PyOB rotates through a pool of up to 10 Gemini API keys. Keys hitting <code>429 Rate Limit</code> are quarantined.</p>
-
-                <h2 id="15-troubleshooting">🚩 Troubleshooting</h2>
-                <div class="p-4 border-l-4 border-red-500 bg-red-500/5">
-                    <h5 id="error-src" class="text-white font-bold">ModuleNotFoundError: No module named 'src'</h5>
-                    <p class="text-sm mt-1">AI incorrectly added <code>src.</code> prefix. Fix by ensuring Rule 7 is enforced.</p>
+                <h2 id="verification-pipeline"><i data-lucide="activity"></i> The Healing Logic</h2>
+                <p>When a crash occurs, PyOB uses <code>_fix_runtime_errors</code> to parse tracebacks and automatically generate patches.</p>
+                
+                <div class="p-6 rounded-xl bg-amber-500/5 border border-amber-500/20 my-10">
+                    <h5 class="text-amber-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Auto-Dependency Locking</h5>
+                    <p class="text-sm">If a <code>ModuleNotFoundError</code> is detected, PyOB automatically runs <code>pip install</code> and freezes the new state into <code>requirements.txt</code> without human intervention.</p>
                 </div>
 
             </article>
 
-            <footer class="mt-32 pt-12 border-t border-slate-800 text-center">
-                <p class="text-slate-500 text-sm italic">PyOB — The engine that builds itself. 🦅</p>
+            <footer class="mt-32 pt-12 border-t border-slate-800 text-center pb-20">
+                <div class="flex justify-center gap-6 mb-8 text-slate-500">
+                    <i data-lucide="github" class="w-5 h-5 hover:text-white cursor-pointer transition-colors"></i>
+                    <i data-lucide="twitter" class="w-5 h-5 hover:text-white cursor-pointer transition-colors"></i>
+                    <i data-lucide="terminal" class="w-5 h-5 hover:text-white cursor-pointer transition-colors"></i>
+                </div>
+                <p class="text-slate-600 text-[10px] tracking-[0.4em] uppercase font-bold">Ouroboros Protocol Alpha // 2025</p>
             </footer>
         </main>
     </div>
@@ -230,81 +235,91 @@ with:
     <script>
         lucide.createIcons();
 
-        // SEARCH LOGIC
+        // DEEP SYMBOLIC SEARCH ENGINE
         const searchOverlay = document.getElementById('search-overlay');
         const searchInput = document.getElementById('docs-search-input');
         const searchResultsList = document.getElementById('search-results-list');
         const searchTrigger = document.getElementById('searchTrigger');
+        const searchCloser = document.getElementById('search-closer');
 
-        // 1. Index Headings on Load
-        const searchIndex = Array.from(document.querySelectorAll('h2, h3, h4, h5')).map(el => ({
-            id: el.id,
-            text: el.innerText,
-            type: el.tagName
-        }));
+        // Extract technical fragments from document
+        const buildIndex = () => {
+            const content = document.getElementById('docs-content');
+            const elements = content.querySelectorAll('h2, h3, h4, p, li, pre code, td');
+            return Array.from(elements).map((el, index) => {
+                if (!el.id) el.id = `node-${index}`;
+                return {
+                    id: el.id,
+                    text: el.innerText.trim(),
+                    tagName: el.tagName.toLowerCase(),
+                    context: el.closest('section, article')?.querySelector('h1, h2')?.innerText || 'Core'
+                };
+            }).filter(item => item.text.length > 5);
+        };
+
+        const searchIndex = buildIndex();
 
         const openSearch = () => {
             searchOverlay.classList.remove('hidden');
             searchInput.focus();
+            document.body.style.overflow = 'hidden';
         };
 
         const closeSearch = () => {
             searchOverlay.classList.add('hidden');
             searchInput.value = '';
-            searchResultsList.innerHTML = '<p class="text-slate-500 text-center py-10">Start typing...</p>';
+            document.body.style.overflow = ''; 
         };
 
         searchTrigger.addEventListener('click', openSearch);
+        searchCloser.addEventListener('click', closeSearch);
 
-        // 2. Listen for Keyboard Shortcuts
         window.addEventListener('keydown', (e) => {
             if (e.key === '/' && searchOverlay.classList.contains('hidden')) {
-                e.preventDefault();
-                openSearch();
-            }
-            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 openSearch();
             }
             if (e.key === 'Escape') closeSearch();
         });
 
-        // 3. Instant Search Filtering
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
-            if (!query) {
-                searchResultsList.innerHTML = '<p class="text-slate-500 text-center py-10">Start typing...</p>';
-                return;
-            }
+            if (query.length < 2) return;
 
             const matches = searchIndex.filter(item => item.text.toLowerCase().includes(query));
-
+            
             if (matches.length === 0) {
-                searchResultsList.innerHTML = '<p class="text-slate-500 text-center py-10">No results found for "' + query + '"</p>';
+                searchResultsList.innerHTML = `<p class="text-slate-600 text-center py-10">No symbolic match found for "${query}"</p>`;
                 return;
             }
 
-            searchResultsList.innerHTML = matches.map(item => `
-                <a href="#${item.id}" onclick="document.getElementById('search-overlay').classList.add('hidden')" 
-                   class="flex items-center justify-between p-4 rounded-xl hover:bg-sky-500/10 border border-transparent hover:border-sky-500/30 transition group">
-                    <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-bold px-2 py-1 rounded bg-slate-800 text-slate-400 uppercase">${item.type}</span>
-                        <span class="text-slate-200 group-hover:text-sky-400 font-medium">${item.text}</span>
+            searchResultsList.innerHTML = matches.slice(0, 10).map(item => `
+                <a href="#${item.id}" onclick="document.getElementById('search-overlay').classList.add('hidden'); document.body.style.overflow = '';" 
+                   class="block p-4 rounded-2xl hover:bg-sky-500/10 border border-transparent hover:border-sky-500/20 transition group">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[8px] font-black px-2 py-0.5 rounded bg-slate-800 text-sky-500 uppercase">${item.tagName}</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${item.context}</span>
                     </div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-sky-500"></i>
+                    <div class="text-slate-300 text-sm truncate">
+                        ${item.text.substring(0, 100)}...
+                    </div>
                 </a>
             `).join('');
-            lucide.createIcons();
         });
 
-        // Sidebar Navigation logic
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const sidebar = document.getElementById('sidebar');
-        mobileMenuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('hidden');
-            sidebar.classList.toggle('w-full');
-            sidebar.classList.toggle('bg-slate-900');
-        });
+        // Intersection Observer for Sidebar
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.5 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    document.querySelectorAll('.sidebar-link').forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`);
+                    });
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section, h2, h3').forEach(el => observer.observe(el));
     </script>
 </body>
 </html>
