@@ -121,7 +121,7 @@ OBSERVER_HTML = """
                 document.getElementById('analysis').innerText = data.analysis || "Parsing...";
 
                 const queueDiv = document.getElementById('queue');
-                queueDiv.innerHTML = ''; 
+                queueDiv.innerHTML = '';
                 if (data.cascade_queue && data.cascade_queue.length > 0) {
                     data.cascade_queue.forEach((item, index) => {
                         const itemElement = document.createElement('div');
@@ -160,7 +160,7 @@ OBSERVER_HTML = """
                 const response = await fetch('/api/pending_patches');
                 const data = await response.json();
                 const patchesDiv = document.getElementById('pending-patches');
-                patchesDiv.innerHTML = ''; 
+                patchesDiv.innerHTML = '';
 
                 if (data.patches && data.patches.length > 0) {
                     data.patches.forEach(patch => {
@@ -224,7 +224,7 @@ OBSERVER_HTML = """
                     body: JSON.stringify({ item: item })
                 });
                 if (response.ok) {
-                    document.getElementById('cascadeItem').value = ''; 
+                    document.getElementById('cascadeItem').value = '';
                     await updateStats();
                 }
             } catch (e) {
