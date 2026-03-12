@@ -185,6 +185,7 @@ class FeatureOperationsMixin:
 
                     # Immediately stage for Git so the Librarian sees it
                     import subprocess
+
                     subprocess.run(["git", "add", new_path_abs], cwd=self.target_dir)
                     created_files.append(new_path_abs)
                 except Exception as e:
@@ -263,9 +264,7 @@ class FeatureOperationsMixin:
         if created_files:
             self.session_context.append(
                 "Created new modules: "
-                + ", ".join(
-                    [os.path.basename(fp) for fp in created_files]
-                )
+                + ", ".join([os.path.basename(fp) for fp in created_files])
             )
 
         if os.path.exists(self.feature_file):
