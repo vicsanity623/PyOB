@@ -153,28 +153,50 @@ class FeatureOperationsMixin:
 
         rel_path = match.group(1)
         target_path = os.path.join(self.target_dir, rel_path)
+        target_folder = os.path.dirname(target_path) # The package directory
         lang_name, lang_tag = getattr(self, "get_language_info")(target_path)
 
         with open(target_path, "r", encoding="utf-8") as f_handle:
             source_code = f_handle.read()
+            
         created_files: list[str] = []
         new_file_matches = re.finditer(
             r'<CREATE_FILE path="(.*?)">(.*?)</CREATE_FILE>', feature_content, re.DOTALL
         )
+        
         for file_match in new_file_matches:
             new_path_rel = file_match.group(1)
             new_code_payload = file_match.group(2).strip()
-            new_path_abs = os.path.join(self.target_dir, new_path_rel)
+            
+            # --- INTELLIGENT PATHING START ---
+            # If the AI provides a naked filename, assume it belongs in the same folder as the target
+            if "/" not in new_path_rel and "\\" not in new_path_rel:
+                new_path_abs = os.path.join(target_folder, new_path_rel)
+            else:
+                new_path_abs = os.path.join(self.target_dir, new_path_rel)
+            # ---------------------------------
+
             if not os.path.exists(new_path_abs):
                 try:
+                    # Ensure directory exists
+                    os.makedirs(os.path.dirname(new_path_abs), exist_ok=True)
+                    
                     logger.warning(
-                        f"ARCHITECTURAL SPLIT: Spawning new module `{new_path_rel}`"
+                        f"🏗️ ARCHITECTURAL SPLIT: Spawning new module `{os.path.basename(new_path_abs)}`"
                     )
                     with open(new_path_abs, "w", encoding="utf-8") as f_new:
                         f_new.write(new_code_payload)
+                    
+                    # --- GIT SYNCHRONIZATION START ---
+                    # Immediately stage the file so the Librarian logic includes it in the commit
+                    import subprocess
+                    subprocess.run(["git", "add", new_path_abs], cwd=self.target_dir)
+                    # ---------------------------------
+                    
                     created_files.append(new_path_abs)
                 except Exception as e:
                     logger.error(f"Failed to create new module {new_path_rel}: {e}")
+
         exp_match = re.search(
             r"\*\*Explanation:\*\*(.*?)(?:###|---|>)",
             feature_content,
@@ -215,26 +237,31 @@ class FeatureOperationsMixin:
             new_code = getattr(self, "ensure_imports_retained")(
                 source_code, new_code, target_path
             )
+            
         with open(target_path, "w", encoding="utf-8") as f_out:
             f_out.write(new_code)
+            
         if lang_tag == "python":
+            # Verification Step
             if not getattr(self, "run_linter_fix_loop")(
                 context_of_change=feature_content
             ) or not getattr(self, "run_and_verify_app")(
                 context_of_change=feature_content
             ):
+                logger.error("Verification failed. Cleaning up spawned modules.")
                 for file_path in created_files:
                     if os.path.exists(file_path):
                         os.remove(file_path)
                 return False
 
             if not getattr(self, "check_downstream_breakages")(target_path, rel_path):
+                logger.error("Downstream breakages detected. Rolling back spawned modules.")
                 for file_path in created_files:
                     if os.path.exists(file_path):
                         os.remove(file_path)
                 return False
 
-        logger.info(f"Successfully implemented feature directly into {rel_path}.")
+        logger.info(fSuccessfully implemented feature directly into {rel_path}.")
 
         self.session_context.append(
             f"SUCCESSFUL CHANGE in `{rel_path}`: {feature_explanation}"
@@ -250,7 +277,9 @@ class FeatureOperationsMixin:
 
         if os.path.exists(self.feature_file):
             os.remove(self.feature_file)
+            
         return True
+
 
     def implement_pr(self, pr_content: str) -> bool:
         """
