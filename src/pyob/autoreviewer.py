@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 
-from pyob.core_utils import (
+from .core_utils import (
     ANALYSIS_FILE,
     FAILED_FEATURE_FILE_NAME,
     FAILED_PR_FILE_NAME,
@@ -23,13 +23,18 @@ from pyob.core_utils import (
     CoreUtilsMixin,
     logger,
 )
-from pyob.feature_mixins import FeatureOperationsMixin
-from pyob.prompts_and_memory import PromptsAndMemoryMixin
-from pyob.reviewer_mixins import ValidationMixin
+from .feature_mixins import FeatureOperationsMixin
+from .prompts_and_memory import PromptsAndMemoryMixin
+from .reviewer_mixins import ValidationMixin
+from .scanner_mixins import ScannerMixin
 
 
 class AutoReviewer(
-    CoreUtilsMixin, PromptsAndMemoryMixin, ValidationMixin, FeatureOperationsMixin
+    CoreUtilsMixin, 
+    PromptsAndMemoryMixin, 
+    ValidationMixin, 
+    FeatureOperationsMixin,
+    ScannerMixin
 ):
     _shared_cooldowns: dict[str, float] | None = None
 
@@ -92,11 +97,6 @@ class AutoReviewer(
         return issues
 
     def set_manual_target_file(self, filepath: str | None):
-        """
-        Sets or clears the manual target file for analysis.
-        If a filepath is provided, it will be used for the next analysis cycle.
-        If None, the system reverts to scanning the directory.
-        """
         if filepath:
             if not os.path.exists(filepath):
                 logger.warning(
@@ -214,14 +214,9 @@ class AutoReviewer(
 
             if not available_keys:
                 if is_cloud:
-                    # Check if we've been stuck for a while
                     logger.warning(
                         " Cloud environment: Keys exhausted. Checking if cooldowns can be cleared..."
                     )
-
-                    # FORCE RESET: If we are in the cloud and all keys are dead,
-                    # we must clear the cooldowns to attempt a retry,
-                    # otherwise the pipeline is effectively dead.
                     for key in self.key_cooldowns:
                         self.key_cooldowns[key] = 0.0
 
@@ -367,19 +362,6 @@ class AutoReviewer(
 
                 return new_code, explanation, response_text
 
-    def scan_directory(self) -> list[str]:
-        file_list = []
-        for root, dirs, files in os.walk(self.target_dir):
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
-            for file in files:
-                if file in IGNORE_FILES:
-                    continue
-                if file.endswith(".spec") or file.endswith(".dmg"):
-                    continue
-                if any(file.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
-                    file_list.append(os.path.join(root, file))
-        return file_list
-
     def run_pipeline(self, current_iteration: int):
         if not self.session_context:
             self.session_context = []
@@ -445,7 +427,7 @@ class AutoReviewer(
                     if os.path.exists(self.manual_target_file):
                         all_files = [self.manual_target_file]
                         logger.info(
-                            f"ð¯ Manual target file override active: {self.manual_target_file}"
+                            f"Manual target file override active: {self.manual_target_file}"
                         )
                     else:
                         logger.warning(
