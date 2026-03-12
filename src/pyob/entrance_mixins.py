@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from .autoreviewer import AutoReviewer
-from .pyob_dashboard import ObserverHandler
 from .dashboard_html import OBSERVER_HTML
+from .pyob_dashboard import ObserverHandler
 
 logger = logging.getLogger(__name__)
 
