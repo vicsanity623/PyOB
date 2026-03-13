@@ -35,9 +35,22 @@ jobs:
 
       - name: Start Ollama Engine
         run: |
+          # 1. Install without trying to use systemd
           curl -fsSL https://ollama.com/install.sh | sh
-          # Remove the 'ollama serve &' line, the installer starts it for you!
-          sleep 5
+          
+          # 2. Start the server in the background, ignoring systemd
+          # We capture the PID to ensure we can kill it later if needed
+          export OLLAMA_HOST=127.0.0.1:11434
+          ollama serve > ollama.log 2>&1 &
+          
+          # 3. Wait for the port to actually open
+          echo "Waiting for Ollama to start..."
+          until curl -s http://127.0.0.1:11434; do
+            echo "Waiting..."
+            sleep 2
+          done
+          
+          # 4. Pull the model now that the server is verified up
           ollama pull qwen2.5-coder:7b
           echo "OLLAMA_AVAILABLE=True" >> $GITHUB_ENV
 
