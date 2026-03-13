@@ -347,7 +347,7 @@ def get_valid_llm_response_engine(
 
             # 4. Final Fail-Safe Sleep
             if not response_text or response_text.startswith("ERROR_CODE_"):
-                wait = 60
+                wait = 300
                 logger.warning(
                     f"All Engines failed or exhausted. Sleeping {wait}s for refill..."
                 )
