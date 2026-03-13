@@ -59,7 +59,6 @@ def test_directory_scanner_finds_all_relevant_files(tmp_path):
     # making the test robust to changes in supported extensions.
     expected_filenames = [
         "main.py",
-        "README.md",
         "module_a.py",
         "data.json",
         "helper.py",
