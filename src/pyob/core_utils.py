@@ -92,11 +92,6 @@ IGNORE_FILES = {
     "README.md",
     "DOCUMENTATION.md",
     "observer.html",
-    "apply_xml_mixins.py",
-    "dashboard_html.py",
-    "get_valid_edit.py",
-    "models.py",
-    "pyob_dashboard.py",
 }
 SUPPORTED_EXTENSIONS = {".py", ".js", ".ts", ".html", ".css", ".json", ".sh"}
 
