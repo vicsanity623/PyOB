@@ -28,39 +28,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyOB and Dependencies
+      - name: Install PyOB
         run: |
           pip install -e .
-          pip install ruff mypy pytest types-requests types-chardet ollama
-
-      - name: Start Ollama Engine
-        run: |
-          # 1. Install without trying to use systemd
-          curl -fsSL https://ollama.com/install.sh | sh
-          
-          # 2. Start the server in the background, ignoring systemd
-          # We capture the PID to ensure we can kill it later if needed
-          export OLLAMA_HOST=127.0.0.1:11434
-          ollama serve > ollama.log 2>&1 &
-          
-          # 3. Wait for the port to actually open
-          echo "Waiting for Ollama to start..."
-          until curl -s http://127.0.0.1:11434; do
-            echo "Waiting..."
-            sleep 2
-          done
-          
-          # 4. Pull the model now that the server is verified up
-          ollama pull qwen2.5-coder:7b
-          echo "OLLAMA_AVAILABLE=True" >> $GITHUB_ENV
+          pip install ruff mypy pytest types-requests types-chardet
 
       - name: Run PyOB Service
         env:
           PYOB_GEMINI_KEYS: ${{ secrets.PYOB_GEMINI_KEYS }}
+          # This maps your secret to the variable the Python code expects
           GITHUB_TOKEN: ${{ secrets.AI_MODELS_TOKEN }} 
+          # The GitHub CLI will automatically use this if it's named GH_TOKEN
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-          # This variable will now be picked up by your models.py logic
-          OLLAMA_AVAILABLE: "True"
         run: |
           git config --global user.email "pyob-bot@users.noreply.github.com"
           git config --global user.name "pyob-bot"
@@ -71,11 +50,15 @@ jobs:
           
           # 2. Launch the bot
           pyob . --iterations 2
+          echo "=================================================="
+          echo "🚀 LIVE HUD TUNNEL (CURRENT RUN):"
+          cat tunnel.log | grep -o 'https://[^ ]*\.pinggy.link' || echo "Link generating... check again in 30s"
+          echo "=================================================="
           
       - name: Deploy Permanent HUD to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: .
-          branch: gh-pages
+          folder: . # The folder where index.html is
+          branch: gh-pages # The branch for GitHub Pages
           commit-message: "📊 Update Architect HUD [skip ci]"
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
