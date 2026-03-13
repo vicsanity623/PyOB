@@ -36,8 +36,8 @@ jobs:
       - name: Start Ollama Engine
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
-          ollama serve &
-          sleep 10
+          # Remove the 'ollama serve &' line, the installer starts it for you!
+          sleep 5
           ollama pull qwen2.5-coder:7b
           echo "OLLAMA_AVAILABLE=True" >> $GITHUB_ENV
 
