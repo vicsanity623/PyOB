@@ -1,13 +1,13 @@
-import os
 from pyob.autoreviewer import AutoReviewer
+
 
 def test_directory_scanner_ignores_hidden_folders(tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    
+
     src_dir = project_dir / "src"
     src_dir.mkdir()
-    
+
     git_dir = project_dir / ".git"
     git_dir.mkdir()
 
@@ -57,11 +57,23 @@ def test_directory_scanner_finds_all_relevant_files(tmp_path):
 
     # Assert specific presence of expected files rather than exact list length,
     # making the test robust to changes in supported extensions.
-    expected_filenames = ["main.py", "README.md", "module_a.py", "data.json", "helper.py"]
-    
+    expected_filenames = [
+        "main.py",
+        "README.md",
+        "module_a.py",
+        "data.json",
+        "helper.py",
+    ]
+
     for filename in expected_filenames:
-        assert any(filename in f for f in files), f"Expected file {filename} not found in scanner results."
+        assert any(filename in f for f in files), (
+            f"Expected file {filename} not found in scanner results."
+        )
 
     # Assert exclusion of hidden files/folders
-    assert not any(".venv" in f for f in files), "Scanner incorrectly included .venv folder."
-    assert not any(".gitignore" in f for f in files), "Scanner incorrectly included .gitignore file."
+    assert not any(".venv" in f for f in files), (
+        "Scanner incorrectly included .venv folder."
+    )
+    assert not any(".gitignore" in f for f in files), (
+        "Scanner incorrectly included .gitignore file."
+    )
