@@ -16,7 +16,6 @@ class ScannerMixin:
                     continue
                 if (
                     file.endswith(".spec")
-                    or file.endswith(".json")
                     or file.endswith(".dmg")
                 ):
                     continue
