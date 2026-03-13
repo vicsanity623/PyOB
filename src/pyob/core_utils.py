@@ -59,7 +59,7 @@ IGNORE_DIRS = {
 IGNORE_FILES = {
     "package-lock.json",
     "LICENSE",
-    "manifest.hson",
+    "manifest.json",
     "sw.js",
     "action.yml",
     "Dockerfile",
@@ -92,7 +92,7 @@ IGNORE_FILES = {
     "README.md",
     "DOCUMENTATION.md",
     "observer.html",
-    "apply_xml_edit.py",
+    "apply_xml_mixins.py",
     "dashboard_html.py",
     "get_valid_edit.py",
     "models.py",
