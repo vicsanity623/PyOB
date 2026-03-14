@@ -120,7 +120,7 @@ class EntranceMixin:
         # 2. Initialize and Start the Live Server
 
         # Dynamically add do_POST method for manual target handling
-        def _dynamic_do_POST_method(handler_instance: Any):
+        def _dynamic_do_POST_method(handler_instance: ObserverHandler):
             if handler_instance.path == "/set_target":
                 content_length = int(handler_instance.headers["Content-Length"])
                 post_data = handler_instance.rfile.read(content_length).decode("utf-8")
