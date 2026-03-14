@@ -238,7 +238,8 @@ class CoreUtilsMixin:
             )
             return initial_content
         finally:
-            os.remove(tmp_file_path)
+            if os.path.exists(tmp_file_path):
+                os.remove(tmp_file_path)
 
     def _edit_prompt_with_external_editor(self, initial_prompt: str) -> str:
         import tempfile
