@@ -20,8 +20,12 @@ def load_config():
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
+                config_data = json.load(f)
+                if isinstance(config_data, dict):
+                    return config_data
+                else:
+                    raise ValueError("Configuration file content is not a dictionary.")
+        except (json.JSONDecodeError, OSError, ValueError) as e:
             print(
                 f"Warning: Configuration file {CONFIG_FILE} is invalid or inaccessible ({e}). Re-creating."
             )
