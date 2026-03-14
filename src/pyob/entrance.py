@@ -24,9 +24,9 @@ if _pyob_package_root_dir not in sys.path:
     sys.path.insert(0, _pyob_package_root_dir)
 # --- END FIX ---
 
-from pyob.autoreviewer import AutoReviewer
-from pyob.entrance_mixins import EntranceMixin
-from pyob.pyob_code_parser import CodeParser
+from pyob.autoreviewer import AutoReviewer  # noqa: E402
+from pyob.entrance_mixins import EntranceMixin  # noqa: E402
+from pyob.pyob_code_parser import CodeParser  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 logger = logging.getLogger(__name__)
