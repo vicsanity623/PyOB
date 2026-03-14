@@ -193,7 +193,8 @@ class AutoReviewer(
                         failure_report += "\n".join(self.session_context[-3:])
 
                         if os.path.exists(self.pr_file):
-                            content = open(self.pr_file).read()
+                            with open(self.pr_file, "r", encoding="utf-8") as f:
+                                content = f.read()
                             with open(self.failed_pr_file, "w") as f:
                                 f.write(content + failure_report)
                             os.remove(self.pr_file)
