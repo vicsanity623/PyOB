@@ -163,13 +163,15 @@ class CoreUtilsMixin:
         if sys.platform == "win32":
             import msvcrt
 
+            prev_line_len = 0
             while True:
                 remaining = int(timeout - (time.time() - start_time))
                 if remaining <= 0:
                     return "PROCEED"
-                sys.stdout.write(
-                    f"\r {remaining}s remaining | You: {input_str} \b\b\b\b"
-                )
+                current_display_str = f" {remaining}s remaining | You: {input_str}"
+                padding_needed = max(0, prev_line_len - len(current_display_str))
+                sys.stdout.write(f"\r{current_display_str}{' ' * padding_needed}")
+                prev_line_len = len(current_display_str) + padding_needed
                 sys.stdout.flush()
                 if msvcrt.kbhit():
                     char = msvcrt.getwch()
