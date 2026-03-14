@@ -35,7 +35,7 @@ class EntranceController(EntranceMixin):
         "prompts_and_memory.py",
         "pyob_code_parser.py",
         "pyob_dashboard.py",
-        "pyob-launcher.py",
+        "pyob_launcher.py",
         "reviewer_mixins.py",
         "scanner_mixins.py",
         "get_valid_edit.py",
