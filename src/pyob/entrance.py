@@ -10,9 +10,14 @@ import sys
 import time
 from typing import Optional
 
-from .autoreviewer import AutoReviewer
-from .entrance_mixins import EntranceMixin
-from .pyob_code_parser import CodeParser
+_current_file_dir = os.path.dirname(os.path.abspath(__file__))
+_pyob_package_root_dir = os.path.dirname(_current_file_dir)
+if _pyob_package_root_dir not in sys.path:
+    sys.path.insert(0, _pyob_package_root_dir)
+
+from pyob.autoreviewer import AutoReviewer  # noqa: E402
+from pyob.entrance_mixins import EntranceMixin  # noqa: E402
+from pyob.pyob_code_parser import CodeParser  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -62,14 +67,16 @@ class EntranceController(EntranceMixin):
             )
             self.start_dashboard()
 
-    def set_manual_target_file(self, file_path: str):
+    def set_manual_target_file(self, file_path: str) -> tuple[bool, str]:
         """Sets a file path to be targeted in the next iteration, overriding LLM choice."""
         abs_path = os.path.join(self.target_dir, file_path)
         if os.path.exists(abs_path):
             self.manual_target_file = file_path
             logger.info(f"Manual target set for next iteration: {file_path}")
+            return True, f"Manual target set for next iteration: {file_path}"
         else:
             logger.warning(f"Manual target file not found: {file_path}")
+            return False, f"Error: File not found at path: {file_path}"
 
     def sync_with_remote(self) -> bool:
         """Fetches remote updates and merges main if we are behind."""
@@ -107,10 +114,8 @@ class EntranceController(EntranceMixin):
         """Verified Hot-Reboot: Checks for syntax/import errors before restarting."""
         logger.info("PRE-FLIGHT: Verifying engine integrity before reboot...")
 
-        # Test if the new code can actually be loaded
         test_cmd = [sys.executable, "-c", "import pyob.entrance; print('SUCCESS')"]
         env = os.environ.copy()
-        # Ensure 'src' is in the path for the test
         env["PYTHONPATH"] = os.path.join(self.target_dir, "src")
 
         try:
@@ -127,7 +132,7 @@ class EntranceController(EntranceMixin):
                 logger.error(
                     f"REBOOT ABORTED: The evolved code has import/syntax errors:\n{result.stderr}"
                 )
-                self.self_evolved_flag = False  # Cancel reboot to stay alive
+                self.self_evolved_flag = False
         except Exception as e:
             logger.error(f"Pre-flight check failed: {e}")
             self.self_evolved_flag = False
@@ -234,15 +239,12 @@ class EntranceController(EntranceMixin):
 
     def _extract_path_from_llm_response(self, text: str) -> str:
         """Extracts a clean relative file path from a potentially conversational LLM response."""
-        # Remove common markdown formatting and quotes
         cleaned_text = re.sub(r"[`\"*]", "", text).strip()
         if " " in cleaned_text:
             parts = cleaned_text.split()
             for part in parts:
-                # Heuristic: check for directory separators or common file extensions
                 if "/" in part or part.endswith((".py", ".js", ".ts", ".html", ".css")):
                     return part
-            # Fallback to the first word if no specific path-like part is found
             return parts[0]
         return cleaned_text
 
@@ -352,7 +354,6 @@ class EntranceController(EntranceMixin):
             if not cmd:
                 return True
 
-            # Determine shell usage before Popen to satisfy Mypy type checker
             use_shell = bool(cmd and (cmd[0] == "start" or cmd[0] == "open"))
 
             start_time = time.time()
@@ -574,7 +575,6 @@ src/pyob/core_utils.py
             except Exception as e:
                 logger.warning(f"Failed to parse Python AST for {rel_path}: {e}")
         elif ext in [".js", ".ts"]:
-            # Improved regex to capture more JS/TS definition patterns, including export/async modifiers
             defs = re.findall(
                 r"(?:export\s+|async\s+)?(?:function\*?|class|const|var|let)\s+([a-zA-Z0-9_$]+)",
                 code,
