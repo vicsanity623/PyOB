@@ -132,16 +132,13 @@ class CoreUtilsMixin:
         """Analyzes a git diff and returns a professional title and body for the PR."""
         prompt = f"""
         Analyze the following git diff for file `{rel_path}` and write a professional, high-quality PR title and description.
-        
         RULES:
         1. PR Title: Start with a category (e.g., "Refactor:", "Feature:", "Fix:", "Security:") followed by a concise summary.
         2. PR Body: Use professional markdown. Include sections for 'Summary of Changes' and 'Technical Impact'.
         3. NO TIMESTAMPS: Do not mention the time or date.
         4. INTENT: Focus on why the change improves the architecture or stability.
-        
         GIT DIFF:
         {diff_text}
-        
         OUTPUT FORMAT (STRICT JSON):
         {{
           "title": "Category: Brief Summary",
