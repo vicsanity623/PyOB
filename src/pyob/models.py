@@ -259,8 +259,6 @@ def get_valid_llm_response_engine(
         or os.environ.get("CI") == "true"
         or "GITHUB_RUN_ID" in os.environ
     )
-    all_keys = list(key_cooldowns.keys())
-
     while True:
         key = None
         now = time.time()
@@ -351,15 +349,15 @@ def get_valid_llm_response_engine(
 
             # 4. Final Catch-All / Fail-Safe Sleep
             if not response_text or response_text.startswith("ERROR_CODE_"):
-                if key and not ("429" in (response_text or "")):
+                if key and "429" not in (response_text or ""):
                     key_cooldowns[key] = time.time() + 10  # Short cooldown for unknown errors prevent tight loops
-                
+
                 if available_keys:
                     logger.warning(f"Engine failed with error: {str(response_text)[:60]}... Rotating...")
                     attempts += 1
                     time.sleep(2)
                     continue
-                
+
                 wait = 90
                 logger.warning(
                     f"All Engines failed or exhausted. Sleeping {wait}s for refill..."
