@@ -10,12 +10,8 @@ import sys
 import time
 from typing import Optional
 
-_current_file_dir = os.path.dirname(
-    os.path.abspath(__file__)
-)
-_pyob_package_root_dir = os.path.dirname(
-    _current_file_dir
-)
+_current_file_dir = os.path.dirname(os.path.abspath(__file__))
+_pyob_package_root_dir = os.path.dirname(_current_file_dir)
 if _pyob_package_root_dir not in sys.path:
     sys.path.insert(0, _pyob_package_root_dir)
 
