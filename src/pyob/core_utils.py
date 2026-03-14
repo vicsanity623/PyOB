@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+import re
 import select
 import shutil
 import subprocess
@@ -125,6 +127,47 @@ class CoreUtilsMixin:
     target_dir: str
     memory_file: str
     key_cooldowns: dict[str, float]
+
+    def generate_pr_summary(self, rel_path: str, diff_text: str) -> dict:
+        """Analyzes a git diff and returns a professional title and body for the PR."""
+        prompt = f"""
+        Analyze the following git diff for file `{rel_path}` and write a professional, high-quality PR title and description.
+        RULES:
+        1. PR Title: Start with a category (e.g., "Refactor:", "Feature:", "Fix:", "Security:") followed by a concise summary.
+        2. PR Body: Use professional markdown. Include sections for 'Summary of Changes' and 'Technical Impact'.
+        3. NO TIMESTAMPS: Do not mention the time or date.
+        GIT DIFF:
+        {diff_text}
+        OUTPUT FORMAT (STRICT JSON):
+        {{"title": "...", "body": "..."}}
+        """
+
+        try:
+            from .models import get_valid_llm_response_engine
+
+            response = get_valid_llm_response_engine(
+                prompt,
+                lambda t: '"title":' in t and '"body":' in t,
+                self.key_cooldowns,
+                context="PR Architect",
+            )
+
+            clean_json = re.sub(
+                r"^```json\s*|\s*```$", "", response.strip(), flags=re.MULTILINE
+            )
+
+            data = json.loads(clean_json)
+            if isinstance(data, dict):
+                return data
+
+            raise ValueError("LLM response was not a dictionary")
+
+        except Exception as e:
+            logger.warning(f"Librarian failed to generate AI summary: {e}")
+            return {
+                "title": f"Evolution: Refactor of `{rel_path}`",
+                "body": f"Automated self-evolution update for `{rel_path}`. Verified stable via runtime testing.",
+            }
 
     def stream_gemini(
         self, prompt: str, api_key: str, on_chunk: Callable[[], None]
