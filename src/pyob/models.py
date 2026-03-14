@@ -189,14 +189,18 @@ def stream_single_llm(
             i = (i + 1) % len(spinner_chars)
             time.sleep(0.1)
 
-    t = threading.Thread(target=spinner, daemon=True)
-    t.start()
+    if is_cloud:
+        print(f"Reading [{context}] ~{input_tokens} ctx...", flush=True)
+    else:
+        t = threading.Thread(target=spinner, daemon=True)
+        t.start()
 
     def on_chunk():
         if not first_chunk_received[0]:
             first_chunk_received[0] = True
-            sys.stdout.write("\r\033[K")
-            sys.stdout.flush()
+            if not is_cloud:
+                sys.stdout.write("\r\033[K")
+                sys.stdout.flush()
             source = f"Gemini ...{key[-4:]}" if key else f"GitHub Models ({gh_model})"
             if not key and not is_cloud:
                 source = "Local Ollama"
@@ -289,9 +293,7 @@ def get_valid_llm_response_engine(
                     prompt, key=None, context=context, gh_model="Llama-3"
                 )
         else:
-            logger.info(
-                " All Gemini keys exhausted. Falling back to Local Ollama Engine..."
-            )
+            logger.info(" All Gemini keys exhausted. Falling back to Local Ollama Engine...")
             response_text = stream_single_llm(prompt, key=None, context=context)
 
         # --- ERROR HANDLING BLOCK ---
@@ -352,14 +354,10 @@ def get_valid_llm_response_engine(
             # 4. Final Catch-All / Fail-Safe Sleep
             if not response_text or response_text.startswith("ERROR_CODE_"):
                 if key and "429" not in (response_text or ""):
-                    key_cooldowns[key] = (
-                        time.time() + 10
-                    )  # Short cooldown for unknown errors prevent tight loops
+                    key_cooldowns[key] = time.time() + 10  # Short cooldown for unknown errors prevent tight loops
 
                 if available_keys:
-                    logger.warning(
-                        f"Engine failed with error: {str(response_text)[:60]}... Rotating..."
-                    )
+                    logger.warning(f"Engine failed with error: {str(response_text)[:60]}... Rotating...")
                     attempts += 1
                     time.sleep(2)
                     continue
