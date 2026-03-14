@@ -434,7 +434,7 @@ class EntranceController(EntranceMixin):
                 if os.environ.get("GITHUB_ACTIONS") == "true":
                     logger.info("Skipping browser launch in GitHub Actions.")
                     return True
-                
+
                 # Command to open browser based on OS
                 if sys.platform == "darwin":
                     cmd = ["open", entry_file]
@@ -474,7 +474,7 @@ class EntranceController(EntranceMixin):
                 stdout, stderr = "", str(e)
 
             duration = time.time() - start_time
-            
+
             # Check for common crash keywords in output
             has_error_logs = any(
                 kw in stderr or kw in stdout
