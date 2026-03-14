@@ -10,9 +10,23 @@ import sys
 import time
 from typing import Optional
 
-from .autoreviewer import AutoReviewer
-from .entrance_mixins import EntranceMixin
-from .pyob_code_parser import CodeParser
+# --- START FIX FOR RELATIVE IMPORTS WHEN RUN DIRECTLY ---
+# This block ensures that when entrance.py is run directly (e.g., python src/pyob/entrance.py),
+# it can still resolve its relative imports by adding the 'src' directory
+# (which contains the 'pyob' package) to the Python path.
+_current_file_dir = os.path.dirname(
+    os.path.abspath(__file__)
+)  # e.g., /path/to/project_root/src/pyob
+_pyob_package_root_dir = os.path.dirname(
+    _current_file_dir
+)  # e.g., /path/to/project_root/src
+if _pyob_package_root_dir not in sys.path:
+    sys.path.insert(0, _pyob_package_root_dir)
+# --- END FIX ---
+
+from pyob.autoreviewer import AutoReviewer
+from pyob.entrance_mixins import EntranceMixin
+from pyob.pyob_code_parser import CodeParser
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -62,14 +76,16 @@ class EntranceController(EntranceMixin):
             )
             self.start_dashboard()
 
-    def set_manual_target_file(self, file_path: str):
+    def set_manual_target_file(self, file_path: str) -> tuple[bool, str]:
         """Sets a file path to be targeted in the next iteration, overriding LLM choice."""
         abs_path = os.path.join(self.target_dir, file_path)
         if os.path.exists(abs_path):
             self.manual_target_file = file_path
             logger.info(f"Manual target set for next iteration: {file_path}")
+            return True, f"Manual target set for next iteration: {file_path}"
         else:
             logger.warning(f"Manual target file not found: {file_path}")
+            return False, f"Error: File not found at path: {file_path}"
 
     def sync_with_remote(self) -> bool:
         """Fetches remote updates and merges main if we are behind."""
