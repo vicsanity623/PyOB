@@ -152,15 +152,17 @@ class CoreUtilsMixin:
                 context="PR Architect",
             )
 
-            clean_json = re.sub(
-                r"^```json\s*|\s*```$", "", response.strip(), flags=re.MULTILINE
-            )
+            json_match = re.search(r'(\{.*\})', response, re.DOTALL)
+            if json_match:
+                clean_json = json_match.group(1)
+            else:
+                clean_json = re.sub(r"^```json\s*|\s*```$", "", response.strip(), flags=re.MULTILINE)
 
             data = json.loads(clean_json)
             if isinstance(data, dict):
                 return data
 
-            raise ValueError("LLM response was not a dictionary")
+            raise ValueError("LLM response was not a valid dictionary object")
 
         except Exception as e:
             logger.warning(f"Librarian failed to generate AI summary: {e}")
