@@ -492,22 +492,42 @@ src/pyob/core_utils.py
             proj_prompt, lambda t: len(t) > 5, context="Project Genesis"
         ).strip()
         content = f"# Project Analysis\n\n**Project Summary:**\n{project_summary}\n\n---\n\n## 📂 File Directory\n\n"
+        file_structures = {}
         for f_path in all_files:
             rel = os.path.relpath(f_path, self.target_dir)
-            logger.info(f"Deep Symbolic Parsing: {rel}")
             with open(f_path, "r", encoding="utf-8", errors="ignore") as f:
                 full_code = f.read()
             self.update_ledger_for_file(rel, full_code)
-            structure_dropdowns = self.code_parser.generate_structure_dropdowns(
+            file_structures[rel] = self.code_parser.generate_structure_dropdowns(
                 f_path, full_code
             )
-            sum_prompt = f"Provide a one-sentence plain text summary of what the file `{rel}` does. \n\nCRITICAL: Do NOT include any HTML tags, <details> blocks, or code signatures in your response. Just the sentence.\n\nFile Structure for context:\n{structure_dropdowns}"
-            desc = self.llm_engine.get_valid_llm_response(
-                sum_prompt, lambda t: "<details>" not in t and len(t) > 5, context=rel
-            ).strip()
-            content += (
-                f"### `{rel}`\n**Summary:** {desc}\n\n{structure_dropdowns}\n---\n"
-            )
+
+        logger.info(f"Batching Deep Symbolic Parsing for {len(all_files)} files...")
+        batch_prompt = "Provide a succinct one-sentence plain text summary for EACH of the following files based on their structure. CRITICAL: Output MUST be strictly in 'filepath: summary' format on each line. Do NOT include any HTML tags, markdown, <details> blocks, or code signatures.\n\n"
+        for rel_path, struct in file_structures.items():
+            batch_prompt += f"File `{rel_path}` Structure:\n{struct}\n\n"
+
+        batch_response = self.llm_engine.get_valid_llm_response(
+            batch_prompt, lambda t: ":" in t and len(t) > 10, context="Batch Genesis"
+        ).strip()
+
+        summaries = {}
+        for line in batch_response.splitlines():
+            if ":" in line:
+                path_part, summary_part = line.split(":", 1)
+                path_clean = path_part.replace("`", "").replace("*", "").strip()
+                summaries[path_clean] = summary_part.strip()
+
+        for f_path in all_files:
+            rel = os.path.relpath(f_path, self.target_dir)
+            structured_summary = summaries.get(rel, "No summary generated.")
+            if structured_summary == "No summary generated.":
+                for k, v in summaries.items():
+                    if k in rel or rel in k:
+                        structured_summary = v
+                        break
+            content += f"### `{rel}`\n**Summary:** {structured_summary}\n\n{file_structures[rel]}\n---\n"
+
         with open(self.analysis_path, "w", encoding="utf-8") as f:
             f.write(content)
         self.save_ledger()
