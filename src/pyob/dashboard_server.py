@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import sys
 
 from flask import Flask, jsonify, render_template
 
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     # Cleanup Flask server before exit
     def cleanup(signum, frame):
         logger.info("Shutting down Flask server...")
-        os._exit(0)
+        sys.exit(0)
 
     signal.signal(signal.SIGTERM, cleanup)
     signal.signal(signal.SIGINT, cleanup)
