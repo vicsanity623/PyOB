@@ -265,13 +265,14 @@ def get_valid_llm_response_engine(
         key = None
         now = time.time()
         # available_keys are Gemini keys
-        available_keys = [k for k in all_keys if now > key_cooldowns[k]]
+        gemini_keys = [k for k in list(key_cooldowns.keys()) if "github" not in k]
+        available_keys = [k for k in gemini_keys if now > key_cooldowns[k]]
         response_text = None
 
         if available_keys:
             key = available_keys[attempts % len(available_keys)]
             logger.info(
-                f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(available_keys)}"
+                f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(gemini_keys)}"
             )
             response_text = stream_single_llm(prompt, key=key, context=context)
         elif is_cloud:
@@ -290,15 +291,16 @@ def get_valid_llm_response_engine(
                     prompt, key=None, context=context, gh_model="Llama-3"
                 )
         else:
-            logger.info(" Using Local Ollama Engine...")
+            logger.info(" All Gemini keys exhausted. Falling back to Local Ollama Engine...")
             response_text = stream_single_llm(prompt, key=None, context=context)
 
         # --- ERROR HANDLING BLOCK ---
         if not response_text or response_text.startswith("ERROR_CODE_"):
             # 1. Handle Gemini 429 (Minute limits)
             if key and response_text and "429" in response_text:
-                key_cooldowns[key] = time.time() + 60
-                logger.warning(f"Key {key[-4:]} rate-limited. Rotating...")
+                key_cooldowns[key] = time.time() + 120
+                logger.warning(f"Key {key[-4:]} rate-limited. Pivoting to next key...")
+                attempts += 1
                 # Immediate pivot attempt for this loop
                 if is_cloud:
                     logger.warning(
@@ -307,6 +309,8 @@ def get_valid_llm_response_engine(
                     response_text = stream_single_llm(
                         prompt, key=None, context=context, gh_model="Llama-3"
                     )
+                else:
+                    continue
 
             # 2. Handle GitHub 429 (Daily Quota Limits)
             if (
@@ -345,8 +349,17 @@ def get_valid_llm_response_engine(
                         prompt, key=None, context=context, gh_model="Phi-4"
                     )
 
-            # 4. Final Fail-Safe Sleep
+            # 4. Final Catch-All / Fail-Safe Sleep
             if not response_text or response_text.startswith("ERROR_CODE_"):
+                if key and not ("429" in (response_text or "")):
+                    key_cooldowns[key] = time.time() + 10  # Short cooldown for unknown errors prevent tight loops
+                
+                if available_keys:
+                    logger.warning(f"Engine failed with error: {str(response_text)[:60]}... Rotating...")
+                    attempts += 1
+                    time.sleep(2)
+                    continue
+                
                 wait = 90
                 logger.warning(
                     f"All Engines failed or exhausted. Sleeping {wait}s for refill..."
