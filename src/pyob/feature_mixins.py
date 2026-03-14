@@ -279,11 +279,11 @@ class FeatureOperationsMixin:
         safety, and verification gates.
         """
         logger.info("Implementing approved PRs seamlessly from XML blocks...")
-        file_sections = re.split(r"## 🛠 Review for `(.*?)`", pr_content)
+        file_sections = re.split(r"## (?:🛠 )?Review for `(.*?)`", pr_content)
 
         # Guard: Ensure content actually contains patches
         if len(file_sections) < 3:
-            logger.error("No valid file patches found in PR.md to apply.")
+            logger.error(f"No valid file patches found in {PR_FILE_NAME} to apply.")
             return False
 
         all_success = True

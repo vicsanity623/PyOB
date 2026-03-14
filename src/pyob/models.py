@@ -189,14 +189,18 @@ def stream_single_llm(
             i = (i + 1) % len(spinner_chars)
             time.sleep(0.1)
 
-    t = threading.Thread(target=spinner, daemon=True)
-    t.start()
+    if is_cloud:
+        print(f"Reading [{context}] ~{input_tokens} ctx...", flush=True)
+    else:
+        t = threading.Thread(target=spinner, daemon=True)
+        t.start()
 
     def on_chunk():
         if not first_chunk_received[0]:
             first_chunk_received[0] = True
-            sys.stdout.write("\r\033[K")
-            sys.stdout.flush()
+            if not is_cloud:
+                sys.stdout.write("\r\033[K")
+                sys.stdout.flush()
             source = f"Gemini ...{key[-4:]}" if key else f"GitHub Models ({gh_model})"
             if not key and not is_cloud:
                 source = "Local Ollama"
