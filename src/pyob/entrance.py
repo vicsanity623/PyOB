@@ -23,6 +23,26 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 
+def load_config() -> dict:
+    """Loads configuration and validates gemini_keys.
+
+    As per MEMORY.md, non-empty gemini_keys are required.
+    This function checks for the GEMINI_API_KEY environment variable.
+    """
+    config = {}
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if not gemini_key:
+        logger.critical(
+            "CRITICAL ERROR: GEMINI_API_KEY environment variable is not set or is empty."
+        )
+        logger.critical(
+            "Please set the GEMINI_API_KEY environment variable to proceed."
+        )
+        sys.exit(1)
+    config["gemini_api_key"] = gemini_key
+    return config
+
+
 class EntranceController(EntranceMixin):
     ENGINE_FILES = [
         "autoreviewer.py",
