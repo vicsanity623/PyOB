@@ -57,6 +57,9 @@ class EntranceController(EntranceMixin):
         self.current_iteration = 1
 
         if not self.skip_dashboard:
+            logger.info(
+                "Dashboard active: Initializing with EntranceController instance."
+            )
             self.start_dashboard()
 
     def set_manual_target_file(self, file_path: str):
