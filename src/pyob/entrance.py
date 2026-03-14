@@ -136,7 +136,15 @@ class EntranceController(EntranceMixin):
 
         test_cmd = [sys.executable, "-c", "import pyob.entrance; print('SUCCESS')"]
         env = os.environ.copy()
-        env["PYTHONPATH"] = os.path.join(self.target_dir, "src")
+        # Ensure the directory containing the 'pyob' package is in PYTHONPATH for the subprocess
+        current_pythonpath_list = env.get("PYTHONPATH", "").split(os.pathsep)
+        if _pyob_package_root_dir not in current_pythonpath_list:
+            if env.get("PYTHONPATH"):
+                env["PYTHONPATH"] = (
+                    f"{_pyob_package_root_dir}{os.pathsep}{env['PYTHONPATH']}"
+                )
+            else:
+                env["PYTHONPATH"] = _pyob_package_root_dir
 
         try:
             result = subprocess.run(test_cmd, capture_output=True, text=True, env=env)
