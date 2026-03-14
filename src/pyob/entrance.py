@@ -48,7 +48,7 @@ def load_config() -> dict:
                 logger.warning(f"WARNING: Could not parse config.json at {path}: {e}")
 
     # Environment variable overrides config.json value
-    gemini_key_env = os.environ.get("GEMINI_API_KEY")
+    gemini_key_env = os.environ.get("PYOB_GEMINI_KEYS")
     if gemini_key_env:
         config["gemini_api_key"] = gemini_key_env
     # Now, gemini_key should be retrieved from the merged config for validation
