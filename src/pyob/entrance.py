@@ -498,7 +498,9 @@ src/pyob/core_utils.py
             with open(f_path, "r", encoding="utf-8", errors="ignore") as f:
                 full_code = f.read()
             self.update_ledger_for_file(rel, full_code)
-            file_structures[rel] = self.code_parser.generate_structure_dropdowns(f_path, full_code)
+            file_structures[rel] = self.code_parser.generate_structure_dropdowns(
+                f_path, full_code
+            )
 
         logger.info(f"Batching Deep Symbolic Parsing for {len(all_files)} files...")
         batch_prompt = "Provide a succinct one-sentence plain text summary for EACH of the following files based on their structure. CRITICAL: Output MUST be strictly in 'filepath: summary' format on each line. Do NOT include any HTML tags, markdown, <details> blocks, or code signatures.\n\n"
@@ -524,9 +526,7 @@ src/pyob/core_utils.py
                     if k in rel or rel in k:
                         structured_summary = v
                         break
-            content += (
-                f"### `{rel}`\n**Summary:** {structured_summary}\n\n{file_structures[rel]}\n---\n"
-            )
+            content += f"### `{rel}`\n**Summary:** {structured_summary}\n\n{file_structures[rel]}\n---\n"
 
         with open(self.analysis_path, "w", encoding="utf-8") as f:
             f.write(content)

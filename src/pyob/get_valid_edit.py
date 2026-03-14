@@ -171,7 +171,9 @@ class GetValidEditMixin:
                     key_cooldowns[key] = time.time() + 10
 
                 if available_keys:
-                    logger.warning(f"Engine failed with error: {str(response)[:60]}... Rotating...")
+                    logger.warning(
+                        f"Engine failed with error: {str(response)[:60]}... Rotating..."
+                    )
                     attempts += 1
                     time.sleep(2)
                     continue
