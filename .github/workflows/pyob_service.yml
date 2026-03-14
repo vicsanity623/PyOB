@@ -28,28 +28,38 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyOB
+      - name: Install Dependencies
         run: |
+          # Install the local package in editable mode
           pip install -e .
+          
+          # Explicitly install Flask and its dependencies for the dashboard
+          pip install flask blinker click itsdangerous jinja2 markupsafe werkzeug
+          
+          # Install from requirements.txt if you have one
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          
+          # Install dev and type-checking tools
           pip install ruff mypy pytest types-requests types-chardet
 
       - name: Run PyOB Service
         env:
           PYOB_GEMINI_KEYS: ${{ secrets.PYOB_GEMINI_KEYS }}
-          # This maps your secret to the variable the Python code expects
           GITHUB_TOKEN: ${{ secrets.AI_MODELS_TOKEN }} 
-          # The GitHub CLI will automatically use this if it's named GH_TOKEN
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
           git config --global user.email "pyob-bot@users.noreply.github.com"
           git config --global user.name "pyob-bot"
           
-          # 1. Start the SSH Tunnel
+          # 1. Start the SSH Tunnel (Pinggy)
           ssh -o StrictHostKeyChecking=no -R 80:localhost:5000 a.pinggy.io "printf 'keepalive'" > tunnel.log 2>&1 &
           sleep 10
           
           # 2. Launch the bot
+          # Using --no-dashboard in the actual evolution command if you want to skip 
+          # local browser launch, but keeping the server running for the tunnel.
           pyob . --iterations 2
+          
           echo "=================================================="
           echo "🚀 LIVE HUD TUNNEL (CURRENT RUN):"
           cat tunnel.log | grep -o 'https://[^ ]*\.pinggy.link' || echo "Link generating... check again in 30s"
