@@ -30,11 +30,18 @@ def load_config():
     # 2. Check for Environment Variables (Ensures it works in GitHub Actions/Docker)
     env_keys = os.environ.get("PYOB_GEMINI_KEYS")
     if env_keys:
-        return {
-            "gemini_keys": env_keys,
-            "gemini_model": os.environ.get("PYOB_GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-            "local_model": os.environ.get("PYOB_LOCAL_MODEL", DEFAULT_LOCAL_MODEL),
-        }
+        if not env_keys.strip():  # Ensure non-empty
+            print(
+                "Warning: PYOB_GEMINI_KEYS environment variable is empty. Falling back to other configuration methods."
+            )
+        else:
+            return {
+                "gemini_keys": env_keys,
+                "gemini_model": os.environ.get(
+                    "PYOB_GEMINI_MODEL", DEFAULT_GEMINI_MODEL
+                ),
+                "local_model": os.environ.get("PYOB_LOCAL_MODEL", DEFAULT_LOCAL_MODEL),
+            }
 
     # 3. Safety Check for Headless Environments
     if not sys.stdin.isatty():
