@@ -129,7 +129,7 @@ class EvolutionMixin:
     def pick_target_file(self) -> str:
         """Uses LLM to strategically pick the next file to evolve."""
         if getattr(self, "manual_target_file", None):
-            target = self.manual_target_file;
+            target = self.manual_target_file
             self.manual_target_file = None
             return target
 
@@ -143,7 +143,6 @@ class EvolutionMixin:
                     last_file = match.group(1)
                     break
         prompt = f"Choose ONE relative file path to review next based on ANALYSIS.md/HISTORY.md.\nSTRATEGIC RULES:\n1. DO NOT pick `{last_file}`.\n2. Rotate between logic, UI, and styles.\nOutput ONLY the path.\n\n### Analysis:\n{analysis}\n### History:\n{history}"
-        
         def val(text: str) -> bool:
             path = getattr(self, "_extract_path_from_llm_response")(text)
             return os.path.exists(os.path.join(self.target_dir, path)) and path != last_file
@@ -162,9 +161,9 @@ class EvolutionMixin:
         for f_path in all_files:
             rel = os.path.relpath(f_path, self.target_dir)
             with open(f_path, "r", encoding="utf-8", errors="ignore") as f:
-            code = f.read()
-            self.update_ledger_for_file(rel, code)
-            file_structures[rel] = self.code_parser.generate_structure_dropdowns(f_path, code)
+                code = f.read()
+                    self.update_ledger_for_file(rel, code)
+                        file_structures[rel] = self.code_parser.generate_structure_dropdowns(f_path, code)
 
         batch_prompt = "Output 'filepath: summary' for each:\n" + "\n".join(f"{r}: {s}" for r, s in file_structures.items())
         batch_resp = getattr(self, "get_valid_llm_response")(batch_prompt, lambda t: ":" in t, context="Batch Genesis").strip()
