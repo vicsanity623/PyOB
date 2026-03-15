@@ -294,11 +294,13 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             self.self_evolved_flag = False
 
             # --- CONTINUOUS EVOLUTION REFRESH ---
-            # Every iteration, we wipe the bot's 'Short-Term Memory' so it 
-            # re-scans the files. This allows Iteration 2 to 'see' the 
+            # Every iteration, we wipe the bot's 'Short-Term Memory' so it
+            # re-scans the files. This allows Iteration 2 to 'see' the
             # changes made in Iteration 1, even if they are on a PR branch.
-            logger.info(f"--- REFRESHING SYMBOLIC CONTEXT FOR ITERATION {iteration} ---")
-            
+            logger.info(
+                f"--- REFRESHING SYMBOLIC CONTEXT FOR ITERATION {iteration} ---"
+            )
+
             # 1. Clear the derived project map files
             if os.path.exists(self.analysis_path):
                 os.remove(self.analysis_path)
