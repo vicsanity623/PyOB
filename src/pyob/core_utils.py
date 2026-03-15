@@ -348,10 +348,7 @@ class CoreUtilsMixin:
         """Wrapper that ensures key rotation is used for all requests."""
         return str(
             get_valid_llm_response_engine(
-                prompt, 
-                validator, 
-                self.key_cooldowns, 
-                context
+                prompt, validator, self.key_cooldowns, context
             )
         )
 
