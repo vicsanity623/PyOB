@@ -479,8 +479,26 @@ class EntranceController(EntranceMixin, CoreUtilsMixin):
                 )
 
                 if is_html:
-                    time.sleep(5)
-                    return True
+                    # For HTML, we launch and wait a short period for the command itself to complete/detach.
+                    # We still need to call communicate to clean up the Popen object.
+                    try:
+                        stdout, stderr = process.communicate(timeout=5)
+                        if process.returncode == 0:
+                            logger.info("HTML command launched successfully.")
+                            return True
+                        else:
+                            logger.warning(
+                                f"HTML command failed (code {process.returncode}): {stderr.strip()}"
+                            )
+                            return False
+                    except subprocess.TimeoutExpired:
+                        # Command likely launched and detached.
+                        process.terminate()  # Terminate the Popen wrapper
+                        process.wait()  # Ensure cleanup
+                        logger.info(
+                            "HTML command launched and detached, assuming success."
+                        )
+                        return True
 
                 stdout, stderr = process.communicate(timeout=10)
             except subprocess.TimeoutExpired:
