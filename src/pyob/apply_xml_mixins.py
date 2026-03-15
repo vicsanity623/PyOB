@@ -176,7 +176,7 @@ class ApplyXMLMixin:
         for i in range(len(lines)):
             test_block = normalize("\n".join(lines[i : i + len(search_lines)]))
             if norm_search in test_block:
-                lines[i : i + len(search_lines)] = [replace]
+                lines[i : i + len(search_lines)] = replace.splitlines()
                 logger.info(f"Normalization match succeeded at line {i + 1}.")
                 return "\n".join(lines), True
         return source, False
