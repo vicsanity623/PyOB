@@ -391,9 +391,16 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         with open(self.analysis_path, "r", encoding="utf-8") as f:
             analysis_text = f.read()
         pattern = rf"### `{re.escape(rel_path)}`.*?(?=### `|---\n\Z)"
-        updated = re.sub(pattern, new_block, analysis_text, flags=re.DOTALL)
+        updated_text, num_subs = re.subn(
+            pattern, new_block, analysis_text, flags=re.DOTALL
+        )
+
+        if num_subs == 0:
+            # If no existing block was found, append the new block
+            updated_text = analysis_text + new_block
+
         with open(self.analysis_path, "w", encoding="utf-8") as f:
-            f.write(updated)
+            f.write(updated_text)
 
     def update_ledger_for_file(self, rel_path: str, code: str):
         ext = os.path.splitext(rel_path)[1]
