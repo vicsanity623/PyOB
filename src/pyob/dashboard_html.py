@@ -138,10 +138,8 @@ OBSERVER_HTML = """
                 const analysisContainer = document.getElementById('analysis');
                 analysisContainer.innerHTML = ''; // Clear existing content
 
-                // Define acknowledgeIssue locally to fit within one edit block
-                async function acknowledgeIssue(issueId) {
-                    try {
-                        const response = await fetch(`/api/analysis/issues/${issueId}/edit`, {
+                // The acknowledgeIssue function is now defined globally below updateStats.
+                // No local definition needed here.
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ status: 'acknowledged' })
