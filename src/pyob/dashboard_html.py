@@ -180,8 +180,9 @@ OBSERVER_HTML = """
                             <span style="color: var(--accent); font-weight: 700;">Patch ID: ${patch.id}</span><br>
                             <span style="font-size: 0.8em; color: var(--dim);">File: ${patch.target_file}</span><br>
                             <span style="font-size: 0.8em; color: var(--dim);">Description: ${patch.description || 'N/A'}</span><br>
-                            <button onclick="reviewPatch('${patch.id}', 'approve')" style="width: 48%; margin-right: 4%; background: #00cc66; color: #000;">APPROVE</button>
-                            <button onclick="reviewPatch('${patch.id}', 'reject')" style="width: 48%; background: #cc0000; color: #fff;">REJECT</button>
+<button onclick="reviewPatch('${patch.id}', 'approve')" style="width: 32%; margin-right: 2%; background: #00cc66; color: #000;">APPROVE</button>
+            <button onclick="reviewPatch('${patch.id}', 'approved')" style="width: 32%; margin-right: 2%; background: #00cc00; color: #000;">APPROVED</button>
+            <button onclick="reviewPatch('${patch.id}', 'reject')" style="width: 32%; background: #cc0000; color: #fff;">REJECT</button>
                         `;
                         patchesDiv.appendChild(patchElement);
                     });
@@ -196,11 +197,19 @@ OBSERVER_HTML = """
 
         async function reviewPatch(patchId, action) {
             try {
-                await fetch('/api/review_patch', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ patch_id: patchId, action: action })
-                });
+                if (action === 'approved') {
+                    await fetch('/api/approve_patch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patch_id: patchId })
+                    });
+                } else {
+                    await fetch('/api/review_patch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patch_id: patchId, action: action })
+                    });
+                }
                 await updateStats();
             } catch (e) {
                 console.error(`Failed to ${action} patch ${patchId}:`, e);
