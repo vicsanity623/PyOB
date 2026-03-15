@@ -1,6 +1,6 @@
 import os
 
-from .apply_xml_mixins import ApplyXMLMixin
+from .xml_mixin import ApplyXMLMixin
 from .autoreviewer import AutoReviewer
 
 
