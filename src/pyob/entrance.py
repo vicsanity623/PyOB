@@ -262,20 +262,19 @@ class EntranceController(EntranceMixin, CoreUtilsMixin):
         except Exception as e:
             logger.error(f"Production Build Failed: {e}")
 
-    def load_ledger(self):
+    def load_ledger(self) -> dict:
+        """Loads the symbolic ledger from disk with type safety."""
         if os.path.exists(self.symbols_path):
             try:
                 with open(self.symbols_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return data
             except (FileNotFoundError, json.JSONDecodeError) as e:
                 logger.warning(
                     f"Failed to load SYMBOLS.json, initializing empty ledger: {e}"
                 )
         return {"definitions": {}, "references": {}}
-
-    def save_ledger(self):
-        with open(self.symbols_path, "w", encoding="utf-8") as f:
-            json.dump(self.ledger, f, indent=2)
 
     def run_master_loop(self):
         logger.info(
