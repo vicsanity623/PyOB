@@ -1,9 +1,15 @@
 import json
-from typing import Any
+from typing import Protocol
+
+
+class CascadeControllerProtocol(Protocol):
+    def add_to_cascade_queue(self, item: str) -> None: ...
+    def remove_cascade_queue_item(self, item_id: str) -> None: ...
+    def move_cascade_queue_item(self, item_id: str, direction: str) -> None: ...
 
 
 class CascadeQueueHandler:
-    def __init__(self, controller: Any):
+    def __init__(self, controller: CascadeControllerProtocol):
         self.controller = controller
 
     def handle_add_to_cascade_queue(self, item: str):
