@@ -1,18 +1,17 @@
-import difflib
-import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
-from typing import Callable, Any
+from typing import Any
 
 from .core_utils import logger
 
 
 class EvolutionMixin:
     """Methods for project analysis, verification, and git librarian duties."""
+
     target_dir: str
     analysis_path: str
     history_path: str
@@ -47,7 +46,9 @@ class EvolutionMixin:
         branch_name = f"pyob-evolution-v{iteration}-{timestamp}"
         logger.info(f" LIBRARIAN: Publishing Evolution: {title}")
 
-        if not getattr(self, "_run_git_command")(["git", "checkout", "-b", branch_name]):
+        if not getattr(self, "_run_git_command")(
+            ["git", "checkout", "-b", branch_name]
+        ):
             return
         getattr(self, "_run_git_command")(["git", "add", rel_path])
         if not getattr(self, "_run_git_command")(["git", "commit", "-m", title]):
@@ -55,9 +56,21 @@ class EvolutionMixin:
 
         if shutil.which("gh"):
             logger.info("Pushing to GitHub and opening Pull Request...")
-            if getattr(self, "_run_git_command")(["git", "push", "origin", branch_name]):
+            if getattr(self, "_run_git_command")(
+                ["git", "push", "origin", branch_name]
+            ):
                 getattr(self, "_run_git_command")(
-                    ["gh", "pr", "create", "--title", title, "--body", body, "--base", "main"]
+                    [
+                        "gh",
+                        "pr",
+                        "create",
+                        "--title",
+                        title,
+                        "--body",
+                        body,
+                        "--base",
+                        "main",
+                    ]
                 )
         else:
             logger.warning("GitHub CLI (gh) not found. Committed locally only.")
@@ -83,7 +96,11 @@ class EvolutionMixin:
                 python_cmd = venv_py if os.path.exists(venv_py) else sys.executable
                 cmd = [python_cmd, entry_file]
             elif is_js:
-                cmd = ["npm", "start"] if entry_file.endswith("package.json") else ["node", entry_file]
+                cmd = (
+                    ["npm", "start"]
+                    if entry_file.endswith("package.json")
+                    else ["node", entry_file]
+                )
             elif is_html:
                 if os.environ.get("GITHUB_ACTIONS") == "true":
                     return True
@@ -106,7 +123,7 @@ class EvolutionMixin:
                     stderr=subprocess.PIPE,
                     text=True,
                     cwd=self.target_dir,
-                    shell=use_shell
+                    shell=use_shell,
                 )
                 if is_html:
                     try:
@@ -125,12 +142,20 @@ class EvolutionMixin:
             duration = time.time() - start_time
             has_error = any(
                 kw in stderr or kw in stdout
-                for kw in ["Traceback", "Exception", "Error:", "ModuleNotFoundError", "ImportError"]
+                for kw in [
+                    "Traceback",
+                    "Exception",
+                    "Error:",
+                    "ModuleNotFoundError",
+                    "ImportError",
+                ]
             )
             if process.returncode not in (0, 15, -15, None) or has_error:
                 logger.warning(f"App crashed after {duration:.1f}s!")
                 if attempt < 2:
-                    self.llm_engine._fix_runtime_errors(stderr + "\n" + stdout, entry_file)
+                    self.llm_engine._fix_runtime_errors(
+                        stderr + "\n" + stdout, entry_file
+                    )
             else:
                 logger.info(f"App ran successfully for {duration:.1f}s.")
                 return True
@@ -164,9 +189,14 @@ class EvolutionMixin:
 
         def val(text: str) -> bool:
             path = getattr(self, "_extract_path_from_llm_response")(text)
-            return os.path.exists(os.path.join(self.target_dir, path)) and path != last_file
+            return (
+                os.path.exists(os.path.join(self.target_dir, path))
+                and path != last_file
+            )
 
-        response = getattr(self, "get_valid_llm_response")(prompt, val, context="Target Selector")
+        response = getattr(self, "get_valid_llm_response")(
+            prompt, val, context="Target Selector"
+        )
         return str(getattr(self, "_extract_path_from_llm_response")(response))
 
     def build_initial_analysis(self):
@@ -178,7 +208,7 @@ class EvolutionMixin:
         p_summary = getattr(self, "get_valid_llm_response")(
             f"Write a 2-sentence summary of this project: {struct_map}",
             lambda t: len(t) > 5,
-            context="Project Genesis"
+            context="Project Genesis",
         ).strip()
         content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n---\n\n## File Directory\n\n"
 
@@ -188,21 +218,21 @@ class EvolutionMixin:
             with open(f_path, "r", encoding="utf-8", errors="ignore") as f:
                 code = f.read()
             self.update_ledger_for_file(rel, code)
-            file_structures[rel] = self.code_parser.generate_structure_dropdowns(f_path, code)
+            file_structures[rel] = self.code_parser.generate_structure_dropdowns(
+                f_path, code
+            )
 
-        batch_prompt = (
-            "Output 'filepath: summary' for each:\n" +
-            "\n".join(f"{r}: {s}" for r, s in file_structures.items())
+        batch_prompt = "Output 'filepath: summary' for each:\n" + "\n".join(
+            f"{r}: {s}" for r, s in file_structures.items()
         )
         batch_resp = getattr(self, "get_valid_llm_response")(
-            batch_prompt,
-            lambda t: ":" in t,
-            context="Batch Genesis"
+            batch_prompt, lambda t: ":" in t, context="Batch Genesis"
         ).strip()
 
         summaries = {
             line.split(":", 1)[0].strip("`* "): line.split(":", 1)[1].strip()
-            for line in batch_resp.splitlines() if ":" in line
+            for line in batch_resp.splitlines()
+            if ":" in line
         }
 
         for f_path in all_files:
