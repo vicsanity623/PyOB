@@ -117,6 +117,7 @@ class EvolutionMixin:
             use_shell = bool(cmd and (cmd[0].startswith("start") or cmd[0] == "open"))
 
             start_time = time.time()
+            stdout, stderr = "", ""  # Initialize stdout and stderr
             try:
                 process = subprocess.Popen(
                     cmd,
@@ -130,12 +131,15 @@ class EvolutionMixin:
                     try:
                         stdout, stderr = process.communicate(timeout=5)
                         if process.returncode == 0:
-                            return True
+                            return True  # HTML launched and exited cleanly within 5s
                     except subprocess.TimeoutExpired:
                         process.terminate()
                         process.wait()
-                        return True
-                stdout, stderr = process.communicate(timeout=10)
+                        return True  # HTML launched and ran for 5s, considered success
+                    # If HTML process exited with non-zero code within 5s,
+                    # stdout/stderr are already captured, fall through to general error handling.
+                else:  # For non-HTML processes, use the 10s timeout
+                    stdout, stderr = process.communicate(timeout=10)
             except Exception as e:
                 logger.error(f"Execution failed: {e}")
                 stdout, stderr = "", str(e)
