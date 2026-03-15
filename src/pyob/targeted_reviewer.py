@@ -1,7 +1,7 @@
 import os
 
-from .apply_xml_mixins import ApplyXMLMixin
 from .autoreviewer import AutoReviewer
+from .xml_mixin import ApplyXMLMixin
 
 
 class TargetedReviewer(AutoReviewer, ApplyXMLMixin):

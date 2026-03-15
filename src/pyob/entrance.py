@@ -69,7 +69,6 @@ def load_config() -> dict:
 
 class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
     ENGINE_FILES = [
-        "apply_xml_mixins.py",
         "autoreviewer.py",
         "cascade_queue_handler.py",
         "core_utils.py",
@@ -90,6 +89,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         "get_valid_edit.py",
         "stats_updater.py",
         "targeted_reviewer.py",
+        "xml_mixin.py",
     ]
 
     def __init__(self, target_dir: str, dashboard_active: bool = True):
