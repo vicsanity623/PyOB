@@ -1,18 +1,17 @@
-import difflib
-import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
-from typing import Callable, Any, Optional
+from typing import Any, Optional
 
 from .core_utils import logger
 
 
 class EvolutionMixin:
     """Methods for project analysis, verification, and git librarian duties."""
+
     target_dir: str
     analysis_path: str
     history_path: str
@@ -48,7 +47,9 @@ class EvolutionMixin:
         branch_name = f"pyob-evolution-v{iteration}-{timestamp}"
         logger.info(f" LIBRARIAN: Publishing Evolution: {title}")
 
-        if not getattr(self, "_run_git_command")(["git", "checkout", "-b", branch_name]):
+        if not getattr(self, "_run_git_command")(
+            ["git", "checkout", "-b", branch_name]
+        ):
             return
         getattr(self, "_run_git_command")(["git", "add", rel_path])
         if not getattr(self, "_run_git_command")(["git", "commit", "-m", title]):
@@ -56,7 +57,9 @@ class EvolutionMixin:
 
         if shutil.which("gh"):
             logger.info("Pushing to GitHub and opening Pull Request...")
-            if getattr(self, "_run_git_command")(["git", "push", "origin", branch_name]):
+            if getattr(self, "_run_git_command")(
+                ["git", "push", "origin", branch_name]
+            ):
                 getattr(self, "_run_git_command")(
                     [
                         "gh",
