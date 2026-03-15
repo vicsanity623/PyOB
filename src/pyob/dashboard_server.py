@@ -40,6 +40,13 @@ def history():
         return jsonify({"success": True, "data": history_content})
     except FileNotFoundError:
         return jsonify({"success": False, "message": "History not available"}), 404
+    except UnicodeDecodeError:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Error reading history content due to encoding issue",
+            }
+        ), 500
 
 
 @app.route("/api/analysis-data")
@@ -53,6 +60,13 @@ def api_analysis_data():
         return jsonify(
             {"success": False, "message": "Analysis data not available"}
         ), 404
+    except UnicodeDecodeError:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Error parsing analysis content due to encoding issue",
+            }
+        ), 500
 
 
 @app.route("/api/history-data")
