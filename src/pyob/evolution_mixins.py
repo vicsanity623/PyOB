@@ -1,17 +1,18 @@
+import difflib
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
-from typing import Any
+from typing import Callable, Any, Optional
 
 from .core_utils import logger
 
 
 class EvolutionMixin:
     """Methods for project analysis, verification, and git librarian duties."""
-
     target_dir: str
     analysis_path: str
     history_path: str
@@ -20,6 +21,7 @@ class EvolutionMixin:
     code_parser: Any
     ledger: dict
     key_cooldowns: dict
+    manual_target_file: Optional[str]
 
     def handle_git_librarian(self, rel_path: str, iteration: int):
         """Creates a branch, generates an AI summary, and opens a professional PR."""
@@ -46,9 +48,7 @@ class EvolutionMixin:
         branch_name = f"pyob-evolution-v{iteration}-{timestamp}"
         logger.info(f" LIBRARIAN: Publishing Evolution: {title}")
 
-        if not getattr(self, "_run_git_command")(
-            ["git", "checkout", "-b", branch_name]
-        ):
+        if not getattr(self, "_run_git_command")(["git", "checkout", "-b", branch_name]):
             return
         getattr(self, "_run_git_command")(["git", "add", rel_path])
         if not getattr(self, "_run_git_command")(["git", "commit", "-m", title]):
@@ -56,9 +56,7 @@ class EvolutionMixin:
 
         if shutil.which("gh"):
             logger.info("Pushing to GitHub and opening Pull Request...")
-            if getattr(self, "_run_git_command")(
-                ["git", "push", "origin", branch_name]
-            ):
+            if getattr(self, "_run_git_command")(["git", "push", "origin", branch_name]):
                 getattr(self, "_run_git_command")(
                     [
                         "gh",
@@ -165,13 +163,16 @@ class EvolutionMixin:
 
     def pick_target_file(self) -> str:
         """Uses LLM to strategically pick the next file to evolve."""
-        if getattr(self, "manual_target_file", None):
-            target = self.manual_target_file
-            self.manual_target_file = None
-            return target
+        # Fix: Cast manual_target_file to Optional[str] via local variable for Mypy
+        manual: Optional[str] = getattr(self, "manual_target_file", None)
+        if manual:
+            setattr(self, "manual_target_file", None)
+            return str(manual)
 
-        analysis = getattr(self, "_read_file")(self.analysis_path)
-        history = getattr(self, "_read_file")(self.history_path) or "No history yet."
+        analysis = str(getattr(self, "_read_file")(self.analysis_path))
+        history = str(
+            getattr(self, "_read_file")(self.history_path) or "No history yet."
+        )
         last_file = ""
         for line in reversed(history.strip().split("\n")):
             if line.startswith("## "):
@@ -197,6 +198,7 @@ class EvolutionMixin:
         response = getattr(self, "get_valid_llm_response")(
             prompt, val, context="Target Selector"
         )
+        # Fix: Explicitly return a string
         return str(getattr(self, "_extract_path_from_llm_response")(response))
 
     def build_initial_analysis(self):
@@ -210,7 +212,7 @@ class EvolutionMixin:
             lambda t: len(t) > 5,
             context="Project Genesis",
         ).strip()
-        content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n---\n\n## File Directory\n\n"
+        content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n-----n\n## File Directory\n\n"
 
         file_structures = {}
         for f_path in all_files:
