@@ -232,55 +232,22 @@ class AutoReviewer(
                 logger.info(
                     f"Found pending {PR_FILE_NAME} and/or {FEATURE_FILE_NAME} from a previous run."
                 )
-                user_input = self.get_user_approval(
-                    "Hit ENTER to PROCEED, type 'SKIP' to ignore, or 'DELETE' to discard",
-                    timeout=220,
+                # Use the helper function to process existing pending proposals from a previous run.
+                # The helper will prompt the user and handle application, rollback, or deletion.
+                proposals_handled = self._handle_pending_proposals(
+                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",  # The helper adds 'DELETE' option if allow_delete=True
+                    allow_delete=True,
                 )
-                if user_input == "PROCEED":
-                    backup_state = self.backup_workspace()
-                    success = True
-                    if os.path.exists(self.pr_file):
-                        with open(self.pr_file, "r", encoding="utf-8") as f:
-                            if not self.implement_pr(f.read()):
-                                success = False
-                    if success and os.path.exists(self.feature_file):
-                        with open(self.feature_file, "r", encoding="utf-8") as f:
-                            if not self.implement_feature(f.read()):
-                                success = False
-                    if not success:
-                        self.restore_workspace(backup_state)
-                        logger.warning("Rollback performed due to unfixable errors.")
-                        self.session_context.append(
-                            "CRITICAL: The last refactor/feature attempt FAILED and was ROLLED BACK. "
-                            "The files on disk have NOT changed. Check FAILED_FEATURE.md for error logs."
-                        )
-
-                        failure_report = f"\n\n### FAILURE ATTEMPT LOGS ({time.strftime('%Y-%m-%d %H:%M:%S')})\n"
-                        failure_report += "\n".join(self.session_context[-3:])
-
-                        if os.path.exists(self.pr_file):
-                            with open(self.pr_file, "r", encoding="utf-8") as f:
-                                content = f.read()
-                            with open(self.failed_pr_file, "w") as f:
-                                f.write(content + failure_report)
-                            os.remove(self.pr_file)
-
-                        if os.path.exists(self.feature_file):
-                            with open(self.feature_file, "r", encoding="utf-8") as f:
-                                content = f.read()
-                            with open(self.failed_feature_file, "w") as f:
-                                f.write(content + failure_report)
-                            os.remove(self.feature_file)
-
+                if proposals_handled:
                     changes_made = True
-                elif user_input == "DELETE":
-                    if os.path.exists(self.pr_file):
-                        os.remove(self.pr_file)
-                    if os.path.exists(self.feature_file):
-                        os.remove(self.feature_file)
-                    logger.info(
-                        "Deleted pending proposal files. Starting fresh scan..."
-                    )
+                # Use the helper function to process existing pending proposals from a previous run.
+                # The helper will prompt the user and handle application, rollback, or deletion.
+                proposals_handled = self._handle_pending_proposals(
+                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",  # The helper adds 'DELETE' option if allow_delete=True
+                    allow_delete=True,
+                )
+                if proposals_handled:
+                    changes_made = True
             if not changes_made:
                 logger.info("==================================================")
                 logger.info("PHASE 1: Initial Assessment & Codebase Scan")
