@@ -12,6 +12,7 @@ from pyob.data_parser import DataParser
 app = Flask(__name__)
 
 logger = logging.getLogger(__name__)
+data_parser_instance = DataParser()  # Initialize DataParser once globally
 
 
 @app.route("/")
@@ -152,6 +153,9 @@ def read_file(filename):
     try:
         with open(filename, "r", encoding="utf-8") as f:
             return f.read()
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {filename}: {e}")
+        raise
     except UnicodeDecodeError as e:
         logger.error(f"Error reading file {filename}: {e}")
         raise
