@@ -235,20 +235,19 @@ class AutoReviewer(
                 # Use the helper function to process existing pending proposals from a previous run.
                 # The helper will prompt the user and handle application, rollback, or deletion.
                 proposals_handled = self._handle_pending_proposals(
-                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",  # The helper adds 'DELETE' option if allow_delete=True
+                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",
                     allow_delete=True,
                 )
-                if proposals_handled:
-                    changes_made = True
-                # Use the helper function to process existing pending proposals from a previous run.
-                # The helper will prompt the user and handle application, rollback, or deletion.
-                proposals_handled = self._handle_pending_proposals(
-                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",  # The helper adds 'DELETE' option if allow_delete=True
-                    allow_delete=True,
-                )
-                if proposals_handled:
-                    changes_made = True
-            if not changes_made:
+                if not proposals_handled:
+                    logger.info(
+                        "Pending proposals were not applied or deleted. Halting current pipeline iteration to await user action."
+                    )
+                    return  # Exit early, do not generate new work
+                # If proposals_handled is True (applied or deleted), then `changes_made` should be True
+                # to ensure the subsequent `if not changes_made:` block is skipped.
+                changes_made = True  # Explicitly set to True if proposals were handled.
+
+            if not changes_made:  # This block will now only run if there were NO pending proposals initially.
                 logger.info("==================================================")
                 logger.info("PHASE 1: Initial Assessment & Codebase Scan")
                 logger.info("==================================================")
