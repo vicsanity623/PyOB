@@ -235,15 +235,7 @@ class AutoReviewer(
                 # Use the helper function to process existing pending proposals from a previous run.
                 # The helper will prompt the user and handle application, rollback, or deletion.
                 proposals_handled = self._handle_pending_proposals(
-                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",  # The helper adds 'DELETE' option if allow_delete=True
-                    allow_delete=True,
-                )
-                if proposals_handled:
-                    changes_made = True
-                # Use the helper function to process existing pending proposals from a previous run.
-                # The helper will prompt the user and handle application, rollback, or deletion.
-                proposals_handled = self._handle_pending_proposals(
-                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",  # The helper adds 'DELETE' option if allow_delete=True
+                    "Hit ENTER to PROCEED, type 'SKIP' to ignore",
                     allow_delete=True,
                 )
                 if proposals_handled:
