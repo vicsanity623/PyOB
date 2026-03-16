@@ -141,8 +141,7 @@ def api_analysis_data():
 def api_history_data():
     try:
         history_content = read_file("HISTORY.md")
-        data_parser = DataParser()
-        parsed_data = data_parser.parse_history_content(history_content)
+        parsed_data = data_parser_instance.parse_history_content(history_content)
         return jsonify(parsed_data)
     except FileNotFoundError:
         return jsonify({"success": False, "message": "History data not available"}), 404
