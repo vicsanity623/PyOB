@@ -19,7 +19,7 @@
 I built this shit for me myself and I, if you want to know how this works send me an email at vicsanity623@gmail.com and maybe ill read it.
 
 
-I got sick and tired of the fucking internet belittleing me for writing auch poor quality code completely missing the intention and purpose.
+I got sick and tired of the fucking internet belittleing me for writing such poor quality code completely missing the intention and purpose.
 
 I know god damn well i have zero years experience in code languages and writing code.
 
@@ -29,7 +29,7 @@ i build shit i think of! plain and simple
 
 and it fuckin works exactly the way i imagine them to
 
-so if thats not preof that i know how to get shit done then let this fuckin epic open source repo prove to all you fuckin pretentious fucks that you never need to take a aingle course for coding in 2026
+so if thats not proof that i know how to get shit done then let this fuckin epic open source repo prove to all you fuckin pretentious fucks that you never need to take a single course for coding in 2026!!!!
 
 yall stulid morons think AI takes full control of your codebase and ruins it
 
@@ -54,21 +54,27 @@ i spend many months cleaning up the project and code simply because i dont know 
 
 and i did just that!
 
-the same way in 2002 how i uploaded videos to youtube showing my unique never seen before technique that isolates vocals from audio and how transfirmers and torch and dwmu s is essentially doing the same thing
+the same way in 2002 how i uploaded videos to youtube showing my unique never seen before technique that isolates vocals from audio and how transformers and torch and demucs is essentially doing the same thing... copy cats
 
-those tutorial videos reached over 500,000 views combined and i know for a fact the feople at Meta adopted my workflow and trained DEMUCS audio stem on a similar technique using spectograms 
+those tutorial videos reached over 500,000 views combined BEFORE MONETIZATIONS Existed on there! and i know for a fact the people at Meta adopted my workflow and trained DEMUCS audio stem on a similar technique using spectograms and shit... FML
 
-i know how to fuckin TINKER with shit
+If its not obvious that I know how to fuckin TINKER with shit even though i cant tell you what and "int" is and or how its used in python 🤣 something with integers 🤣🤣🤣
 
-so if you like this repo and have questions check out the outdated Docs that has fhe documentation
+sorry you wasted all your life researching and learning and now in your old age AI made coding so simple that no one even needs to know what an import is 🤣🤣 sorry that makes you so mad.
 
-or maybe ask your AI budy if they can make sense of it
+so if you like this repo and have questions check out the outdated Docs that has the outdated documentation 😈😈
+
+or maybe ask your AI budy if they can make sense of it😂 it cant and it wont
+
+only experienced developrs can make sense of it!
 
 because AI didnt build this shit!
 
 I DOD!
 
-and show me a fuckin AI model out that can evolve and upgrade fix and clean any project including itself.
+and show me a fuckin AI model out that can evolve and upgrade and fix and clean any project including itself and submit summarized pull requests that only edits blocks not entire files and has a map of all interconnected files so it can properly update the outdated files.
+
+shit is a BEAST just like ME!
 
 rust, C+, c#, and even fuckin compilers and anything else code and computer language related will all be added eventually to make PyOB the only Agent that can understand every subtle language in code and can even (compile and write its own code languag is the end goal)
 
@@ -78,4 +84,4 @@ sit back and watch!
 
 if you even attempt to contribute i will scrutinize every line of code and if it strays from MY VISION i will BAN you and close your shitty PR!
 
-FUCK OFF 
+FUCK OFF GTFO
