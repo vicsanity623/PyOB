@@ -39,6 +39,7 @@ IGNORE_DIRS = {
     "autovenv",
     "build_env",
     "pyob.egg-info",
+    "TapEvent",
     "build",
     "dist",
     "docs",
