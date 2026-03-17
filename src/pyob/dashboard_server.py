@@ -77,7 +77,7 @@ def acknowledge_issue(issue_id):
 
         logger.info(f"Issue {issue_id} acknowledged by user.")
         return jsonify({"success": True, "message": f"Issue {issue_id} acknowledged."})
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger.error(f"Error acknowledging issue {issue_id}: {e}")
         return jsonify(
             {"success": False, "message": "Failed to acknowledge issue."}
