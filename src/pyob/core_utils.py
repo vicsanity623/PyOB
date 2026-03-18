@@ -173,7 +173,7 @@ class CoreUtilsMixin:
     def stream_gemini(
         self, prompt: str, api_key: str, on_chunk: Callable[[], None]
     ) -> str:
-        return str(stream_gemini(prompt, api_key, on_chunk))
+        return stream_gemini(prompt, api_key, on_chunk)
 
     def stream_ollama(self, prompt: str, on_chunk: Callable[[], None]) -> str:
         return str(stream_ollama(prompt, on_chunk))
