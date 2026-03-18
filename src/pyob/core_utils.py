@@ -421,4 +421,67 @@ class CoreUtilsMixin:
                 if file.endswith(".html") and not html_fallback:
                     html_fallback = file_path
 
-        return html_fallback
+        python_entry_points = []
+        other_script_entry_points = []
+        html_entry_points = []
+
+        for root, dirs, files in os.walk(self.target_dir):
+            dirs[:] = [
+                d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")
+            ]
+
+            for file in files:
+                if file in IGNORE_FILES:
+                    continue
+
+                file_path = os.path.join(root, file)
+
+                if file.endswith(".py"):
+                    try:
+                        with open(
+                            file_path, "r", encoding="utf-8", errors="ignore"
+                        ) as f_obj:
+                            content = f_obj.read()
+                            if (
+                                'if __name__ == "__main__":' in content
+                                or "if __name__ == '__main__':" in content
+                            ):
+                                python_entry_points.append(file_path)
+                    except Exception:
+                        continue
+                elif file.endswith((".js", ".ts", ".sh")):
+                    other_script_entry_points.append(file_path)
+                elif file.endswith((".html", ".htm")):
+                    html_entry_points.append(file_path)
+                elif file == "package.json":
+                    html_entry_points.append(
+                        file_path
+                    )  # Treat package.json as a fallback similar to HTML
+
+        if python_entry_points:
+            # Prioritize common names if multiple python entry points are found
+            for p_file in priority_files:
+                for entry in python_entry_points:
+                    if entry.endswith(p_file):
+                        return entry
+            return python_entry_points[
+                0
+            ]  # Fallback to first found if no priority match
+
+        if other_script_entry_points:
+            # Prioritize common names if multiple script entry points are found
+            for p_file in priority_files:
+                for entry in other_script_entry_points:
+                    if entry.endswith(p_file):
+                        return entry
+            return other_script_entry_points[0]
+
+        if html_entry_points:
+            # Prioritize common names if multiple html/package.json entry points are found
+            for p_file in priority_files:
+                for entry in html_entry_points:
+                    if entry.endswith(p_file):
+                        return entry
+            return html_entry_points[0]
+
+        return None
