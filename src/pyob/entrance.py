@@ -112,7 +112,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         self.self_evolved_flag: bool = False
         self.manual_target_file: Optional[str] = None
         self.dashboard_process: Optional[subprocess.Popen] = None
-
+        self.session_pr_count = 0
         self.current_iteration = 1
 
         if not self.skip_dashboard:
@@ -294,6 +294,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             self.current_iteration = iteration
             self.self_evolved_flag = False
 
+            # Capture Human Directives to prevent AI erasure
             current_mem = self.load_memory()
             directives = ""
             if "# HUMAN DIRECTIVES" in current_mem:
@@ -307,6 +308,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                 f"--- REFRESHING SYMBOLIC CONTEXT FOR ITERATION {iteration} ---"
             )
 
+            # Clear project map for recursive branch awareness
             if os.path.exists(self.analysis_path):
                 os.remove(self.analysis_path)
             if os.path.exists(self.symbols_path):
@@ -314,6 +316,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
 
             self.build_initial_analysis()
 
+            # Check for remote updates
             if self.sync_with_remote():
                 res = subprocess.run(
                     ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
@@ -341,8 +344,10 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             )
 
             try:
+                # Execute the evolution cycle
                 self.execute_targeted_iteration(iteration)
 
+                # Restore Human Directives if the AI cleaned the memory file
                 if directives:
                     post_run_mem = self.load_memory()
                     if directives not in post_run_mem:
@@ -351,6 +356,18 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                         )
                         with open(self.memory_path, "w", encoding="utf-8") as f:
                             f.write(directives + "\n\n" + post_run_mem)
+
+                # --- THE WRAP-UP GATE ---
+                # session_pr_count is incremented in handle_git_librarian.
+                # If we hit the goal and have no pending cross-file tasks, we sign off.
+                if getattr(self, "session_pr_count", 0) >= 8 and not getattr(self, "cascade_queue", []):
+                    logger.info(
+                        f"🏆 SESSION COMPLETE: {self.session_pr_count} PRs achieved with no pending cascades."
+                    )
+                    if hasattr(self, "wrap_up_evolution_session"):
+                        self.wrap_up_evolution_session()
+                    break # Graceful exit from the 6-hour loop
+                # ------------------------
 
             except KeyboardInterrupt:
                 logger.info("\nExiting Entrance Controller...")
