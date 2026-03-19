@@ -6,7 +6,7 @@ import sys
 import threading
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 from pyob.data_parser import DataParser
 
@@ -14,6 +14,7 @@ app = Flask(__name__)
 
 logger = logging.getLogger(__name__)
 status_lock = threading.Lock()  # Initialize a lock for issue_statuses.json
+decision_lock = threading.Lock()  # Initialize a lock for proposal_decisions.json
 data_parser_instance = DataParser()  # Initialize DataParser once globally
 
 
@@ -83,6 +84,61 @@ def acknowledge_issue(issue_id):
         return jsonify(
             {"success": False, "message": "Failed to acknowledge issue."}
         ), 500
+
+
+@app.route("/api/decision/<string:session_id>", methods=["GET", "POST"])
+def handle_proposal_decision(session_id):
+    """
+    API endpoint to handle and retrieve decisions for a given session_id.
+    - POST: User makes a decision (PROCEED/SKIP/DELETE) for a proposal.
+            Expects JSON body: {"action": "PROCEED" | "SKIP" | "DELETE"}
+    - GET: entrance.py polls for the decision for a specific session_id.
+            Returns: {"success": True, "decision": {"status": "pending" | "PROCEED" | "SKIP" | "DELETE", "timestamp": "..."}}
+    """
+    decision_file = "proposal_decisions.json"
+
+    with decision_lock:  # Acquire lock for the entire read-modify-write operation
+        decisions = {}
+        if os.path.exists(decision_file):
+            try:
+                with open(decision_file, "r", encoding="utf-8") as f:
+                    decisions = json.load(f)
+            except json.JSONDecodeError:
+                logger.warning(
+                    f"Could not decode {decision_file}, starting fresh for proposal decisions."
+                )
+                decisions = {}
+
+        if request.method == "POST":
+            data = request.get_json()
+            action = data.get("action")
+            if not action or action not in ["PROCEED", "SKIP", "DELETE"]:
+                return jsonify(
+                    {
+                        "success": False,
+                        "message": "Invalid or missing 'action' in request body.",
+                    }
+                ), 400
+
+            decisions[session_id] = {
+                "status": action,
+                "timestamp": datetime.now().isoformat(),
+            }
+            with open(decision_file, "w", encoding="utf-8") as f:
+                json.dump(decisions, f, indent=4)
+
+            logger.info(f"Decision '{action}' recorded for session {session_id}.")
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"Decision '{action}' recorded for session {session_id}.",
+                }
+            )
+
+        elif request.method == "GET":
+            # Return the current status for the session_id, default to "pending"
+            decision_status = decisions.get(session_id, {"status": "pending"})
+            return jsonify({"success": True, "decision": decision_status})
 
 
 @app.route("/api/analysis-data")
