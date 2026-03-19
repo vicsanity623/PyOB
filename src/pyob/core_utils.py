@@ -124,7 +124,7 @@ logger.propagate = False
 
 class CoreUtilsMixin:
     target_dir: str
-    memory_file: str
+    memory_path: str
     key_cooldowns: dict[str, float]
 
     def generate_pr_summary(self, rel_path: str, diff_text: str) -> dict:
@@ -337,9 +337,9 @@ class CoreUtilsMixin:
         logger.warning("Workspace restored to safety due to unfixable AI errors.")
 
     def load_memory(self) -> str:
-        if os.path.exists(self.memory_file):
+        if os.path.exists(self.memory_path):
             try:
-                with open(self.memory_file, "r", encoding="utf-8") as f:
+                with open(self.memory_path, "r", encoding="utf-8") as f:
                     return f.read().strip()
             except Exception:
                 pass
