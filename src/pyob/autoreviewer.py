@@ -1,12 +1,12 @@
 import ast
 import os
 import random
-import subprocess  # Moved from run_linters
+import subprocess
 import sys
 import time
-import uuid  # Added for generating unique session IDs
+import uuid
 
-import requests  # Added for dashboard polling
+import requests
 
 from .core_utils import (
     ANALYSIS_FILE,
@@ -49,7 +49,7 @@ class AutoReviewer(
         self.feature_file = os.path.join(self.pyob_dir, FEATURE_FILE_NAME)
         self.failed_pr_file = os.path.join(self.pyob_dir, FAILED_PR_FILE_NAME)
         self.failed_feature_file = os.path.join(self.pyob_dir, FAILED_FEATURE_FILE_NAME)
-        self.memory_file = os.path.join(self.pyob_dir, MEMORY_FILE_NAME)
+        self.memory_path = os.path.join(self.pyob_dir, MEMORY_FILE_NAME)
         self.analysis_path = os.path.join(self.pyob_dir, ANALYSIS_FILE)
         self.history_path = os.path.join(self.pyob_dir, HISTORY_FILE)
         self.symbols_path = os.path.join(self.pyob_dir, SYMBOLS_FILE)
@@ -57,7 +57,6 @@ class AutoReviewer(
         self.session_context: list[str] = []
         self.manual_target_file: str | None = None
         self._ensure_prompt_files()
-
         if AutoReviewer._shared_cooldowns is None:
             AutoReviewer._shared_cooldowns = {
                 key: 0.0 for key in GEMINI_API_KEYS if key.strip()
@@ -137,14 +136,13 @@ class AutoReviewer(
 
         decision = None
         poll_interval_seconds = 2
-        max_retries = 3  # For connection errors before falling back to CLI
+        max_retries = 3
 
         retries = 0
         while decision is None:
             try:
-                # Poll the dashboard for a decision
                 response = requests.get(decision_api_url, timeout=5)
-                response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
+                response.raise_for_status()
                 data = response.json()
                 if data.get("decision"):
                     decision = data["decision"].upper()
@@ -157,7 +155,7 @@ class AutoReviewer(
                         decision = "SKIP"
                 else:
                     time.sleep(poll_interval_seconds)
-                retries = 0  # Reset retries on successful connection
+                retries = 0
             except requests.exceptions.ConnectionError as e:
                 retries += 1
                 logger.error(
@@ -167,10 +165,10 @@ class AutoReviewer(
                     logger.info(
                         "Max connection retries reached. Falling back to CLI input for decision."
                     )
-                    break  # Exit polling loop to fallback
+                    break
                 time.sleep(
                     poll_interval_seconds * 2
-                )  # Longer wait for connection issues
+                )
             except requests.exceptions.Timeout:
                 logger.debug("Dashboard decision poll timed out, retrying...")
                 time.sleep(poll_interval_seconds)
@@ -185,7 +183,6 @@ class AutoReviewer(
                 )
                 time.sleep(poll_interval_seconds)
 
-        # Fallback to CLI input if dashboard is unreachable or polling failed
         if decision is None:
             prompt_options = "'PROCEED' to apply, 'SKIP' to ignore"
             if allow_delete:
@@ -209,7 +206,6 @@ class AutoReviewer(
 
         logger.info(f"Dashboard decision received: {decision}")
         return decision
-        # we cannot wait for keyboard input. We must auto-approve to keep the loop alive.
         is_cloud = (
             os.environ.get("GITHUB_ACTIONS") == "true"
             or os.environ.get("CI") == "true"
@@ -331,12 +327,9 @@ class AutoReviewer(
         False if skipped or failed to apply.
         """
         if not (os.path.exists(self.pr_file) or os.path.exists(self.feature_file)):
-            return False  # No proposals to process
+            return False
 
-        # --- MODIFICATION START ---
-        # Replace the CLI-based get_user_approval with the new dashboard interaction
         user_input = self._get_dashboard_decision(allow_delete)
-        # --- MODIFICATION END ---
 
         if user_input == "PROCEED":
             backup_state = self.backup_workspace()
@@ -358,9 +351,7 @@ class AutoReviewer(
                 )
 
                 failure_report = f"\n\n### FAILURE ATTEMPT LOGS ({time.strftime('%Y-%m-%d %H:%M:%S')})\n"
-                # Ensure the most recent critical message is always included
                 failure_report += self.session_context[-1]
-                # Add up to two preceding context messages if available
                 if len(self.session_context) > 1:
                     failure_report += "\n" + "\n".join(self.session_context[-3:-1])
 
@@ -377,20 +368,20 @@ class AutoReviewer(
                     with open(self.failed_feature_file, "w") as f:
                         f.write(content + failure_report)
                     os.remove(self.feature_file)
-                return False  # Failed to apply, proposals still conceptually pending for next run
-            return True  # Successfully applied
+                return False
+            return True
         elif allow_delete and user_input == "DELETE":
             if os.path.exists(self.pr_file):
                 os.remove(self.pr_file)
             if os.path.exists(self.feature_file):
                 os.remove(self.feature_file)
             logger.info("Deleted pending proposal files. Starting fresh scan...")
-            return True  # Deleted, no longer pending
-        else:  # SKIP or other input
+            return True
+        else:
             logger.info(
                 "Changes not applied manually. They will remain for the next loop iteration."
             )
-            return False  # Skipped, proposals still pending
+            return False
 
     def run_pipeline(self, current_iteration: int):
         changes_made = False
@@ -400,8 +391,6 @@ class AutoReviewer(
                 logger.info(
                     f"Found pending {PR_FILE_NAME} and/or {FEATURE_FILE_NAME} from a previous run."
                 )
-                # Use the helper function to process existing pending proposals from a previous run.
-                # The helper will prompt the user and handle application, rollback, or deletion.
                 proposals_handled = self._handle_pending_proposals(
                     "Hit ENTER to PROCEED, type 'SKIP' to ignore",
                     allow_delete=True,
@@ -410,12 +399,10 @@ class AutoReviewer(
                     logger.info(
                         "Pending proposals were not applied or deleted. Halting current pipeline iteration to await user action."
                     )
-                    return  # Exit early, do not generate new work
-                # If proposals_handled is True (applied or deleted), then `changes_made` should be True
-                # to ensure the subsequent `if not changes_made:` block is skipped.
-                changes_made = True  # Explicitly set to True if proposals were handled.
+                    return
+                changes_made = True
 
-            if not changes_made:  # This block will now only run if there were NO pending proposals initially.
+            if not changes_made:
                 logger.info("==================================================")
                 logger.info("PHASE 1: Initial Assessment & Codebase Scan")
                 logger.info("==================================================")
@@ -429,7 +416,7 @@ class AutoReviewer(
                         logger.warning(
                             f"Manual target file '{self.manual_target_file}' not found. Reverting to full scan."
                         )
-                        self.manual_target_file = None  # Clear invalid target
+                        self.manual_target_file = None
                         all_files = self.scan_directory()
                 else:
                     all_files = self.scan_directory()
@@ -451,8 +438,6 @@ class AutoReviewer(
                 if os.path.exists(self.pr_file) or os.path.exists(self.feature_file):
                     print("\n" + "=" * 50)
                     print(" ACTION REQUIRED: Proposals Generated")
-                    # Use the extracted helper for handling newly generated proposals.
-                    # No 'DELETE' option for newly generated proposals, only PROCEED or SKIP.
                     self._handle_pending_proposals(
                         "Hit ENTER to PROCEED, or type 'SKIP' to cancel",
                         allow_delete=False,
