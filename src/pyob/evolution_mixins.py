@@ -270,24 +270,19 @@ class EvolutionMixin:
         prompt = f"""
         Analyze the following evolution history for this session and write a 'Master Session Summary'.
         We have successfully submitted {self.session_pr_count} Pull Requests.
-        
         YOUR TASK:
         Create a Markdown report named 'PR_SUMMARY.md'.
         Include:
         1. ## Session Overview (High-level goals achieved)
         2. ## Technical Milestones (List the major features/refactors)
         3. ## Architectural Impact (How the codebase is healthier now)
-        
         HISTORY:
         {history_text}
-        
         Output ONLY the Markdown content for the file. Use a professional, triumphant tone.
         """
-        
         summary_md = self.get_valid_llm_response(
             prompt, lambda t: len(t) > 100, context="Session Architect"
         )
-        
         # Save the file to root
         summary_path = os.path.join(self.target_dir, "PR_SUMMARY.md")
         with open(summary_path, "w", encoding="utf-8") as f:
