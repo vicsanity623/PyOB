@@ -142,22 +142,31 @@ class ValidationMixin:
 
     def run_and_verify_app(self, context_of_change: str = "") -> bool:
         check_script = os.path.join(self.target_dir, "check.sh")
-        
+
         if os.path.exists(check_script):
             logger.info("PHASE 3.5: Running full validation suite (check.sh)...")
             try:
                 os.chmod(check_script, 0o755)
-                
-                subprocess.run([check_script, "--fix"], capture_output=True, text=True, cwd=self.target_dir)
 
-                res = subprocess.run([check_script], capture_output=True, text=True, cwd=self.target_dir)
+                subprocess.run(
+                    [check_script, "--fix"],
+                    capture_output=True,
+                    text=True,
+                    cwd=self.target_dir,
+                )
+
+                res = subprocess.run(
+                    [check_script], capture_output=True, text=True, cwd=self.target_dir
+                )
 
                 if res.returncode != 0:
                     logger.warning(
                         f"Validation suite failed after auto-fix!\n{res.stdout.strip()}"
                     )
                     self._fix_runtime_errors(
-                        res.stdout + "\n" + res.stderr, "Validation Suite", context_of_change
+                        res.stdout + "\n" + res.stderr,
+                        "Validation Suite",
+                        context_of_change,
                     )
                     return False
             except Exception as e:
@@ -183,7 +192,7 @@ class ValidationMixin:
             )
 
             is_html = entry_file.endswith((".html", ".htm"))
-            
+
             process = subprocess.Popen(
                 [python_cmd, entry_file],
                 stdout=subprocess.PIPE,
@@ -191,7 +200,7 @@ class ValidationMixin:
                 text=True,
                 cwd=self.target_dir,
             )
-            
+
             stdout, stderr = "", ""
             try:
                 stdout, stderr = process.communicate(timeout=10)
