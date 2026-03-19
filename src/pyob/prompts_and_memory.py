@@ -22,7 +22,7 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
     target_dir: str
     history_path: str
     analysis_path: str
-    memory_file: str
+    memory_path: str
     memory: str
 
     def _ensure_prompt_files(self) -> None:
@@ -127,7 +127,7 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         )
         clean_memory = re.sub(r"\n```$", "", clean_memory, flags=re.MULTILINE)
         if clean_memory:
-            with open(self.memory_file, "w", encoding="utf-8") as f:
+            with open(self.memory_path, "w", encoding="utf-8") as f:
                 f.write(clean_memory)
             self.memory = clean_memory
 
@@ -148,6 +148,6 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         )
         clean_memory = re.sub(r"\n```$", "", clean_memory, flags=re.MULTILINE)
         if clean_memory and len(clean_memory) > 50:
-            with open(self.memory_file, "w", encoding="utf-8") as f:
+            with open(self.memory_path, "w", encoding="utf-8") as f:
                 f.write(clean_memory)
             self.memory = clean_memory
