@@ -123,7 +123,7 @@ class AutoReviewer(
             return "PROCEED"
 
         session_id = self._generate_unique_session_id()
-        dashboard_url = f"http://localhost:8000/review/{session_id}"  # Placeholder URL for dashboard_server
+        dashboard_url = f"{self.DASHBOARD_BASE_URL}/review/{session_id}"
 
         logger.info("==================================================")
         logger.info(" ACTION REQUIRED: Interactive Proposal Review")
