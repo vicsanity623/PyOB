@@ -294,26 +294,24 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             self.current_iteration = iteration
             self.self_evolved_flag = False
 
-            # --- CONTINUOUS EVOLUTION REFRESH ---
-            # Every iteration, we wipe the bot's 'Short-Term Memory' so it
-            # re-scans the files. This allows Iteration 2 to 'see' the
-            # changes made in Iteration 1, even if they are on a PR branch.
+            current_mem = self.load_memory()
+            directives = ""
+            if "# HUMAN DIRECTIVES" in current_mem:
+                match = re.search(r"(# HUMAN DIRECTIVES.*?)(\n#|\Z)", current_mem, re.DOTALL)
+                if match:
+                    directives = match.group(1).strip()
+
             logger.info(
                 f"--- REFRESHING SYMBOLIC CONTEXT FOR ITERATION {iteration} ---"
             )
 
-            # 1. Clear the derived project map files
             if os.path.exists(self.analysis_path):
                 os.remove(self.analysis_path)
             if os.path.exists(self.symbols_path):
                 os.remove(self.symbols_path)
 
-            # 2. Perform a Fresh Genesis Scan of the current filesystem state.
-            # This ensures the bot's analysis is never 'stale'.
             self.build_initial_analysis()
-            # ------------------------------------
 
-            # Check if main branch has been updated by the user (manual merges)
             if self.sync_with_remote():
                 res = subprocess.run(
                     ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
@@ -328,7 +326,6 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                     )
                     self.self_evolved_flag = True
 
-            # If the engine itself was modified, reboot to load new logic
             if self.self_evolved_flag:
                 if getattr(sys, "frozen", False):
                     logger.warning("COMPILED ENGINE EVOLVED: Initiating Forge Build.")
@@ -343,6 +340,14 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
 
             try:
                 self.execute_targeted_iteration(iteration)
+                
+                if directives:
+                    post_run_mem = self.load_memory()
+                    if directives not in post_run_mem:
+                        logger.warning("AI wiped Human Directives. Restoring memory integrity...")
+                        with open(self.memory_path, "w", encoding="utf-8") as f:
+                            f.write(directives + "\n\n" + post_run_mem)
+
             except KeyboardInterrupt:
                 logger.info("\nExiting Entrance Controller...")
                 break
