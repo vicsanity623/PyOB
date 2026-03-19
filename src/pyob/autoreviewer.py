@@ -166,9 +166,7 @@ class AutoReviewer(
                         "Max connection retries reached. Falling back to CLI input for decision."
                     )
                     break
-                time.sleep(
-                    poll_interval_seconds * 2
-                )
+                time.sleep(poll_interval_seconds * 2)
             except requests.exceptions.Timeout:
                 logger.debug("Dashboard decision poll timed out, retrying...")
                 time.sleep(poll_interval_seconds)
