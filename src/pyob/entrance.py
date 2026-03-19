@@ -371,9 +371,11 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             for part in parts:
                 clean_part = str(part).rstrip(".,;:'\")")
                 if "/" in clean_part or clean_part.endswith(
-                    (".py", ".js", ".ts", ".html", ".css")
+                    (".py", ".js", ".ts", ".html", ".css", ".json", ".md")
                 ):
-                    return str(clean_part)
+                    abs_path = os.path.join(base_dir, clean_part)
+                    if os.path.exists(abs_path):
+                        return str(clean_part)
             return str(parts[0].rstrip(".,;:'\")"))
 
         return str(cleaned_text)
