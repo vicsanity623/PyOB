@@ -297,7 +297,9 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             current_mem = self.load_memory()
             directives = ""
             if "# HUMAN DIRECTIVES" in current_mem:
-                match = re.search(r"(# HUMAN DIRECTIVES.*?)(\n#|\Z)", current_mem, re.DOTALL)
+                match = re.search(
+                    r"(# HUMAN DIRECTIVES.*?)(\n#|\Z)", current_mem, re.DOTALL
+                )
                 if match:
                     directives = match.group(1).strip()
 
@@ -340,11 +342,13 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
 
             try:
                 self.execute_targeted_iteration(iteration)
-                
+
                 if directives:
                     post_run_mem = self.load_memory()
                     if directives not in post_run_mem:
-                        logger.warning("AI wiped Human Directives. Restoring memory integrity...")
+                        logger.warning(
+                            "AI wiped Human Directives. Restoring memory integrity..."
+                        )
                         with open(self.memory_path, "w", encoding="utf-8") as f:
                             f.write(directives + "\n\n" + post_run_mem)
 
