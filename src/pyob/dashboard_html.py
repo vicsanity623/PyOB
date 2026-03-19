@@ -201,7 +201,7 @@ OBSERVER_HTML = """
                         const moveDownBtn = document.createElement('button');
                         moveDownBtn.className = 'move-btn';
                         moveDownBtn.innerHTML = '&#x25BC;';
-                        moveDownBtn.onclick = () => moveQueueItem(item, 'down');
+                        moveDownBtn.addEventListener('click', () => moveQueueItem(item, 'down'));
 
                         const removeBtn = document.createElement('button');
                         removeBtn.className = 'remove-btn';
