@@ -99,6 +99,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         os.makedirs(self.pyob_dir, exist_ok=True)
 
         from pyob.core_utils import GEMINI_API_KEYS
+
         self.key_cooldowns: dict[str, float] = {
             key: 0.0 for key in GEMINI_API_KEYS if key.strip()
         }
