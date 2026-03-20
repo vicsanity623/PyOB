@@ -267,11 +267,11 @@ def get_valid_llm_response_engine(
         or os.environ.get("CI") == "true"
         or "GITHUB_RUN_ID" in os.environ
     )
-    
+
     while True:
         key = None
         now = time.time()
-        
+
         # 1. Identify all registered Gemini keys and find those not on cooldown
         gemini_keys = [k for k in list(key_cooldowns.keys()) if "github" not in k]
         available_keys = [k for k in gemini_keys if now > key_cooldowns[k]]
@@ -285,7 +285,7 @@ def get_valid_llm_response_engine(
                 f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(gemini_keys)}"
             )
             response_text = stream_single_llm(prompt, key=key, context=context)
-            
+
         elif is_cloud:
             # 3. CLOUD FALLBACK: If all Gemini keys are cooling down, use GitHub Models
             if now < key_cooldowns.get("github_llama", 0):
@@ -295,7 +295,9 @@ def get_valid_llm_response_engine(
                     prompt, key=None, context=context, gh_model="Phi-4"
                 )
             else:
-                logger.warning("Gemini exhausted. Pivoting to GitHub Models (Llama-3)...")
+                logger.warning(
+                    "Gemini exhausted. Pivoting to GitHub Models (Llama-3)..."
+                )
                 response_text = stream_single_llm(
                     prompt, key=None, context=context, gh_model="Llama-3"
                 )
@@ -306,26 +308,33 @@ def get_valid_llm_response_engine(
 
         # --- ERROR HANDLING BLOCK ---
         if not response_text or response_text.startswith("ERROR_CODE_"):
-            
             # A. Gemini Rate Limit (429)
             if key and response_text and "429" in response_text:
-                key_cooldowns[key] = time.time() + 180 # 3 min rest for the specific key
+                key_cooldowns[key] = (
+                    time.time() + 180
+                )  # 3 min rest for the specific key
                 logger.warning(f"Key {key[-4:]} rate-limited. Pivoting to next key...")
                 attempts += 1
-                continue # Immediately retry with the next key in the pool
+                continue  # Immediately retry with the next key in the pool
 
             # B. GitHub Models Daily Quota (429)
-            if response_text and "429" in response_text and "RateLimitReached" in response_text:
+            if (
+                response_text
+                and "429" in response_text
+                and "RateLimitReached" in response_text
+            ):
                 match = re.search(r"wait (\d+) seconds", response_text)
                 seconds_to_wait = int(match.group(1)) if match else 86400
-                
+
                 # Assign cooldown to the specific model that failed
                 if "Llama" in (response_text or ""):
                     key_cooldowns["github_llama"] = time.time() + seconds_to_wait + 60
                 else:
                     key_cooldowns["github_phi"] = time.time() + seconds_to_wait + 60
-                
-                logger.error(f"GITHUB QUOTA REACHED. Cooling down model for {seconds_to_wait}s")
+
+                logger.error(
+                    f"GITHUB QUOTA REACHED. Cooling down model for {seconds_to_wait}s"
+                )
                 attempts += 1
                 continue
 
@@ -333,9 +342,11 @@ def get_valid_llm_response_engine(
             if not available_keys:
                 # If everything is exhausted, take a long nap
                 wait = 120
-                logger.warning(f"All API resources exhausted. Sleeping {wait}s for refill...")
+                logger.warning(
+                    f"All API resources exhausted. Sleeping {wait}s for refill..."
+                )
                 time.sleep(wait)
-                attempts = 0 # RESET: Start fresh with Key 1 after the nap
+                attempts = 0  # RESET: Start fresh with Key 1 after the nap
                 continue
             else:
                 # Key failed for unknown reason, rotate and retry
@@ -348,17 +359,23 @@ def get_valid_llm_response_engine(
         # --- VALIDATION BLOCK ---
         if validator(response_text):
             if is_cloud:
-                time.sleep(5) # Slow down slightly in cloud to prevent 429 machine-gunning
+                time.sleep(
+                    5
+                )  # Slow down slightly in cloud to prevent 429 machine-gunning
             return response_text
         else:
             # Try cleaning AI chatter (e.g. "Here is the code:") and re-validating
-            clean_text = re.sub(
-                r"^(Here is the code:)|(I suggest:)|(```[a-z]*)",
-                "",
-                response_text,
-                flags=re.IGNORECASE,
-            ).strip().rstrip("`")
-            
+            clean_text = (
+                re.sub(
+                    r"^(Here is the code:)|(I suggest:)|(```[a-z]*)",
+                    "",
+                    response_text,
+                    flags=re.IGNORECASE,
+                )
+                .strip()
+                .rstrip("`")
+            )
+
             if validator(clean_text):
                 return clean_text
 
