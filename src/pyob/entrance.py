@@ -97,7 +97,12 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         self.target_dir = os.path.abspath(target_dir)
         self.pyob_dir = os.path.join(self.target_dir, ".pyob")
         os.makedirs(self.pyob_dir, exist_ok=True)
-        self.key_cooldowns: dict[str, float] = {}
+
+        from pyob.core_utils import GEMINI_API_KEYS
+        self.key_cooldowns: dict[str, float] = {
+            key: 0.0 for key in GEMINI_API_KEYS if key.strip()
+        }
+
         self.skip_dashboard = ("--no-dashboard" in sys.argv) or (not dashboard_active)
 
         self.analysis_path = os.path.join(self.pyob_dir, "ANALYSIS.md")
