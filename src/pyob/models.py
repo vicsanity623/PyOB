@@ -257,66 +257,67 @@ def get_valid_llm_response_engine(
     key_cooldowns: dict[str, float],
     context: str = "",
 ) -> str:
+    """
+    Robust engine that handles key rotation across multiple providers.
+    Uses cooldown tracking to ensure maximum utilization of free-tier quotas.
+    """
     attempts = 0
     is_cloud = (
         os.environ.get("GITHUB_ACTIONS") == "true"
         or os.environ.get("CI") == "true"
         or "GITHUB_RUN_ID" in os.environ
     )
+
     while True:
         key = None
         now = time.time()
-        # available_keys are Gemini keys
+
+        # 1. Identify all registered Gemini keys and find those not on cooldown
         gemini_keys = [k for k in list(key_cooldowns.keys()) if "github" not in k]
         available_keys = [k for k in gemini_keys if now > key_cooldowns[k]]
         response_text = None
 
+        # 2. DECISION LOGIC: Prioritize Gemini rotation
         if available_keys:
+            # Cycle through available keys using the attempt counter
             key = available_keys[attempts % len(available_keys)]
             logger.info(
                 f"Attempting Gemini Key {attempts % len(available_keys) + 1}/{len(gemini_keys)}"
             )
             response_text = stream_single_llm(prompt, key=key, context=context)
+
         elif is_cloud:
-            # CHECK: Is Llama-3 specifically on a daily cooldown?
+            # 3. CLOUD FALLBACK: If all Gemini keys are cooling down, use GitHub Models
             if now < key_cooldowns.get("github_llama", 0):
-                remaining = int(key_cooldowns["github_llama"] - now)
-                logger.warning(
-                    f"Llama-3 daily quota exhausted. {remaining}s remaining. Trying Phi-4..."
-                )
+                # If Llama is also cooling, try Phi
+                logger.warning("Llama-3 limited. Trying Phi-4...")
                 response_text = stream_single_llm(
                     prompt, key=None, context=context, gh_model="Phi-4"
                 )
             else:
-                logger.warning("Gemini limited. Pivoting to GitHub Models (Llama-3)...")
+                logger.warning(
+                    "Gemini exhausted. Pivoting to GitHub Models (Llama-3)..."
+                )
                 response_text = stream_single_llm(
                     prompt, key=None, context=context, gh_model="Llama-3"
                 )
         else:
-            logger.info(
-                " All Gemini keys exhausted. Falling back to Local Ollama Engine..."
-            )
+            # 4. LOCAL FALLBACK: Fallback to Ollama
+            logger.info(" All Gemini keys exhausted. Falling back to Local Ollama...")
             response_text = stream_single_llm(prompt, key=None, context=context)
 
         # --- ERROR HANDLING BLOCK ---
         if not response_text or response_text.startswith("ERROR_CODE_"):
-            # 1. Handle Gemini 429 (Minute limits)
-            # Increased cooldown to 180s to ensure the sliding window reset
+            # A. Gemini Rate Limit (429)
             if key and response_text and "429" in response_text:
-                key_cooldowns[key] = time.time() + 180
+                key_cooldowns[key] = (
+                    time.time() + 180
+                )  # 3 min rest for the specific key
                 logger.warning(f"Key {key[-4:]} rate-limited. Pivoting to next key...")
                 attempts += 1
-                if is_cloud:
-                    logger.warning(
-                        "Gemini limited. Pivoting to GitHub Models (Llama-3)..."
-                    )
-                    response_text = stream_single_llm(
-                        prompt, key=None, context=context, gh_model="Llama-3"
-                    )
-                else:
-                    continue
+                continue  # Immediately retry with the next key in the pool
 
-            # 2. Handle GitHub 429 (Daily Quota Limits)
+            # B. GitHub Models Daily Quota (429)
             if (
                 response_text
                 and "429" in response_text
@@ -324,70 +325,62 @@ def get_valid_llm_response_engine(
             ):
                 match = re.search(r"wait (\d+) seconds", response_text)
                 seconds_to_wait = int(match.group(1)) if match else 86400
-                if "Llama-3" in response_text or "llama" in response_text.lower():
+
+                # Assign cooldown to the specific model that failed
+                if "Llama" in (response_text or ""):
                     key_cooldowns["github_llama"] = time.time() + seconds_to_wait + 60
-                    logger.error(
-                        f"GITHUB DAILY QUOTA REACHED (Llama-3). Cooldown: {seconds_to_wait}s"
-                    )
                 else:
                     key_cooldowns["github_phi"] = time.time() + seconds_to_wait + 60
-                    logger.error(
-                        f"GITHUB DAILY QUOTA REACHED (Phi-4). Cooldown: {seconds_to_wait}s"
-                    )
 
-            # 3. Handle Cloud Fallbacks (Llama -> Phi)
-            if is_cloud and (
-                not response_text or response_text.startswith("ERROR_CODE_")
-            ):
-                if response_text and "413" in response_text:
-                    pass
-                else:
-                    logger.warning(
-                        "Model failed or limited. Pivoting to GitHub Models (Phi-4)..."
-                    )
-                    response_text = stream_single_llm(
-                        prompt, key=None, context=context, gh_model="Phi-4"
-                    )
+                logger.error(
+                    f"GITHUB QUOTA REACHED. Cooling down model for {seconds_to_wait}s"
+                )
+                attempts += 1
+                continue
 
-            # 4. Final Catch-All / Fail-Safe Sleep
-            if not response_text or response_text.startswith("ERROR_CODE_"):
-                if key and "429" not in (response_text or ""):
-                    key_cooldowns[key] = time.time() + 30  # Anti-machine-gun delay
-
-                if available_keys:
-                    logger.warning(
-                        f"Engine failed with error: {str(response_text)[:60]}... Rotating..."
-                    )
-                    attempts += 1
-                    time.sleep(5)
-                    continue
-
-                # Increased from 90s to 120s for total refill
+            # C. Generic Error Handling / Fail-Safe Sleep
+            if not available_keys:
+                # If everything is exhausted, take a long nap
                 wait = 120
                 logger.warning(
-                    f"All Engines failed or exhausted. Sleeping {wait}s for refill..."
+                    f"All API resources exhausted. Sleeping {wait}s for refill..."
                 )
                 time.sleep(wait)
+                attempts = 0  # RESET: Start fresh with Key 1 after the nap
+                continue
+            else:
+                # Key failed for unknown reason, rotate and retry
+                if key:
+                    key_cooldowns[key] = time.time() + 30
                 attempts += 1
+                time.sleep(2)
                 continue
 
         # --- VALIDATION BLOCK ---
         if validator(response_text):
             if is_cloud:
-                time.sleep(5)
+                time.sleep(
+                    5
+                )  # Slow down slightly in cloud to prevent 429 machine-gunning
             return response_text
         else:
-            clean_text = re.sub(
-                r"^(Here is the code:)|(I suggest:)|(```)",
-                "",
-                response_text,
-                flags=re.IGNORECASE,
+            # Try cleaning AI chatter (e.g. "Here is the code:") and re-validating
+            clean_text = (
+                re.sub(
+                    r"^(Here is the code:)|(I suggest:)|(```[a-z]*)",
+                    "",
+                    response_text,
+                    flags=re.IGNORECASE,
+                )
+                .strip()
+                .rstrip("`")
             )
+
             if validator(clean_text):
                 return clean_text
 
-            # Increased from 60s to 120s for invalid response backoff
-            wait = 120 if is_cloud else 5
-            logger.warning(f"Response invalid. Backing off {wait}s...")
+            # If still invalid, back off and retry
+            wait = 120 if is_cloud else 10
+            logger.warning(f"AI response failed validation. Backing off {wait}s...")
             time.sleep(wait)
             attempts += 1
