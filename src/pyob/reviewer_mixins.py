@@ -244,7 +244,7 @@ class ValidationMixin:
         self, logs: str, entry_file: str, context_of_change: str = ""
     ):
         """Detects crashes. Handles missing packages automatically, otherwise asks AI."""
-        
+
         # --- 0. SANITIZE TARGET ---
         # Prevent the bot from hallucinating log headers as filenames
         if entry_file == "Validation Suite" or "Validation Suite" in entry_file:
@@ -323,7 +323,7 @@ class ValidationMixin:
         # --- 1. SMART FILE IDENTIFICATION ---
         # Look for Python tracebacks first
         tb_files = re.findall(r'File "([^"]+)"', logs)
-        
+
         # NEW: Look for JavaScript/HTML filenames if Python search fails
         if not tb_files:
             tb_files = re.findall(r"([\w\-/]+\.(?:js|html|css))", logs)
@@ -333,9 +333,13 @@ class ValidationMixin:
             # Block the "Validation Suite" hallucination here too
             if "Validation Suite" in f:
                 continue
-                
-            abs_f = os.path.abspath(f) if os.path.isabs(f) else os.path.join(self.target_dir, f)
-            
+
+            abs_f = (
+                os.path.abspath(f)
+                if os.path.isabs(f)
+                else os.path.join(self.target_dir, f)
+            )
+
             if (
                 abs_f.startswith(self.target_dir)
                 and not any(ign in abs_f for ign in getattr(self, "IGNORE_DIRS", []))
@@ -343,17 +347,17 @@ class ValidationMixin:
             ):
                 target_file = abs_f
                 break
-        
+
         # Ensure we have a valid path before proceeding
         if not os.path.exists(target_file):
             target_file = entry_file
 
         rel_path = os.path.relpath(target_file, self.target_dir)
-        
+
         # --- 2. LOAD CODE AND PROMPT ---
         with open(target_file, "r", encoding="utf-8", errors="ignore") as f_obj:
             code = f_obj.read()
-            
+
         if context_of_change:
             logger.info(
                 f"Applying CONTEXT-AWARE fix for runtime crash in `{rel_path}`..."
@@ -384,7 +388,7 @@ class ValidationMixin:
         new_code, explanation, _ = getattr(self, "get_valid_edit")(
             prompt, code, require_edit=True, target_filepath=target_file
         )
-        
+
         if new_code != code:
             with open(target_file, "w", encoding="utf-8") as f_out:
                 f_out.write(new_code)
