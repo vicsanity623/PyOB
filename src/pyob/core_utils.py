@@ -62,7 +62,6 @@ IGNORE_FILES = {
     "package-lock.json",
     "LICENSE",
     "manifest.json",
-    "sw.js",
     "action.yml",
     "Dockerfile",
     "build_pyinstaller_multiOS.py",
