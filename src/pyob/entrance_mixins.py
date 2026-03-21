@@ -8,7 +8,7 @@ import time
 import urllib.parse
 from http.server import HTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Callable
 
 from .dashboard_html import OBSERVER_HTML
 from .pyob_dashboard import ObserverHandler
@@ -16,10 +16,45 @@ from .pyob_dashboard import ObserverHandler
 logger = logging.getLogger(__name__)
 
 
-# [TargetedReviewer class moved to targeted_reviewer.py]
-
-
 class EntranceMixin:
+    """
+    Mixin providing the core iteration logic and dashboard management.
+    Attributes are declared here to satisfy static type checking (Mypy).
+    """
+    # --- TYPE ANNOTATIONS FOR MYPY ---
+    target_dir: str
+    pyob_dir: str
+    ENGINE_FILES: list[str]
+    llm_engine: Any
+    code_parser: Any
+    cascade_queue: list[str]
+    cascade_diffs: dict[str, str]
+    session_pr_count: int
+    self_evolved_flag: bool
+    memory_path: str
+    history_path: str
+    analysis_path: str
+    symbols_path: str
+    manual_target_file: Optional[str]
+    key_cooldowns: dict[str, float]
+
+    def pick_target_file(self) -> str: ...
+    def _read_file(self, path: str) -> str: ...
+    def _extract_path_from_llm_response(self, text: str) -> str: ...
+    def get_valid_llm_response(self, p: str, v: Callable[[str], bool], context: str) -> str: ...
+    def update_analysis_for_single_file(self, abs_p: str, rel_p: str): ...
+    def update_ledger_for_file(self, rel_p: str, code: str): ...
+    def detect_symbolic_ripples(self, o: str, n: str, p: str) -> list[str]: ...
+    def _run_final_verification_and_heal(self, b: dict) -> bool: ...
+    def handle_git_librarian(self, p: str, i: int): ...
+    def reboot_pyob(self): ...
+    def trigger_production_build(self): ...
+    def load_ledger(self) -> dict: ...
+    def append_to_history(self, p: str, o: str, n: str): ...
+    def _run_git_command(self, cmd: list[str]) -> bool: ...
+    def wrap_up_evolution_session(self): ...
+    # ---------------------------------
+
     def start_dashboard(self: Any):
         # 1. Save to the internal .pyob folder
         obs_path = os.path.join(self.pyob_dir, "observer.html")
