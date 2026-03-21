@@ -168,9 +168,16 @@ class EntranceMixin:
         print(f"FILE: {obs_path}")
         print("=" * 60 + "\n")
 
-    def execute_targeted_iteration(self: Any, iteration: int):
+    def execute_targeted_iteration(self, iteration: int):
+        """
+        Orchestrates a single targeted evolution step.
+        Preserves engine safety pods and manages symbolic ripples.
+        """
+        from pathlib import Path
+        
         backup_state = self.llm_engine.backup_workspace()
         target_diff = ""
+        
         if self.cascade_queue:
             target_rel_path = self.cascade_queue.pop(0)
             target_diff = self.cascade_diffs.get(target_rel_path, "")
@@ -185,8 +192,8 @@ class EntranceMixin:
         if not target_rel_path:
             return
 
+        # --- SAFETY POD LOGIC (Preserved) ---
         is_engine_file = any(Path(target_rel_path).name == f for f in self.ENGINE_FILES)
-
         if is_engine_file:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             project_name = os.path.basename(self.target_dir)
@@ -206,9 +213,15 @@ class EntranceMixin:
                 logger.error(f"Failed to create external safety pod: {e}")
 
         target_abs_path = os.path.join(self.target_dir, target_rel_path)
+        
+        # --- PREPARE REVIEWER ---
         self.llm_engine.session_context = []
         if is_cascade and target_diff:
-            msg = f"CRITICAL SYMBOLIC RIPPLE: This file depends on code that was just modified. Ensure this file is updated to support these changes:\n\n### DEPDENDENCY CHANGE DIFF:\n{target_diff}"
+            msg = (
+                f"CRITICAL SYMBOLIC RIPPLE: This file depends on code that was just modified. "
+                f"Ensure this file is updated to support these changes:\n\n"
+                f"### DEPENDENCY CHANGE DIFF:\n{target_diff}"
+            )
             self.llm_engine.session_context.append(msg)
 
         old_content = ""
@@ -216,21 +229,39 @@ class EntranceMixin:
             with open(target_abs_path, "r", encoding="utf-8", errors="ignore") as f:
                 old_content = f.read()
 
+        # Initialize the reviewer with the same state as the controller
+        from pyob.targeted_reviewer import TargetedReviewer
         reviewer = TargetedReviewer(self.target_dir, target_abs_path)
+        
+        # SYNC STATE: Ensure reviewer uses the same memory and cooldowns
         reviewer.session_context = self.llm_engine.session_context[:]
+        if hasattr(self, 'key_cooldowns'):
+            reviewer.key_cooldowns = self.key_cooldowns
+        if hasattr(self, 'session_pr_count'):
+            reviewer.session_pr_count = self.session_pr_count
+
+        # Execute the reviewer pipeline
         reviewer.run_pipeline(iteration)
 
+        # Sync context back after review
         self.llm_engine.session_context = reviewer.session_context[:]
+        if hasattr(reviewer, 'session_pr_count'):
+            self.session_pr_count = reviewer.session_pr_count
 
+        # Capture the results of the edit
         new_content = ""
         if os.path.exists(target_abs_path):
             with open(target_abs_path, "r", encoding="utf-8", errors="ignore") as f:
                 new_content = f.read()
 
+        # Update symbolic maps immediately
         logger.info(f"Refreshing metadata for `{target_rel_path}`...")
-        self.update_analysis_for_single_file(target_abs_path, target_rel_path)
-        self.update_ledger_for_file(target_rel_path, new_content)
+        if hasattr(self, 'update_analysis_for_single_file'):
+            self.update_analysis_for_single_file(target_abs_path, target_rel_path)
+        if hasattr(self, 'update_ledger_for_file'):
+            self.update_ledger_for_file(target_rel_path, new_content)
 
+        # --- FINAL VERIFICATION GATE ---
         if old_content != new_content:
             logger.info(
                 f"Edit successful. Checking ripples and running final verification for {target_rel_path}..."
@@ -244,6 +275,7 @@ class EntranceMixin:
                 )
             )
 
+            # Detect if this change impacts other files
             ripples = self.detect_symbolic_ripples(
                 old_content, new_content, target_rel_path
             )
@@ -257,12 +289,16 @@ class EntranceMixin:
                         self.cascade_diffs[r] = current_diff
 
             logger.info("\n" + "=" * 20 + " FINAL VERIFICATION " + "=" * 20)
+            
+            # THE ABSOLUTE GATE: We only push the PR if the app is stable
             if not self._run_final_verification_and_heal(backup_state):
                 logger.error(
-                    "Final verification failed and could not be auto-repaired. Iteration changes have been rolled back."
+                    f"Final verification failed for `{target_rel_path}` and could not be auto-repaired. "
+                    "Iteration changes have been rolled back to protect the branch."
                 )
             else:
                 logger.info("Final verification successful. Application is stable.")
+                # OPEN PR ONLY ON SUCCESS
                 self.handle_git_librarian(target_rel_path, iteration)
 
                 if is_engine_file:
