@@ -11,10 +11,9 @@ logger = logging.getLogger(__name__)
 
 class EntranceMixin:
     """
-    Mixin providing core iteration logic. 
+    Mixin providing core iteration logic.
     Attributes are declared here to satisfy strict Mypy checks.
     """
-    # --- TYPE ANNOTATIONS FOR MYPY (Fixes 23 errors) ---
     target_dir: str
     pyob_dir: str
     ENGINE_FILES: list[str]
@@ -31,20 +30,30 @@ class EntranceMixin:
     manual_target_file: Optional[str]
     key_cooldowns: dict[str, float]
 
-    def pick_target_file(self) -> str: return ""
-    def _read_file(self, path: str) -> str: return ""
-    def _extract_path_from_llm_response(self, text: str) -> str: return ""
-    def get_valid_llm_response(self, p: str, v: Callable[[str], bool], context: str) -> str: return ""
-    def update_analysis_for_single_file(self, abs_p: str, rel_p: str): pass
-    def update_ledger_for_file(self, rel_p: str, code: str): pass
-    def detect_symbolic_ripples(self, o: str, n: str, p: str) -> list[str]: return []
-    def _run_final_verification_and_heal(self, b: dict) -> bool: return False
-    def handle_git_librarian(self, p: str, i: int): pass
-    def append_to_history(self, p: str, o: str, n: str): pass
-    def wrap_up_evolution_session(self): pass
-    def generate_pr_summary(self, rel_path: str, diff_text: str) -> dict: return {}
-    # ---------------------------------------------------
-
+    def pick_target_file(self) -> str:
+        return ""
+    def _read_file(self, path: str) -> str:
+        return ""
+    def _extract_path_from_llm_response(self, text: str) -> str:
+        return ""
+    def get_valid_llm_response(self, p: str, v: Callable[[str], bool], context: str) -> str:
+        return ""
+    def update_analysis_for_single_file(self, abs_p: str, rel_p: str):
+        pass
+    def update_ledger_for_file(self, rel_p: str, code: str):
+        pass
+    def detect_symbolic_ripples(self, o: str, n: str, p: str) -> list[str]:
+        return []
+    def _run_final_verification_and_heal(self, b: dict) -> bool:
+        return False
+    def handle_git_librarian(self, p: str, i: int):
+        pass
+    def append_to_history(self, p: str, o: str, n: str):
+        pass
+    def wrap_up_evolution_session(self):
+        pass
+    def generate_pr_summary(self, rel_path: str, diff_text: str) -> dict:
+        return {}
     def execute_targeted_iteration(self, iteration: int):
         """Orchestrates a single targeted evolution step."""
         backup_state = self.llm_engine.backup_workspace()
