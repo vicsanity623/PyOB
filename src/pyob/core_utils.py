@@ -76,6 +76,7 @@ IGNORE_FILES = {
     "README.md",
     "DOCUMENTATION.md",
     "observer.html",
+    "sw.js",
 }
 SUPPORTED_EXTENSIONS = {".py", ".js", ".ts", ".html", ".css", ".json", ".sh"}
 
