@@ -381,6 +381,10 @@ def get_valid_llm_response_engine(
 
             # If still invalid, back off and retry
             wait = 300 if is_cloud else 10
+            
+            # --- ADD THIS LINE SO YOU CAN SEE WHAT IT FAILED ON ---
+            logger.error(f"Validation Failed! The AI said: '{response_text}'") 
+            
             logger.warning(f"AI response failed validation. Backing off {wait}s...")
             time.sleep(wait)
             attempts += 1
