@@ -40,6 +40,10 @@ class AutoReviewer(
     DASHBOARD_BASE_URL: str = os.environ.get(
         "PYOB_DASHBOARD_URL", "http://localhost:8000"
     )
+    MODULARITY_THRESHOLD_LINES: int = 800
+    DASHBOARD_POLL_INTERVAL_SECONDS: int = 2
+    DASHBOARD_MAX_RETRIES: int = 3
+    DASHBOARD_REQUEST_TIMEOUT_SECONDS: int = 5
 
     def __init__(self, target_dir: str):
         self.target_dir = os.path.abspath(target_dir)
