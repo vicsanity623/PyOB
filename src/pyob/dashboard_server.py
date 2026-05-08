@@ -169,10 +169,18 @@ def api_analysis_data():
         status_file = "issue_statuses.json"
         with status_lock:  # Acquire lock before reading shared resource
             if os.path.exists(status_file):
-                with open(status_file, "r", encoding="utf-8") as f:
-                    issue_statuses = json.load(f)
+                try:
+                    with open(status_file, "r", encoding="utf-8") as f:
+                        issue_statuses = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        f"Could not decode {status_file}, starting fresh for issue statuses in api_analysis_data."
+                    )
+                    issue_statuses = {}
+            else:
+                issue_statuses = {}
 
-        # Merge statuses into parsed_data.
+            # Merge statuses into parsed_data.
         # This logic assumes parsed_data is a dictionary with an 'issues' key,
         # where 'issues' is a list of dictionaries, each with an 'id'.
         # Adjust if DataParser returns a different structure.
