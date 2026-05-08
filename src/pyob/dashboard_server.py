@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import signal
+import socket  # Added for port availability check
 import sys
 import threading
 from datetime import datetime
@@ -9,6 +10,13 @@ from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 
 from pyob.data_parser import DataParser
+
+# Configure logging at the very beginning to ensure messages are displayed
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 
 app = Flask(__name__)
 
@@ -66,8 +74,14 @@ def acknowledge_issue(issue_id):
         issue_statuses = {}
         with status_lock:  # Acquire lock for the entire read-modify-write operation
             if os.path.exists(status_file):
-                with open(status_file, "r", encoding="utf-8") as f:
-                    issue_statuses = json.load(f)
+                try:
+                    with open(status_file, "r", encoding="utf-8") as f:
+                        issue_statuses = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        f"Could not decode {status_file}, starting fresh for issue statuses."
+                    )
+                    issue_statuses = {}
 
             # Update status for the given issue_id
             issue_statuses[issue_id] = {
@@ -215,11 +229,51 @@ def read_file(filename):
         return f.read()
 
 
+def is_port_available(port):
+    """Checks if a given port is available."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
 def run_server():
     logger.info("Starting Flask server...")
-    # Use an environment variable to control debug mode for safety
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
-    app.run(debug=debug_mode, use_reloader=False)
+    initial_port = int(os.environ.get("FLASK_PORT", 5000))
+
+    # Define a range of ports to try: initial port + 10 alternatives
+    ports_to_try = [initial_port] + list(range(initial_port + 1, initial_port + 11))
+
+    for port_to_try in ports_to_try:
+        # Perform a quick check before attempting to run Flask
+        if not is_port_available(port_to_try):
+            logger.warning(f"Port {port_to_try} is already in use. Trying next port...")
+            continue  # Skip to the next port if it's already in use
+
+        try:
+            logger.info(f"Attempting to start Flask server on port {port_to_try}...")
+            app.run(debug=debug_mode, use_reloader=False, port=port_to_try)
+            # If app.run succeeds, it's a blocking call, so this line won't be reached until server stops
+            return  # Server started successfully, exit the function
+        except OSError as e:
+            if "Address already in use" in str(e):
+                logger.warning(
+                    f"Flask failed to bind to port {port_to_try} (Address already in use). Trying next port..."
+                )
+                # Continue to the next port in the loop
+            else:
+                logger.error(
+                    f"An unexpected OSError occurred while starting server on port {port_to_try}: {e}"
+                )
+                raise  # Re-raise other OSError exceptions
+
+    logger.error(
+        f"Could not find an available port in range {ports_to_try[0]}-{ports_to_try[-1]}. Server failed to start."
+    )
+    sys.exit(1)  # Exit with an error code if no port was found
 
 
 if __name__ == "__main__":
