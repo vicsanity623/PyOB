@@ -233,7 +233,7 @@ class EvolutionMixin:
             lambda t: len(t) > 5,
             context="Project Genesis",
         ).strip()
-        content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n-----n\n## File Directory\n\n"
+        content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n-----\n## File Directory\n\n"
 
         file_structures = {}
         for f_path in all_files:
