@@ -61,6 +61,7 @@ OBSERVER_HTML = """
     </style>
     <!-- Add Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/dashboard_utils.js"></script>
 </head>
 <body>
     <h1>
@@ -122,10 +123,22 @@ OBSERVER_HTML = """
 </div>
 
     <script>
-        async function updateStats() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
+        // [Most JavaScript logic moved to dashboard_utils.js]
+
+        async function setManualTarget() {
+            const targetFile = document.getElementById('manualTargetFile').value;
+            if (!targetFile) return;
+            await fetch('/api/set_target_file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_file: targetFile })
+            });
+            document.getElementById('manualTargetFile').value = '';
+        }
+
+        setInterval(updateStats, 3000);
+        updateStats();
+    </script>
                 document.getElementById('iteration').innerText = data.iteration || "0";
                 document.getElementById('ledger').innerText = (data.ledger_stats?.definitions || 0) + " SYM";
                 document.getElementById('queue-count').innerText = data.cascade_queue?.length || "0";
