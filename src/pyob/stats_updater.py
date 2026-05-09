@@ -27,7 +27,7 @@ class StatsUpdater:
             await fetch_api(
                 "/api/review_patch",
                 method="POST",
-                data=json.dumps({"patch_id": patch_id, "action": action}),
+                data={"patch_id": patch_id, "action": action},
             )
         except Exception as e:
             print(f"Failed to {action} patch {patch_id}: {e}")
