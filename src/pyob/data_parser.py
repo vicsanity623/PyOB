@@ -14,7 +14,8 @@ class DataParser:
                 continue
 
             # This regex captures the label and the number, then ignores optional units
-            match = re.search(r"(\w+)\s*:\s*([\d\.]+)(?:px|em|rem|%|s)?", line)
+            # The numeric part is refined to match valid integers or floats more precisely.
+            match = re.search(r"(\w+)\s*:\s*(\d+(?:\.\d+)?)(?:px|em|rem|%|s)?", line)
             if match:
                 key = match.group(1)
                 value_str = match.group(2)
