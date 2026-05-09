@@ -84,7 +84,7 @@ async function updateStats() {
                 const removeBtn = document.createElement('button');
                 removeBtn.className = 'remove-btn';
                 removeBtn.innerHTML = 'X';
-                removeBtn.onclick = () => removeQueueItem(item);
+                removeBtn.addEventListener('click', () => removeQueueItem(item));
 
                 buttonDiv.appendChild(moveUpBtn);
                 buttonDiv.appendChild(moveDownBtn);
