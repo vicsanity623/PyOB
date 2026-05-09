@@ -148,7 +148,6 @@ OBSERVER_HTML = """
                         issue.description.toLowerCase().includes(filterText)
                     );
                     filteredAnalysis.forEach(issue => {
-                    data.analysis.forEach(issue => {
                         const issueElement = document.createElement('div');
                         issueElement.style.marginBottom = '8px';
                         issueElement.style.padding = '8px';
