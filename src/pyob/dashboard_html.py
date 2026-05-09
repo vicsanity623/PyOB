@@ -177,7 +177,7 @@ OBSERVER_HTML = """
                         analysisContainer.appendChild(issueElement);
                     });
                 } else {
-                    analysisContainer.innerText = data.analysis || "No issues found."; // Fallback if not array or empty
+                    analysisContainer.innerText = "No issues found."; // Always display this if no issues or not an array
                 }
 
                 // Update chart after fetching data
