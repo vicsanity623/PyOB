@@ -69,3 +69,15 @@ class StatsUpdater:
             )
         except Exception as e:
             print(f"Failed to remove item {item_id}: {e}")
+
+    async def fetch_cascade_queue(self):
+        """
+        Fetches the current list of items in the cascade queue.
+        """
+        try:
+            response = await fetch_api("/api/cascade_queue")
+            data = await response.json()
+            return data
+        except Exception as e:
+            print(f"Failed to fetch cascade queue: {e}")
+            return None
