@@ -292,10 +292,10 @@ OBSERVER_HTML = """
         async function reviewPatch(patchId, action) {
             try {
                 if (action === 'approved') {
-                    await fetch('/api/approve_patch', {
+                    await fetch('/api/review_patch', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ patch_id: patchId })
+                        body: JSON.stringify({ patch_id: patchId, action: 'approved' })
                     });
                 } else {
                     await fetch('/api/review_patch', {
