@@ -136,9 +136,14 @@ OBSERVER_HTML = """
             document.getElementById('manualTargetFile').value = '';
         }
 
-        setInterval(updateStats, 3000);
-        updateStats();
-    </script>
+        // The main updateStats function was malformed and prematurely closed the script block.
+        // It is now correctly defined below.
+        // The initial calls to setInterval and updateStats() are handled at the end of the script block.
+
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
                 document.getElementById('iteration').innerText = data.iteration || "0";
                 document.getElementById('ledger').innerText = (data.ledger_stats?.definitions || 0) + " SYM";
                 document.getElementById('queue-count').innerText = data.cascade_queue?.length || "0";
