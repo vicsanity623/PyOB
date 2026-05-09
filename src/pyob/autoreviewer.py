@@ -344,16 +344,18 @@ class AutoReviewer(
                 logger.info(
                     f"Found pending {PR_FILE_NAME} and/or {FEATURE_FILE_NAME} from a previous run."
                 )
-                proposals_handled = self._handle_pending_proposals(
+                proposals_outcome = self._handle_pending_proposals(
                     "Hit ENTER to PROCEED, type 'SKIP' to ignore",
                     allow_delete=True,
                 )
-                if not proposals_handled:
+                if proposals_outcome == "SKIPPED":
                     logger.info(
                         "Pending proposals were not applied or deleted. Halting current pipeline iteration to await user action."
                     )
                     return
-                changes_made = True
+                elif proposals_outcome == "APPLIED":
+                    changes_made = True
+                # If proposals_outcome is "DELETED", changes_made remains False, allowing the scan to proceed.
 
             if not changes_made:
                 logger.info("==================================================")
