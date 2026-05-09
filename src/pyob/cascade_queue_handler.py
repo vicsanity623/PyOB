@@ -6,6 +6,11 @@ class CascadeControllerProtocol(Protocol):
     def add_to_cascade_queue(self, item: str) -> None: ...
     def remove_cascade_queue_item(self, item_id: str) -> None: ...
     def move_cascade_queue_item(self, item_id: str, direction: str) -> None: ...
+    def process_next_cascade_item(
+        self,
+    ) -> (
+        str | None
+    ): ...  # Returns the ID of the processed item, or None if queue is empty
 
 
 class CascadeQueueHandler:
@@ -22,6 +27,26 @@ class CascadeQueueHandler:
             return json.dumps(
                 {
                     "error": "Controller method 'add_to_cascade_queue' not found. Ensure entrance.py is updated."
+                }
+            ).encode()
+        except Exception as e:
+            return json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
+
+    def handle_process_next_cascade_item(self):
+        try:
+            processed_item_id = self.controller.process_next_cascade_item()
+            if processed_item_id:
+                return json.dumps(
+                    {"message": f"Item '{processed_item_id}' processed successfully"}
+                ).encode()
+            else:
+                return json.dumps(
+                    {"message": "Cascade queue is empty, no item to process"}
+                ).encode()
+        except AttributeError:
+            return json.dumps(
+                {
+                    "error": "Controller method 'process_next_cascade_item' not found. Ensure entrance.py is updated."
                 }
             ).encode()
         except Exception as e:
