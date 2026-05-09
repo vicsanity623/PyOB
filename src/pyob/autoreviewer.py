@@ -139,13 +139,12 @@ class AutoReviewer(
         )
 
         decision = None
-        poll_interval_seconds = 2
-        max_retries = 3
-
         retries = 0
         while decision is None:
             try:
-                response = requests.get(decision_api_url, timeout=5)
+                response = requests.get(
+                    decision_api_url, timeout=self.DASHBOARD_REQUEST_TIMEOUT_SECONDS
+                )
                 response.raise_for_status()
                 data = response.json()
                 if data.get("decision"):
@@ -158,32 +157,32 @@ class AutoReviewer(
                         )
                         decision = "SKIP"
                 else:
-                    time.sleep(poll_interval_seconds)
+                    time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
                 retries = 0
             except requests.exceptions.ConnectionError as e:
                 retries += 1
                 logger.error(
-                    f"Could not connect to dashboard server at {self.DASHBOARD_BASE_URL}. (Attempt {retries}/{max_retries}) Error: {e}"
+                    f"Could not connect to dashboard server at {self.DASHBOARD_BASE_URL}. (Attempt {retries}/{self.DASHBOARD_MAX_RETRIES}) Error: {e}"
                 )
-                if retries >= max_retries:
+                if retries >= self.DASHBOARD_MAX_RETRIES:
                     logger.info(
                         "Max connection retries reached. Falling back to CLI input for decision."
                     )
                     break
-                time.sleep(poll_interval_seconds * 2)
+                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS * 2)
             except requests.exceptions.Timeout:
                 logger.debug("Dashboard decision poll timed out, retrying...")
-                time.sleep(poll_interval_seconds)
+                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
             except requests.exceptions.RequestException as e:
                 logger.error(
                     f"An HTTP request error occurred while polling dashboard: {e}"
                 )
-                time.sleep(poll_interval_seconds)
+                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
             except Exception as e:
                 logger.error(
                     f"An unexpected error occurred while polling dashboard: {e}"
                 )
-                time.sleep(poll_interval_seconds)
+                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
 
         if decision is None:
             prompt_options = "'PROCEED' to apply, 'SKIP' to ignore"
