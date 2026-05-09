@@ -204,54 +204,6 @@ class AutoReviewer(
 
         logger.info(f"Dashboard decision received: {decision}")
         return decision
-        is_cloud = (
-            os.environ.get("GITHUB_ACTIONS") == "true"
-            or os.environ.get("CI") == "true"
-            or "GITHUB_RUN_ID" in os.environ
-        )
-        if is_cloud or not sys.stdin.isatty():
-            logger.info(
-                "Headless environment detected: Auto-approving dashboard proposal."
-            )
-            return "PROCEED"
-
-        session_id = self._generate_unique_session_id()
-        dashboard_url = f"{self.DASHBOARD_BASE_URL}/review/{session_id}"
-
-        logger.info("==================================================")
-        logger.info(" ACTION REQUIRED: Interactive Proposal Review")
-        logger.info("==================================================")
-        logger.info(
-            "Pending proposals require your review. Please open your web browser to:"
-        )
-        logger.info(f"  -> {dashboard_url}")
-        logger.info(
-            f"Please open your web browser to the URL above for context. Decision will be taken via CLI (PROCEED, SKIP, or {'DELETE' if allow_delete else 'CANCEL'})..."
-        )
-
-        prompt_options = "'PROCEED' to apply, 'SKIP' to ignore"
-        if allow_delete:
-            prompt_options += ", 'DELETE' to discard"
-
-        try:
-            user_decision = (
-                input(f"Simulating dashboard decision (enter {prompt_options}): ")
-                .strip()
-                .upper()
-            )
-
-            if user_decision not in ["PROCEED", "SKIP", "DELETE"]:
-                logger.warning(f"Invalid input '{user_decision}'. Defaulting to SKIP.")
-                user_decision = "SKIP"
-
-        except EOFError:
-            logger.warning(
-                "EOFError caught during input. Auto-approving to prevent crash."
-            )
-            user_decision = "PROCEED"
-
-        logger.info(f"Dashboard decision received: {user_decision}")
-        return user_decision
 
     def set_manual_target_file(self, filepath: str | None):
         if filepath:
