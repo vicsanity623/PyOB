@@ -217,12 +217,41 @@ class EvolutionMixin:
         except Exception:
             pass
 
+        # Build an authoritative list of files that actually exist in the repo.
+        # This grounds the LLM so it cannot hallucinate filenames (e.g. "main.js")
+        # that are not present in the target directory.
+        try:
+            real_files = sorted(
+                os.path.relpath(os.path.join(root, fname), self.target_dir)
+                for root, dirs, files in os.walk(self.target_dir)
+                for fname in files
+                if not any(
+                    part.startswith(".")
+                    for part in os.path.relpath(
+                        os.path.join(root, fname), self.target_dir
+                    ).split(os.sep)
+                )
+            )
+        except Exception:
+            real_files = []
+
+        real_files_text = (
+            "### AVAILABLE FILES (you MUST pick from this exact list ONLY):\n"
+            + "\n".join(f"- {f}" for f in real_files)
+            + "\n\n"
+            if real_files
+            else ""
+        )
+
         prompt = (
             f"Choose ONE relative file path to review next based on ANALYSIS.md/HISTORY.md.\n"
-            f"STRATEGIC RULES:\n1. DO NOT pick `{last_file}`.\n"
-            f"2. Rotate between logic, UI, and styles.\n"
-            f"3. Prioritize files that are highly complex or frequently changed.\n"
-            f"Output ONLY the path.\n\n"
+            f"CRITICAL RULES:\n"
+            f"1. You MUST pick a file from the AVAILABLE FILES list below. Do NOT invent filenames.\n"
+            f"2. DO NOT pick `{last_file}`.\n"
+            f"3. Rotate between logic, UI, and styles.\n"
+            f"4. Prioritize files that are highly complex or frequently changed.\n"
+            f"Output ONLY the exact relative path as it appears in the AVAILABLE FILES list.\n\n"
+            f"{real_files_text}"
             f"### Analysis:\n{analysis}\n### History:\n{history}\n{hotspots_text}"
         )
 
