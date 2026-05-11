@@ -217,7 +217,9 @@ class EvolutionMixin:
         except Exception:
             pass
 
-        from pyob.core_utils import IGNORE_FILES, IGNORE_DIRS, SUPPORTED_EXTENSIONS
+        # Build an authoritative list of files that actually exist in the repo.
+        try:
+            from pyob.core_utils import IGNORE_FILES, IGNORE_DIRS, SUPPORTED_EXTENSIONS
 
             real_files = []
             for root, dirs, files in os.walk(self.target_dir):
@@ -225,15 +227,19 @@ class EvolutionMixin:
                     rel_path = os.path.relpath(os.path.join(root, fname), self.target_dir)
                     path_parts = rel_path.split(os.sep)
 
+                    # Skip hidden files/dirs
                     if any(part.startswith(".") for part in path_parts):
                         continue
                     
+                    # Skip ignored directories
                     if any(part in IGNORE_DIRS for part in path_parts):
                         continue
 
+                    # Skip ignored files (like brain.json)
                     if fname in IGNORE_FILES:
                         continue
 
+                    # Only include supported extensions
                     if not any(fname.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
                         continue
 
@@ -271,7 +277,7 @@ class EvolutionMixin:
             )
 
         response = self.get_valid_llm_response(prompt, val, context="Target Selector")
-        # Fix: Explicitly return a string
+
         return str(self._extract_path_from_llm_response(response))
 
     def build_initial_analysis(self):
