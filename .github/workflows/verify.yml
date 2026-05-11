@@ -45,7 +45,9 @@ jobs:
           # This is required for the git-auto-commit-action to have push rights
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
-      - name: Run PyOB Validation Suite
+      - name: 🚀 Run PyOB Validation Suite
+        env:
+          PYTHONPATH: src
         run: |
           chmod +x check.sh
-          ./check.sh --fix
+          ./check.sh
