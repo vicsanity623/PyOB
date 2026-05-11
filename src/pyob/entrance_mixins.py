@@ -8,7 +8,6 @@ import time
 import urllib.parse
 from http.server import HTTPServer
 from pathlib import Path
-from typing import Any
 
 from .dashboard_html import OBSERVER_HTML
 from .pyob_dashboard import ObserverHandler

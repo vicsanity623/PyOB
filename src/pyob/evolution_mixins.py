@@ -49,9 +49,7 @@ class EvolutionMixin:
         branch_name = f"pyob-evolution-v{iteration}-{timestamp}"
         logger.info(f" LIBRARIAN: Publishing Evolution: {title}")
 
-        if not self._run_git_command(
-            ["git", "checkout", "-b", branch_name]
-        ):
+        if not self._run_git_command(["git", "checkout", "-b", branch_name]):
             return
 
         self._run_git_command(["git", "add", rel_path])
@@ -63,9 +61,7 @@ class EvolutionMixin:
         # 4. Push to GitHub and create the PR
         if shutil.which("gh"):
             logger.info("Pushing to GitHub and opening Pull Request...")
-            if self._run_git_command(
-                ["git", "push", "origin", branch_name]
-            ):
+            if self._run_git_command(["git", "push", "origin", branch_name]):
                 self._run_git_command(
                     [
                         "gh",
@@ -191,9 +187,7 @@ class EvolutionMixin:
             return str(manual)
 
         analysis = str(self._read_file(self.analysis_path))
-        history = str(
-            self._read_file(self.history_path) or "No history yet."
-        )
+        history = str(self._read_file(self.history_path) or "No history yet.")
         last_file = ""
         for line in reversed(history.strip().split("\n")):
             if line.startswith("## "):
@@ -206,13 +200,20 @@ class EvolutionMixin:
         try:
             hotspot_proc = subprocess.run(
                 ["git", "log", "--format=", "--name-only"],
-                cwd=self.target_dir, capture_output=True, text=True
+                cwd=self.target_dir,
+                capture_output=True,
+                text=True,
             )
             from collections import Counter
+
             counts = Counter([f for f in hotspot_proc.stdout.splitlines() if f.strip()])
             top_hotspots = [f for f, _ in counts.most_common(5)]
             if top_hotspots:
-                hotspots_text = "### Git Hotspots (frequently changed):\n" + "\n".join(f"- {f}" for f in top_hotspots) + "\n\n"
+                hotspots_text = (
+                    "### Git Hotspots (frequently changed):\n"
+                    + "\n".join(f"- {f}" for f in top_hotspots)
+                    + "\n\n"
+                )
         except Exception:
             pass
 
@@ -232,9 +233,7 @@ class EvolutionMixin:
                 and path != last_file
             )
 
-        response = self.get_valid_llm_response(
-            prompt, val, context="Target Selector"
-        )
+        response = self.get_valid_llm_response(prompt, val, context="Target Selector")
         # Fix: Explicitly return a string
         return str(self._extract_path_from_llm_response(response))
 

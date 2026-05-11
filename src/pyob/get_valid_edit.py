@@ -1,4 +1,3 @@
-from typing import Any
 import difflib
 import os
 import re
@@ -8,7 +7,8 @@ from .core_utils import logger
 
 
 class GetValidEditMixin:
-    def get_valid_edit(self,
+    def get_valid_edit(
+        self,
         prompt: str,
         source_code: str,
         require_edit: bool = True,
@@ -67,7 +67,8 @@ class GetValidEditMixin:
     # PRIVATE HELPER METHODS
     # ==========================================
 
-    def _handle_pre_generation_approval(self, prompt: str, display_name: str
+    def _handle_pre_generation_approval(
+        self, prompt: str, display_name: str
     ) -> tuple[str, bool]:
         print("\n" + "=" * 50)
         print(f"AI Generation Prompt Ready: [{display_name}]")
@@ -86,7 +87,8 @@ class GetValidEditMixin:
                 prompt += f"\n\n### User Augmentation:\n{aug.strip()}"
         return prompt, False
 
-    def _fetch_llm_with_retries(self, prompt: str, display_name: str, attempts: int
+    def _fetch_llm_with_retries(
+        self, prompt: str, display_name: str, attempts: int
     ) -> tuple[str, int]:
         is_cloud = (
             os.environ.get("GITHUB_ACTIONS") == "true"
@@ -182,7 +184,8 @@ class GetValidEditMixin:
 
             return response, attempts
 
-    def _validate_llm_patch(self,
+    def _validate_llm_patch(
+        self,
         source_code: str,
         response_text: str,
         require_edit: bool,
@@ -213,7 +216,8 @@ class GetValidEditMixin:
 
         return new_code, explanation, True
 
-    def _handle_post_generation_review(self,
+    def _handle_post_generation_review(
+        self,
         source_code: str,
         new_code: str,
         explanation: str,
@@ -258,9 +262,7 @@ class GetValidEditMixin:
             return nc, exp, resp, "APPLY"
         elif choice == "EDIT_CODE":
             ext = os.path.splitext(target_filepath)[1] if target_filepath else ".py"
-            ec = self._launch_external_code_editor(
-                new_code, file_suffix=ext
-            )
+            ec = self._launch_external_code_editor(new_code, file_suffix=ext)
             return ec, explanation + " (User edited)", response_text, "APPLY"
 
         return new_code, explanation, response_text, "APPLY"

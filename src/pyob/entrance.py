@@ -431,7 +431,8 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             logger.error(f"Git Execution Error: {e}")
             return False
 
-    def detect_symbolic_ripples(self, old: str, new: str, source_file: str
+    def detect_symbolic_ripples(
+        self, old: str, new: str, source_file: str
     ) -> list[str]:
         diff = list(difflib.unified_diff(old.splitlines(), new.splitlines()))
         changed_text = "\n".join(
@@ -506,7 +507,9 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                         potential_refs.add(n.id)
             except Exception as e:
                 logger.warning(f"Failed to parse Python AST for {rel_path}: {e}")
-                potential_refs.update(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{3,}\b", code))
+                potential_refs.update(
+                    re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{3,}\b", code)
+                )
         elif ext in [".js", ".ts"]:
             defs = re.findall(
                 r"(?:export\s+|async\s+)?(?:function\*?|class|const|var|let)\s+([a-zA-Z0-9_$]+)",

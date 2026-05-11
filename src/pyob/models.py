@@ -237,7 +237,13 @@ def stream_single_llm(
 
         else:
             response_text = stream_ollama(prompt, on_chunk)
-    except (requests.RequestException, ConnectionError, OSError, ValueError, RuntimeError) as e:
+    except (
+        requests.RequestException,
+        ConnectionError,
+        OSError,
+        ValueError,
+        RuntimeError,
+    ) as e:
         first_chunk_received[0] = True
         if is_cloud:
             time.sleep(30)

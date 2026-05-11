@@ -1,13 +1,8 @@
-from typing import Any
 import ast
 import os
-import random
 import subprocess
 import sys
 import time
-import uuid
-
-import requests
 
 from .core_utils import (
     ANALYSIS_FILE,
@@ -115,20 +110,18 @@ class AutoReviewer(
             or "GITHUB_RUN_ID" in os.environ
         )
         if is_cloud or not sys.stdin.isatty():
-            logger.info(
-                "Headless environment detected: Auto-approving proposal."
-            )
+            logger.info("Headless environment detected: Auto-approving proposal.")
             return "PROCEED"
 
         logger.info("==================================================")
         logger.info(" ACTION REQUIRED: Interactive Proposal Review")
         logger.info("==================================================")
-        
+
         if os.path.exists(self.pr_file):
             logger.info(f"\n--- {PR_FILE_NAME} ---")
             with open(self.pr_file, "r", encoding="utf-8") as f:
                 print(f.read())
-        
+
         if os.path.exists(self.feature_file):
             logger.info(f"\n--- {FEATURE_FILE_NAME} ---")
             with open(self.feature_file, "r", encoding="utf-8") as f:
@@ -185,7 +178,8 @@ class AutoReviewer(
             pass
         return ruff_out, mypy_out
 
-    def build_patch_prompt(self,
+    def build_patch_prompt(
+        self,
         lang_name: str,
         lang_tag: str,
         content: str,
@@ -216,7 +210,8 @@ class AutoReviewer(
             )
         )
 
-    def _handle_pending_proposals(self, prompt_message: str, allow_delete: bool
+    def _handle_pending_proposals(
+        self, prompt_message: str, allow_delete: bool
     ) -> bool:
         """
         Handles user approval for pending PR/feature files, applies them,
@@ -318,33 +313,57 @@ class AutoReviewer(
                         all_files = self.scan_directory()
                 else:
                     all_files = self.scan_directory()
-                    
+
                     # Incremental Analysis: Only analyze changed files + direct dependencies
                     try:
-                        res = subprocess.run(["git", "diff", "--name-only", "HEAD"], cwd=self.target_dir, capture_output=True, text=True)
-                        changed_files = [os.path.abspath(os.path.join(self.target_dir, f)) for f in res.stdout.strip().splitlines() if f]
-                        
+                        res = subprocess.run(
+                            ["git", "diff", "--name-only", "HEAD"],
+                            cwd=self.target_dir,
+                            capture_output=True,
+                            text=True,
+                        )
+                        changed_files = [
+                            os.path.abspath(os.path.join(self.target_dir, f))
+                            for f in res.stdout.strip().splitlines()
+                            if f
+                        ]
+
                         # Add dependencies based on symbols (if we changed a definition, re-analyze files that reference it)
-                        if changed_files and hasattr(self, 'ledger'):
+                        if changed_files and hasattr(self, "ledger"):
                             deps = set(changed_files)
                             for c_file in changed_files:
                                 rel_c = os.path.relpath(c_file, self.target_dir)
                                 # Find definitions in this changed file
-                                defs_here = [k for k, v in self.ledger.get("definitions", {}).items() if v == rel_c]
+                                defs_here = [
+                                    k
+                                    for k, v in self.ledger.get(
+                                        "definitions", {}
+                                    ).items()
+                                    if v == rel_c
+                                ]
                                 # Find files that reference these definitions
-                                for ref_file, refs in self.ledger.get("references", {}).items():
+                                for ref_file, refs in self.ledger.get(
+                                    "references", {}
+                                ).items():
                                     if any(d in refs for d in defs_here):
-                                        deps.add(os.path.abspath(os.path.join(self.target_dir, ref_file)))
-                            
+                                        deps.add(
+                                            os.path.abspath(
+                                                os.path.join(self.target_dir, ref_file)
+                                            )
+                                        )
+
                             all_files = [f for f in all_files if f in deps]
                             if not all_files:
-                                logger.info("Incremental Analysis: No relevant file changes detected. Sleeping...")
+                                logger.info(
+                                    "Incremental Analysis: No relevant file changes detected. Sleeping..."
+                                )
                                 return
                         elif not changed_files:
                             # If no git changes, maybe we just analyze a random subset instead of all to save tokens
                             import random
+
                             all_files = random.sample(all_files, min(3, len(all_files)))
-                            
+
                     except Exception as e:
                         logger.warning(f"Failed to perform incremental analysis: {e}")
 

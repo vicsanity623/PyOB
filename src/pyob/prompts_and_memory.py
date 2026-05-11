@@ -1,4 +1,3 @@
-from typing import Any
 import os
 import re
 
@@ -38,14 +37,15 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
     def load_prompt(self, filename: str, **kwargs: str) -> str:
         # Use a consistent path resolution
         data_dir = os.path.join(self.target_dir, ".pyob")
-        
+
         # A/B Testing Logic
         base_name, ext = os.path.splitext(filename)
         path_a = os.path.join(data_dir, f"{base_name}.vA{ext}")
         path_b = os.path.join(data_dir, f"{base_name}.vB{ext}")
-        
+
         if os.path.exists(path_a) and os.path.exists(path_b):
             import random
+
             chosen_version = random.choice(["vA", "vB"])
             filepath = path_a if chosen_version == "vA" else path_b
             logger.info(f"A/B Testing: Selected {chosen_version} for prompt {filename}")
@@ -105,11 +105,11 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
                     p_words = set(re.findall(r"\b\w{4,}\b", p.lower()))
                     score = len(query_words.intersection(p_words))
                     scored_paragraphs.append((score, p))
-                
+
                 # Sort by score descending and take top N paragraphs
                 scored_paragraphs.sort(key=lambda x: x[0], reverse=True)
                 top_paragraphs = [p for score, p in scored_paragraphs[:5] if score > 0]
-                
+
                 if top_paragraphs:
                     mem_str = "\n\n".join(top_paragraphs)
                     mem_str = f"[RAG FILTERED MEMORY]\n{mem_str}"
@@ -160,23 +160,27 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
     def refactor_memory(self) -> None:
         if not self.memory:
             return
-        logger.info("\nPHASE 6: Cleanup! Summarizing and refactoring MEMORY.md (Rolling Summary)...")
-        
+        logger.info(
+            "\nPHASE 6: Cleanup! Summarizing and refactoring MEMORY.md (Rolling Summary)..."
+        )
+
         # Pull in recent history and analysis for dense summarization
         history_excerpt = self._get_impactful_history()
         analysis_excerpt = ""
         if os.path.exists(self.analysis_path):
             try:
                 with open(self.analysis_path, "r", encoding="utf-8") as f:
-                    analysis_excerpt = f.read()[:1000] # Just the high-level project summary
+                    analysis_excerpt = f.read()[
+                        :1000
+                    ]  # Just the high-level project summary
             except Exception:
                 pass
 
         prompt = self.load_prompt(
-            "RM.md", 
+            "RM.md",
             current_memory=self.memory,
             history=history_excerpt,
-            analysis=analysis_excerpt
+            analysis=analysis_excerpt,
         )
 
         def validator(text: str) -> bool:

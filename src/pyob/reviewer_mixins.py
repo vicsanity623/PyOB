@@ -1,4 +1,3 @@
-from typing import Any
 import os
 import re
 import shutil
@@ -111,7 +110,8 @@ class ValidationMixin:
                         pass
         return success
 
-    def _apply_linter_fixes(self, filepath: str, err_text: str, context_of_change: str = ""
+    def _apply_linter_fixes(
+        self, filepath: str, err_text: str, context_of_change: str = ""
     ):
         with open(filepath, "r", encoding="utf-8") as f:
             code = f.read()
@@ -240,7 +240,8 @@ class ValidationMixin:
         logger.error("Exhausted runtime auto-fix attempts.")
         return False
 
-    def _fix_runtime_errors(self, logs: str, entry_file: str, context_of_change: str = ""
+    def _fix_runtime_errors(
+        self, logs: str, entry_file: str, context_of_change: str = ""
     ):
         """Detects crashes. Handles missing packages automatically, otherwise asks AI."""
         package_match = re.search(r"ModuleNotFoundError: No module named '(.*?)'", logs)
@@ -293,9 +294,7 @@ class ValidationMixin:
 
                 # --- AUTO-DEPENDENCY LOCKING ---
                 try:
-                    req_path = os.path.join(
-                        self.target_dir, "requirements.txt"
-                    )
+                    req_path = os.path.join(self.target_dir, "requirements.txt")
                     with open(req_path, "w", encoding="utf-8") as f_req:
                         subprocess.run(
                             [python_cmd, "-m", "pip", "freeze"],

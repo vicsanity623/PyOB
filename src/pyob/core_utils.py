@@ -170,18 +170,21 @@ class CoreUtilsMixin:
                 "body": f"Automated self-evolution update for `{rel_path}`. Verified stable via runtime testing.",
             }
 
-    def stream_gemini(self, prompt: str, api_key: str, on_chunk: Callable[[], None]
+    def stream_gemini(
+        self, prompt: str, api_key: str, on_chunk: Callable[[], None]
     ) -> str:
         return stream_gemini(prompt, api_key, on_chunk)
 
     def stream_ollama(self, prompt: str, on_chunk: Callable[[], None]) -> str:
         return str(stream_ollama(prompt, on_chunk))
 
-    def stream_github_models(self, prompt: str, on_chunk: Callable[[], None], model_name: str = "Llama-3"
+    def stream_github_models(
+        self, prompt: str, on_chunk: Callable[[], None], model_name: str = "Llama-3"
     ) -> str:
         return str(stream_github_models(prompt, on_chunk, model_name))
 
-    def _stream_single_llm(self,
+    def _stream_single_llm(
+        self,
         prompt: str,
         key: Optional[str] = None,
         context: str = "",
@@ -198,7 +201,7 @@ class CoreUtilsMixin:
         ):
             logger.info(" Headless environment detected: Auto-approving action.")
             return "PROCEED"
-            
+
         print(f"\n{prompt_text}")
         return self._get_input_with_timeout(timeout)
 
@@ -211,18 +214,19 @@ class CoreUtilsMixin:
 
     def _win32_input(self, start_time: float, timeout: int) -> str:
         import msvcrt
+
         input_str = ""
         prev_line_len = 0
         while True:
             remaining = int(timeout - (time.time() - start_time))
             if remaining <= 0:
                 return "PROCEED"
-            
+
             display = f" {remaining}s remaining | You: {input_str}"
             sys.stdout.write(f"\r{display}{' ' * max(0, prev_line_len - len(display))}")
             sys.stdout.flush()
             prev_line_len = len(display)
-            
+
             if msvcrt.kbhit():
                 char = msvcrt.getwch()
                 if char in ("\r", "\n"):
@@ -238,6 +242,7 @@ class CoreUtilsMixin:
     def _unix_input(self, start_time: float, timeout: int) -> str:
         import termios
         import tty
+
         input_str = ""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -247,10 +252,10 @@ class CoreUtilsMixin:
                 remaining = int(timeout - (time.time() - start_time))
                 if remaining <= 0:
                     return "PROCEED"
-                
+
                 sys.stdout.write(f"\r {remaining}s remaining | You: {input_str}\033[K")
                 sys.stdout.flush()
-                
+
                 i, _, _ = select.select([sys.stdin], [], [], 0.1)
                 if i:
                     char = sys.stdin.read(1)
@@ -265,7 +270,8 @@ class CoreUtilsMixin:
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-    def _open_editor_for_content(self,
+    def _open_editor_for_content(
+        self,
         initial_content: str,
         file_suffix: str = ".txt",
         log_message: str = "Opening editor",
@@ -292,13 +298,16 @@ class CoreUtilsMixin:
             logger.error(f"Editor '{editor}' exited with an error. {error_message}")
             return initial_content
         except Exception as e:
-            logger.error(f"An unexpected error occurred with editor: {e}. {error_message}")
+            logger.error(
+                f"An unexpected error occurred with editor: {e}. {error_message}"
+            )
             return initial_content
         finally:
             if os.path.exists(tmp_file_path):
                 os.remove(tmp_file_path)
 
-    def _launch_external_code_editor(self, initial_content: str, file_suffix: str = ".py"
+    def _launch_external_code_editor(
+        self, initial_content: str, file_suffix: str = ".py"
     ) -> str:
         return self._open_editor_for_content(
             initial_content,
@@ -331,7 +340,10 @@ class CoreUtilsMixin:
                     try:
                         mtime = os.path.getmtime(path)
                         # Check cache
-                        if path in self._workspace_cache and self._workspace_cache[path][0] == mtime:
+                        if (
+                            path in self._workspace_cache
+                            and self._workspace_cache[path][0] == mtime
+                        ):
                             state[path] = self._workspace_cache[path][1]
                         else:
                             with open(path, "r", encoding="utf-8") as f:
@@ -379,7 +391,8 @@ class CoreUtilsMixin:
 
         return memory_content
 
-    def get_valid_llm_response(self, prompt: str, validator: Callable[[str], bool], context: str = ""
+    def get_valid_llm_response(
+        self, prompt: str, validator: Callable[[str], bool], context: str = ""
     ) -> str:
         """Wrapper that ensures key rotation is used for all requests."""
         return str(

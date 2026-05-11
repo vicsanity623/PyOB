@@ -1,4 +1,3 @@
-from typing import Any
 import os
 import re
 
@@ -53,12 +52,14 @@ class FeatureOperationsMixin:
         if lang_tag == "python":
             ruff_out, mypy_out = self.run_linters(filepath)
             custom_issues = self.scan_for_lazy_code(filepath, content)
-            
+
             # Verification Pipeline Optimization: Short-circuit LLM if no issues found
             if not ruff_out and not mypy_out and not custom_issues:
-                logger.info(f"Local validation passed perfectly for {filename}. Skipping expensive LLM analysis.")
+                logger.info(
+                    f"Local validation passed perfectly for {filename}. Skipping expensive LLM analysis."
+                )
                 return
-                
+
         prompt = self.build_patch_prompt(
             lang_name, lang_tag, content, ruff_out, mypy_out, custom_issues
         )
@@ -116,9 +117,7 @@ class FeatureOperationsMixin:
         def validator(text):
             return "<SNIPPET>" in text and "</SNIPPET>" in text
 
-        llm_response = self.get_valid_llm_response(
-            prompt, validator, context=rel_path
-        )
+        llm_response = self.get_valid_llm_response(prompt, validator, context=rel_path)
         thought_match = re.search(
             r"<(?:THOUGHT|EXPLANATION)>(.*?)</(?:THOUGHT|EXPLANATION)>",
             llm_response,
@@ -204,7 +203,9 @@ class FeatureOperationsMixin:
         logger.info(
             f"Implementing approved feature seamlessly directly into {rel_path}..."
         )
-        memory_section = self._get_rich_context(query_text=feature_content + "\n" + source_code)
+        memory_section = self._get_rich_context(
+            query_text=feature_content + "\n" + source_code
+        )
         prompt = self.load_prompt(
             "IF.md",
             memory_section=memory_section,
@@ -227,9 +228,7 @@ class FeatureOperationsMixin:
             return False
 
         if lang_tag == "python":
-            new_code = self.ensure_imports_retained(
-                source_code, new_code, target_path
-            )
+            new_code = self.ensure_imports_retained(source_code, new_code, target_path)
 
         with open(target_path, "w", encoding="utf-8") as f_out:
             f_out.write(new_code)
@@ -238,9 +237,7 @@ class FeatureOperationsMixin:
             # Verification Pipeline
             if not self.run_linter_fix_loop(
                 context_of_change=feature_content
-            ) or not self.run_and_verify_app(
-                context_of_change=feature_content
-            ):
+            ) or not self.run_and_verify_app(context_of_change=feature_content):
                 logger.error("Verification failed. Cleaning up spawned modules.")
                 for file_path in created_files:
                     if os.path.exists(file_path):

@@ -1,4 +1,3 @@
-from typing import Any
 import ast
 import logging
 import os
