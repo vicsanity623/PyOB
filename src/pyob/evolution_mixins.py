@@ -219,18 +219,20 @@ class EvolutionMixin:
 
         # Build an authoritative list of files that actually exist in the repo.
         try:
-            from pyob.core_utils import IGNORE_FILES, IGNORE_DIRS, SUPPORTED_EXTENSIONS
+            from pyob.core_utils import IGNORE_DIRS, IGNORE_FILES, SUPPORTED_EXTENSIONS
 
             real_files = []
             for root, dirs, files in os.walk(self.target_dir):
                 for fname in files:
-                    rel_path = os.path.relpath(os.path.join(root, fname), self.target_dir)
+                    rel_path = os.path.relpath(
+                        os.path.join(root, fname), self.target_dir
+                    )
                     path_parts = rel_path.split(os.sep)
 
                     # Skip hidden files/dirs
                     if any(part.startswith(".") for part in path_parts):
                         continue
-                    
+
                     # Skip ignored directories
                     if any(part in IGNORE_DIRS for part in path_parts):
                         continue
@@ -244,7 +246,7 @@ class EvolutionMixin:
                         continue
 
                     real_files.append(rel_path)
-            
+
             real_files.sort()
         except Exception:
             real_files = []
