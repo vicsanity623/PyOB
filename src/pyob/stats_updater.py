@@ -1,6 +1,6 @@
+from typing import Any
 import json
-
-from dashboard_server import fetch_api
+from pyob.dashboard_server import fetch_api
 
 
 class StatsUpdater:
