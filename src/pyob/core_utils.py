@@ -63,6 +63,8 @@ IGNORE_FILES = {
     "LICENSE",
     "manifest.json",
     "action.yml",
+    "brain.json",
+    "evolved_core_brain.pkl",
     "Dockerfile",
     "build_pyinstaller_multiOS.py",
     "check.sh",
