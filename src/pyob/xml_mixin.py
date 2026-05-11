@@ -86,7 +86,9 @@ class ApplyXMLMixin:
 
     def _extract_explanation(self, llm_response: str) -> str:
         thought_match = re.search(
-            r"<\s*THOUGHT[^>]*>(.*?)<\s*/\s*THOUGHT\s*>", llm_response, re.DOTALL | re.IGNORECASE
+            r"<\s*THOUGHT[^>]*>(.*?)<\s*/\s*THOUGHT\s*>",
+            llm_response,
+            re.DOTALL | re.IGNORECASE,
         )
         return (
             thought_match.group(1).strip()
@@ -231,8 +233,8 @@ class ApplyXMLMixin:
                 return source, False
 
             def make_flexible(line: str) -> str:
-                parts = re.split(r'[ \t]+', line)
-                return r'\s+'.join(re.escape(p) for p in parts)
+                parts = re.split(r"[ \t]+", line)
+                return r"\s+".join(re.escape(p) for p in parts)
 
             regex_parts = [
                 r"^[ \t]*" + make_flexible(line) + r"[ \t]*\n+"
