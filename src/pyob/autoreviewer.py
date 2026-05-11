@@ -1,3 +1,4 @@
+from typing import Any
 import ast
 import os
 import random
@@ -26,6 +27,7 @@ from .get_valid_edit import GetValidEditMixin
 from .prompts_and_memory import PromptsAndMemoryMixin
 from .reviewer_mixins import ValidationMixin
 from .scanner_mixins import ScannerMixin
+from .xml_mixin import ApplyXMLMixin
 
 
 class AutoReviewer(
@@ -35,6 +37,7 @@ class AutoReviewer(
     FeatureOperationsMixin,
     ScannerMixin,
     GetValidEditMixin,
+    ApplyXMLMixin,
 ):
     _shared_cooldowns: dict[str, float] | None = None
     DASHBOARD_BASE_URL: str = os.environ.get(
@@ -102,15 +105,9 @@ class AutoReviewer(
                 issues.append("Found use of 'typing.Any'.")
         return issues
 
-    def _generate_unique_session_id(self) -> str:
-        """Generates a unique session ID for dashboard interactions."""
-        return str(uuid.uuid4())
-
-    def _get_dashboard_decision(self, allow_delete: bool) -> str:
+    def _get_user_decision(self, prompt_message: str, allow_delete: bool) -> str:
         """
-        Initiates an interactive web-based review process for pending proposals
-        and waits for the user's decision from the dashboard.
-        The user makes the decision directly on the dashboard UI.
+        Initiates an interactive CLI review process for pending proposals.
         """
         is_cloud = (
             os.environ.get("GITHUB_ACTIONS") == "true"
@@ -119,94 +116,44 @@ class AutoReviewer(
         )
         if is_cloud or not sys.stdin.isatty():
             logger.info(
-                "Headless environment detected: Auto-approving dashboard proposal."
+                "Headless environment detected: Auto-approving proposal."
             )
             return "PROCEED"
-
-        session_id = self._generate_unique_session_id()
-        dashboard_url = f"{self.DASHBOARD_BASE_URL}/review/{session_id}"
-        decision_api_url = f"{self.DASHBOARD_BASE_URL}/api/decision/{session_id}"
 
         logger.info("==================================================")
         logger.info(" ACTION REQUIRED: Interactive Proposal Review")
         logger.info("==================================================")
-        logger.info(
-            "Pending proposals require your review. Please open your web browser to:"
-        )
-        logger.info(f"  -> {dashboard_url}")
-        logger.info(
-            "Waiting for your decision from the dashboard (PROCEED, SKIP, or DELETE)..."
-        )
+        
+        if os.path.exists(self.pr_file):
+            logger.info(f"\n--- {PR_FILE_NAME} ---")
+            with open(self.pr_file, "r", encoding="utf-8") as f:
+                print(f.read())
+        
+        if os.path.exists(self.feature_file):
+            logger.info(f"\n--- {FEATURE_FILE_NAME} ---")
+            with open(self.feature_file, "r", encoding="utf-8") as f:
+                print(f.read())
 
-        decision = None
-        retries = 0
-        while decision is None:
-            try:
-                response = requests.get(
-                    decision_api_url, timeout=self.DASHBOARD_REQUEST_TIMEOUT_SECONDS
-                )
-                response.raise_for_status()
-                data = response.json()
-                if data.get("decision"):
-                    decision = data["decision"].upper()
-                    if decision not in ["PROCEED", "SKIP"] and (
-                        not allow_delete or decision != "DELETE"
-                    ):
-                        logger.warning(
-                            f"Invalid or disallowed decision '{decision}' received from dashboard. Defaulting to SKIP."
-                        )
-                        decision = "SKIP"
-                else:
-                    time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
-                retries = 0
-            except requests.exceptions.ConnectionError as e:
-                retries += 1
-                logger.error(
-                    f"Could not connect to dashboard server at {self.DASHBOARD_BASE_URL}. (Attempt {retries}/{self.DASHBOARD_MAX_RETRIES}) Error: {e}"
-                )
-                if retries >= self.DASHBOARD_MAX_RETRIES:
-                    logger.info(
-                        "Max connection retries reached. Falling back to CLI input for decision."
-                    )
-                    break
-                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS * 2)
-            except requests.exceptions.Timeout:
-                logger.debug("Dashboard decision poll timed out, retrying...")
-                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
-            except requests.exceptions.RequestException as e:
-                logger.error(
-                    f"An HTTP request error occurred while polling dashboard: {e}"
-                )
-                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
-            except Exception as e:
-                logger.error(
-                    f"An unexpected error occurred while polling dashboard: {e}"
-                )
-                time.sleep(self.DASHBOARD_POLL_INTERVAL_SECONDS)
+        logger.info("==================================================")
 
-        if decision is None:
-            prompt_options = "'PROCEED' to apply, 'SKIP' to ignore"
-            if allow_delete:
-                prompt_options += ", 'DELETE' to discard"
+        while True:
             try:
-                user_decision = input(f"Enter {prompt_options}: ").strip().upper()
+                user_decision = input(f"{prompt_message}: ").strip().upper()
+                if user_decision == "":
+                    return "PROCEED"
                 if user_decision not in ["PROCEED", "SKIP"] and (
                     not allow_delete or user_decision != "DELETE"
                 ):
                     logger.warning(
-                        f"Invalid input '{user_decision}'. Defaulting to SKIP."
+                        f"Invalid input '{user_decision}'. Please try again."
                     )
-                    decision = "SKIP"
                 else:
-                    decision = user_decision
+                    return user_decision
             except EOFError:
                 logger.warning(
                     "EOFError caught during input. Auto-approving to prevent crash."
                 )
-                decision = "PROCEED"
-
-        logger.info(f"Dashboard decision received: {decision}")
-        return decision
+                return "PROCEED"
 
     def set_manual_target_file(self, filepath: str | None):
         if filepath:
@@ -238,8 +185,7 @@ class AutoReviewer(
             pass
         return ruff_out, mypy_out
 
-    def build_patch_prompt(
-        self,
+    def build_patch_prompt(self,
         lang_name: str,
         lang_tag: str,
         content: str,
@@ -247,7 +193,7 @@ class AutoReviewer(
         mypy_out: str,
         custom_issues: list[str],
     ) -> str:
-        memory_section = self._get_rich_context()
+        memory_section = self._get_rich_context(query_text=content)
         ruff_section = f"### Ruff Errors:\n{ruff_out}\n\n" if ruff_out else ""
         mypy_section = f"### Mypy Errors:\n{mypy_out}\n\n" if mypy_out else ""
         custom_issues_section = (
@@ -270,8 +216,7 @@ class AutoReviewer(
             )
         )
 
-    def _handle_pending_proposals(
-        self, prompt_message: str, allow_delete: bool
+    def _handle_pending_proposals(self, prompt_message: str, allow_delete: bool
     ) -> bool:
         """
         Handles user approval for pending PR/feature files, applies them,
@@ -282,7 +227,7 @@ class AutoReviewer(
         if not (os.path.exists(self.pr_file) or os.path.exists(self.feature_file)):
             return False
 
-        user_input = self._get_dashboard_decision(allow_delete)
+        user_input = self._get_user_decision(prompt_message, allow_delete)
 
         if user_input == "PROCEED":
             backup_state = self.backup_workspace()
@@ -373,6 +318,36 @@ class AutoReviewer(
                         all_files = self.scan_directory()
                 else:
                     all_files = self.scan_directory()
+                    
+                    # Incremental Analysis: Only analyze changed files + direct dependencies
+                    try:
+                        res = subprocess.run(["git", "diff", "--name-only", "HEAD"], cwd=self.target_dir, capture_output=True, text=True)
+                        changed_files = [os.path.abspath(os.path.join(self.target_dir, f)) for f in res.stdout.strip().splitlines() if f]
+                        
+                        # Add dependencies based on symbols (if we changed a definition, re-analyze files that reference it)
+                        if changed_files and hasattr(self, 'ledger'):
+                            deps = set(changed_files)
+                            for c_file in changed_files:
+                                rel_c = os.path.relpath(c_file, self.target_dir)
+                                # Find definitions in this changed file
+                                defs_here = [k for k, v in self.ledger.get("definitions", {}).items() if v == rel_c]
+                                # Find files that reference these definitions
+                                for ref_file, refs in self.ledger.get("references", {}).items():
+                                    if any(d in refs for d in defs_here):
+                                        deps.add(os.path.abspath(os.path.join(self.target_dir, ref_file)))
+                            
+                            all_files = [f for f in all_files if f in deps]
+                            if not all_files:
+                                logger.info("Incremental Analysis: No relevant file changes detected. Sleeping...")
+                                return
+                        elif not changed_files:
+                            # If no git changes, maybe we just analyze a random subset instead of all to save tokens
+                            import random
+                            all_files = random.sample(all_files, min(3, len(all_files)))
+                            
+                    except Exception as e:
+                        logger.warning(f"Failed to perform incremental analysis: {e}")
+
                 if not all_files:
                     return logger.warning("No supported source files found.")
                 for idx, filepath in enumerate(all_files, start=1):

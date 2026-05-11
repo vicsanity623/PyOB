@@ -1,3 +1,4 @@
+from typing import Any
 import difflib
 import os
 import re
@@ -7,8 +8,7 @@ from .core_utils import logger
 
 
 class GetValidEditMixin:
-    def get_valid_edit(
-        self,
+    def get_valid_edit(self,
         prompt: str,
         source_code: str,
         require_edit: bool = True,
@@ -67,28 +67,26 @@ class GetValidEditMixin:
     # PRIVATE HELPER METHODS
     # ==========================================
 
-    def _handle_pre_generation_approval(
-        self, prompt: str, display_name: str
+    def _handle_pre_generation_approval(self, prompt: str, display_name: str
     ) -> tuple[str, bool]:
         print("\n" + "=" * 50)
         print(f"AI Generation Prompt Ready: [{display_name}]")
         print("=" * 50)
-        choice = getattr(self, "get_user_approval")(
+        choice = self.get_user_approval(
             "Hit ENTER to send as-is, type 'EDIT_PROMPT', 'AUGMENT_PROMPT', or 'SKIP'.",
             timeout=220,
         )
         if choice == "SKIP":
             return prompt, True
         elif choice == "EDIT_PROMPT":
-            prompt = getattr(self, "_edit_prompt_with_external_editor")(prompt)
+            prompt = self._edit_prompt_with_external_editor(prompt)
         elif choice == "AUGMENT_PROMPT":
-            aug = getattr(self, "_get_user_prompt_augmentation")()
+            aug = self._get_user_prompt_augmentation()
             if aug.strip():
                 prompt += f"\n\n### User Augmentation:\n{aug.strip()}"
         return prompt, False
 
-    def _fetch_llm_with_retries(
-        self, prompt: str, display_name: str, attempts: int
+    def _fetch_llm_with_retries(self, prompt: str, display_name: str, attempts: int
     ) -> tuple[str, int]:
         is_cloud = (
             os.environ.get("GITHUB_ACTIONS") == "true"
@@ -109,7 +107,7 @@ class GetValidEditMixin:
                 logger.info(
                     f"\n[Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(gemini_keys)}]"
                 )
-                response = getattr(self, "_stream_single_llm")(
+                response = self._stream_single_llm(
                     prompt, key=key, context=display_name
                 )
             elif is_cloud:
@@ -127,12 +125,12 @@ class GetValidEditMixin:
                 logger.warning(
                     f"Gemini limited. Pivoting to GitHub Models ({gh_model})..."
                 )
-                response = getattr(self, "_stream_single_llm")(
+                response = self._stream_single_llm(
                     prompt, key=None, context=display_name, gh_model=gh_model
                 )
             else:
                 logger.info("\n[All keys exhausted. Falling back to Local Ollama]")
-                response = getattr(self, "_stream_single_llm")(
+                response = self._stream_single_llm(
                     prompt, key=None, context=display_name
                 )
 
@@ -177,21 +175,20 @@ class GetValidEditMixin:
                     time.sleep(5)
                     continue
 
-                logger.warning("API Error or Empty Response. Sleeping 120s...")
-                time.sleep(120)
+                logger.warning("API Error or Empty Response. Sleeping 30s...")
+                time.sleep(30)
                 attempts += 1
                 continue
 
             return response, attempts
 
-    def _validate_llm_patch(
-        self,
+    def _validate_llm_patch(self,
         source_code: str,
         response_text: str,
         require_edit: bool,
         display_name: str,
     ) -> tuple[str, str, bool]:
-        new_code, explanation, edit_success = getattr(self, "apply_xml_edits")(
+        new_code, explanation, edit_success = self.apply_xml_edits(
             source_code, response_text
         )
         edit_count = len(re.findall(r"<EDIT>", response_text, re.IGNORECASE))
@@ -204,20 +201,19 @@ class GetValidEditMixin:
             logger.warning(
                 f"Partial edit failure in {display_name}. Auto-regenerating..."
             )
-            time.sleep(30)
+            time.sleep(10)
             return source_code, explanation, False
         if require_edit and new_code == source_code:
             logger.warning("Search block mismatch. Rotating...")
-            time.sleep(30)
+            time.sleep(10)
             return source_code, explanation, False
         if not require_edit and new_code == source_code and not ai_approved:
-            time.sleep(30)
+            time.sleep(10)
             return source_code, explanation, False
 
         return new_code, explanation, True
 
-    def _handle_post_generation_review(
-        self,
+    def _handle_post_generation_review(self,
         source_code: str,
         new_code: str,
         explanation: str,
@@ -247,7 +243,7 @@ class GetValidEditMixin:
             else:
                 print(clean)
 
-        choice = getattr(self, "get_user_approval")(
+        choice = self.get_user_approval(
             "Hit ENTER to APPLY, type 'EDIT_CODE', 'EDIT_XML', 'REGENERATE', or 'SKIP'.",
             timeout=220,
         )
@@ -257,12 +253,12 @@ class GetValidEditMixin:
         elif choice == "REGENERATE":
             return source_code, explanation, response_text, "REGENERATE"
         elif choice == "EDIT_XML":
-            resp = getattr(self, "_edit_prompt_with_external_editor")(response_text)
-            nc, exp, _ = getattr(self, "apply_xml_edits")(source_code, resp)
+            resp = self._edit_prompt_with_external_editor(response_text)
+            nc, exp, _ = self.apply_xml_edits(source_code, resp)
             return nc, exp, resp, "APPLY"
         elif choice == "EDIT_CODE":
             ext = os.path.splitext(target_filepath)[1] if target_filepath else ".py"
-            ec = getattr(self, "_launch_external_code_editor")(
+            ec = self._launch_external_code_editor(
                 new_code, file_suffix=ext
             )
             return ec, explanation + " (User edited)", response_text, "APPLY"

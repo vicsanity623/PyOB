@@ -37,7 +37,7 @@ class EvolutionMixin:
         diff_text = diff_proc.stdout or "Minor structural refinement."
 
         # 2. Ask the AI to write the PR summary (inherited from CoreUtilsMixin)
-        summary = getattr(self, "generate_pr_summary")(rel_path, diff_text)
+        summary = self.generate_pr_summary(rel_path, diff_text)
         title = summary.get("title", f"Evolution: Refactor of {rel_path}")
         body = summary.get(
             "body",
@@ -49,24 +49,24 @@ class EvolutionMixin:
         branch_name = f"pyob-evolution-v{iteration}-{timestamp}"
         logger.info(f" LIBRARIAN: Publishing Evolution: {title}")
 
-        if not getattr(self, "_run_git_command")(
+        if not self._run_git_command(
             ["git", "checkout", "-b", branch_name]
         ):
             return
 
-        getattr(self, "_run_git_command")(["git", "add", rel_path])
+        self._run_git_command(["git", "add", rel_path])
 
         # Use AI-generated title as commit message
-        if not getattr(self, "_run_git_command")(["git", "commit", "-m", title]):
+        if not self._run_git_command(["git", "commit", "-m", title]):
             return
 
         # 4. Push to GitHub and create the PR
         if shutil.which("gh"):
             logger.info("Pushing to GitHub and opening Pull Request...")
-            if getattr(self, "_run_git_command")(
+            if self._run_git_command(
                 ["git", "push", "origin", branch_name]
             ):
-                getattr(self, "_run_git_command")(
+                self._run_git_command(
                     [
                         "gh",
                         "pr",
@@ -190,9 +190,9 @@ class EvolutionMixin:
             setattr(self, "manual_target_file", None)
             return str(manual)
 
-        analysis = str(getattr(self, "_read_file")(self.analysis_path))
+        analysis = str(self._read_file(self.analysis_path))
         history = str(
-            getattr(self, "_read_file")(self.history_path) or "No history yet."
+            self._read_file(self.history_path) or "No history yet."
         )
         last_file = ""
         for line in reversed(history.strip().split("\n")):
@@ -202,25 +202,41 @@ class EvolutionMixin:
                     last_file = match.group(1)
                     break
 
+        hotspots_text = ""
+        try:
+            hotspot_proc = subprocess.run(
+                ["git", "log", "--format=", "--name-only"],
+                cwd=self.target_dir, capture_output=True, text=True
+            )
+            from collections import Counter
+            counts = Counter([f for f in hotspot_proc.stdout.splitlines() if f.strip()])
+            top_hotspots = [f for f, _ in counts.most_common(5)]
+            if top_hotspots:
+                hotspots_text = "### Git Hotspots (frequently changed):\n" + "\n".join(f"- {f}" for f in top_hotspots) + "\n\n"
+        except Exception:
+            pass
+
         prompt = (
             f"Choose ONE relative file path to review next based on ANALYSIS.md/HISTORY.md.\n"
             f"STRATEGIC RULES:\n1. DO NOT pick `{last_file}`.\n"
-            f"2. Rotate between logic, UI, and styles.\nOutput ONLY the path.\n\n"
-            f"### Analysis:\n{analysis}\n### History:\n{history}"
+            f"2. Rotate between logic, UI, and styles.\n"
+            f"3. Prioritize files that are highly complex or frequently changed.\n"
+            f"Output ONLY the path.\n\n"
+            f"### Analysis:\n{analysis}\n### History:\n{history}\n{hotspots_text}"
         )
 
         def val(text: str) -> bool:
-            path = getattr(self, "_extract_path_from_llm_response")(text)
+            path = self._extract_path_from_llm_response(text)
             return (
                 os.path.exists(os.path.join(self.target_dir, path))
                 and path != last_file
             )
 
-        response = getattr(self, "get_valid_llm_response")(
+        response = self.get_valid_llm_response(
             prompt, val, context="Target Selector"
         )
         # Fix: Explicitly return a string
-        return str(getattr(self, "_extract_path_from_llm_response")(response))
+        return str(self._extract_path_from_llm_response(response))
 
     def build_initial_analysis(self):
         """Bootstraps ANALYSIS.md and SYMBOLS.json."""
@@ -228,7 +244,7 @@ class EvolutionMixin:
         all_files = sorted(self.llm_engine.scan_directory())
         struct_map = "\n".join(os.path.relpath(f, self.target_dir) for f in all_files)
 
-        p_summary = getattr(self, "get_valid_llm_response")(
+        p_summary = self.get_valid_llm_response(
             f"Write a 2-sentence summary of this project: {struct_map}",
             lambda t: len(t) > 5,
             context="Project Genesis",
@@ -248,7 +264,7 @@ class EvolutionMixin:
         batch_prompt = "Output 'filepath: summary' for each:\n" + "\n".join(
             f"{r}: {s}" for r, s in file_structures.items()
         )
-        batch_resp = getattr(self, "get_valid_llm_response")(
+        batch_resp = self.get_valid_llm_response(
             batch_prompt, lambda t: ":" in t, context="Batch Genesis"
         ).strip()
 
@@ -271,7 +287,7 @@ class EvolutionMixin:
         """Generates a master summary of the entire session and opens a final PR."""
         logger.info("🎬 INITIATING WRAP-UP PHASE: Generating session summary...")
 
-        history_text = getattr(self, "_read_file")(self.history_path)
+        history_text = self._read_file(self.history_path)
 
         prompt = f"""
         Analyze the following evolution history for this session and write a 'Master Session Summary'.

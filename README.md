@@ -256,8 +256,8 @@ Gemini API keys are configured in `core_utils.py` in the `GEMINI_API_KEYS` list.
 ### Models
 | Setting | Default | Location |
 |---|---|---|
-| Gemini Model | `gemini-2.5-flash` | `core_utils.py` → `GEMINI_MODEL` |
-| Local Model | `qwen3-coder:30b` | `core_utils.py` → `LOCAL_MODEL` |
+| Gemini Model | `gemini-1.5-flash` | `core_utils.py` → `GEMINI_MODEL` |
+| Local Model  | `llama3.2:3b` | `core_utils.py` → `LOCAL_MODEL` |
 | Temperature | `0.1` | `core_utils.py` → `stream_gemini()` / `stream_ollama()` |
 
 ### Ignored Paths

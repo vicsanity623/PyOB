@@ -20,8 +20,8 @@ from .models import (
 
 env_keys = os.environ.get("PYOB_GEMINI_KEYS", "")
 GEMINI_API_KEYS = [k.strip() for k in env_keys.split(",") if k.strip()]
-GEMINI_MODEL = os.environ.get("PYOB_GEMINI_MODEL", "gemini-2.5-flash")
-LOCAL_MODEL = os.environ.get("PYOB_LOCAL_MODEL", "qwen3-coder:30b")
+GEMINI_MODEL = os.environ.get("PYOB_GEMINI_MODEL", "gemini-3.1-flash-lite")
+LOCAL_MODEL = os.environ.get("PYOB_LOCAL_MODEL", "llama3.2:3b")
 PR_FILE_NAME = "PEER_REVIEW.md"
 FEATURE_FILE_NAME = "FEATURE.md"
 FAILED_PR_FILE_NAME = "FAILED_PEER_REVIEW.md"
@@ -163,28 +163,25 @@ class CoreUtilsMixin:
 
             raise ValueError("LLM response was not a valid dictionary object")
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError) as e:
             logger.warning(f"Librarian failed to generate AI summary: {e}")
             return {
                 "title": f"Evolution: Refactor of `{rel_path}`",
                 "body": f"Automated self-evolution update for `{rel_path}`. Verified stable via runtime testing.",
             }
 
-    def stream_gemini(
-        self, prompt: str, api_key: str, on_chunk: Callable[[], None]
+    def stream_gemini(self, prompt: str, api_key: str, on_chunk: Callable[[], None]
     ) -> str:
         return stream_gemini(prompt, api_key, on_chunk)
 
     def stream_ollama(self, prompt: str, on_chunk: Callable[[], None]) -> str:
         return str(stream_ollama(prompt, on_chunk))
 
-    def stream_github_models(
-        self, prompt: str, on_chunk: Callable[[], None], model_name: str = "Llama-3"
+    def stream_github_models(self, prompt: str, on_chunk: Callable[[], None], model_name: str = "Llama-3"
     ) -> str:
         return str(stream_github_models(prompt, on_chunk, model_name))
 
-    def _stream_single_llm(
-        self,
+    def _stream_single_llm(self,
         prompt: str,
         key: Optional[str] = None,
         context: str = "",
@@ -201,65 +198,74 @@ class CoreUtilsMixin:
         ):
             logger.info(" Headless environment detected: Auto-approving action.")
             return "PROCEED"
+            
         print(f"\n{prompt_text}")
-        start_time = time.time()
-        input_str = ""
-        if sys.platform == "win32":
-            import msvcrt
+        return self._get_input_with_timeout(timeout)
 
-            prev_line_len = 0
+    def _get_input_with_timeout(self, timeout: int) -> str:
+        start_time = time.time()
+        if sys.platform == "win32":
+            return self._win32_input(start_time, timeout)
+        else:
+            return self._unix_input(start_time, timeout)
+
+    def _win32_input(self, start_time: float, timeout: int) -> str:
+        import msvcrt
+        input_str = ""
+        prev_line_len = 0
+        while True:
+            remaining = int(timeout - (time.time() - start_time))
+            if remaining <= 0:
+                return "PROCEED"
+            
+            display = f" {remaining}s remaining | You: {input_str}"
+            sys.stdout.write(f"\r{display}{' ' * max(0, prev_line_len - len(display))}")
+            sys.stdout.flush()
+            prev_line_len = len(display)
+            
+            if msvcrt.kbhit():
+                char = msvcrt.getwch()
+                if char in ("\r", "\n"):
+                    print()
+                    val = input_str.strip().upper()
+                    return val if val else "PROCEED"
+                elif char == "\x08":
+                    input_str = input_str[:-1]
+                else:
+                    input_str += char
+            time.sleep(0.1)
+
+    def _unix_input(self, start_time: float, timeout: int) -> str:
+        import termios
+        import tty
+        input_str = ""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(fd)
             while True:
                 remaining = int(timeout - (time.time() - start_time))
                 if remaining <= 0:
                     return "PROCEED"
-                current_display_str = f" {remaining}s remaining | You: {input_str}"
-                padding_needed = max(0, prev_line_len - len(current_display_str))
-                sys.stdout.write(f"\r{current_display_str}{' ' * padding_needed}")
-                prev_line_len = len(current_display_str) + padding_needed
+                
+                sys.stdout.write(f"\r {remaining}s remaining | You: {input_str}\033[K")
                 sys.stdout.flush()
-                if msvcrt.kbhit():
-                    char = msvcrt.getwch()
-                    if char in ("\r", "\n"):
+                
+                i, _, _ = select.select([sys.stdin], [], [], 0.1)
+                if i:
+                    char = sys.stdin.read(1)
+                    if char in ("\n", "\r"):
                         print()
                         val = input_str.strip().upper()
                         return val if val else "PROCEED"
-                    elif char == "\x08":
+                    elif char in ("\x08", "\x7f"):
                         input_str = input_str[:-1]
                     else:
                         input_str += char
-                time.sleep(0.1)
-        else:
-            import termios
-            import tty
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            try:
-                tty.setcbreak(fd)
-                while True:
-                    remaining = int(timeout - (time.time() - start_time))
-                    if remaining <= 0:
-                        return "PROCEED"
-                    sys.stdout.write(
-                        f"\r {remaining}s remaining | You: {input_str}\033[K"
-                    )
-                    sys.stdout.flush()
-                    i, o, e = select.select([sys.stdin], [], [], 0.1)
-                    if i:
-                        char = sys.stdin.read(1)
-                        if char in ("\n", "\r"):
-                            print()
-                            val = input_str.strip().upper()
-                            return val if val else "PROCEED"
-                        elif char in ("\x08", "\x7f"):
-                            input_str = input_str[:-1]
-                        else:
-                            input_str += char
-            finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
-    def _open_editor_for_content(
-        self,
+    def _open_editor_for_content(self,
         initial_content: str,
         file_suffix: str = ".txt",
         log_message: str = "Opening editor",
@@ -285,15 +291,14 @@ class CoreUtilsMixin:
         except subprocess.CalledProcessError:
             logger.error(f"Editor '{editor}' exited with an error. {error_message}")
             return initial_content
-        except Exception:
-            logger.error(f"An unexpected error occurred with editor. {error_message}")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred with editor: {e}. {error_message}")
             return initial_content
         finally:
             if os.path.exists(tmp_file_path):
                 os.remove(tmp_file_path)
 
-    def _launch_external_code_editor(
-        self, initial_content: str, file_suffix: str = ".py"
+    def _launch_external_code_editor(self, initial_content: str, file_suffix: str = ".py"
     ) -> str:
         return self._open_editor_for_content(
             initial_content,
@@ -310,6 +315,9 @@ class CoreUtilsMixin:
         )
 
     def backup_workspace(self) -> dict[str, str]:
+        if not hasattr(self, "_workspace_cache"):
+            self._workspace_cache: dict[str, tuple[float, str]] = {}
+
         state: dict[str, str] = {}
         for root, dirs, files in os.walk(self.target_dir):
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
@@ -321,9 +329,16 @@ class CoreUtilsMixin:
                 if any(file.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
                     path = os.path.join(root, file)
                     try:
-                        with open(path, "r", encoding="utf-8") as f:
-                            state[path] = f.read()
-                    except Exception:
+                        mtime = os.path.getmtime(path)
+                        # Check cache
+                        if path in self._workspace_cache and self._workspace_cache[path][0] == mtime:
+                            state[path] = self._workspace_cache[path][1]
+                        else:
+                            with open(path, "r", encoding="utf-8") as f:
+                                content = f.read()
+                                self._workspace_cache[path] = (mtime, content)
+                                state[path] = content
+                    except (OSError, IOError, UnicodeDecodeError):
                         pass
         return state
 
@@ -332,7 +347,7 @@ class CoreUtilsMixin:
             try:
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(content)
-            except Exception as e:
+            except (OSError, IOError) as e:
                 logger.error(f"Failed to restore {path}: {e}")
         logger.warning("Workspace restored to safety due to unfixable AI errors.")
 
@@ -344,7 +359,7 @@ class CoreUtilsMixin:
             try:
                 with open(self.memory_path, "r", encoding="utf-8") as f:
                     memory_content = f.read().strip()
-            except Exception:
+            except (OSError, IOError):
                 pass
 
         directives_path = os.path.join(self.target_dir, "DIRECTIVES.md")
@@ -359,13 +374,12 @@ class CoreUtilsMixin:
                             f"---\n\n"
                             f"{memory_content}"
                         )
-            except Exception as e:
+            except (OSError, IOError) as e:
                 logger.warning(f"Librarian could not read DIRECTIVES.md: {e}")
 
         return memory_content
 
-    def get_valid_llm_response(
-        self, prompt: str, validator: Callable[[str], bool], context: str = ""
+    def get_valid_llm_response(self, prompt: str, validator: Callable[[str], bool], context: str = ""
     ) -> str:
         """Wrapper that ensures key rotation is used for all requests."""
         return str(
@@ -408,7 +422,7 @@ class CoreUtilsMixin:
                                 return target
                         if target.endswith(".js") and len(content.strip()) > 10:
                             return target
-                except Exception:
+                except (OSError, IOError, UnicodeDecodeError):
                     continue
 
         html_fallback = None
@@ -434,7 +448,7 @@ class CoreUtilsMixin:
                                 or "if __name__ == '__main__':" in content
                             ):
                                 return file_path
-                    except Exception:
+                    except (OSError, IOError, UnicodeDecodeError):
                         continue
 
                 if file.endswith(".html") and not html_fallback:
@@ -466,7 +480,7 @@ class CoreUtilsMixin:
                                 or "if __name__ == '__main__':" in content
                             ):
                                 python_entry_points.append(file_path)
-                    except Exception:
+                    except (OSError, IOError, UnicodeDecodeError):
                         continue
                 elif file.endswith((".js", ".ts", ".sh")):
                     other_script_entry_points.append(file_path)

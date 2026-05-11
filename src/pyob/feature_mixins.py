@@ -1,3 +1,4 @@
+from typing import Any
 import os
 import re
 
@@ -43,19 +44,25 @@ class FeatureOperationsMixin:
                 content = "".join(lines)
         except UnicodeDecodeError:
             return
-        lang_name, lang_tag = getattr(self, "get_language_info")(filepath)
+        lang_name, lang_tag = self.get_language_info(filepath)
         filename = os.path.basename(filepath)
         logger.info(
             f"[{current_index}/{total_files}] Scanning {filename} ({lang_name}) - Reading {len(lines)} lines into AI context..."
         )
         ruff_out, mypy_out, custom_issues = "", "", []
         if lang_tag == "python":
-            ruff_out, mypy_out = getattr(self, "run_linters")(filepath)
-            custom_issues = getattr(self, "scan_for_lazy_code")(filepath, content)
-        prompt = getattr(self, "build_patch_prompt")(
+            ruff_out, mypy_out = self.run_linters(filepath)
+            custom_issues = self.scan_for_lazy_code(filepath, content)
+            
+            # Verification Pipeline Optimization: Short-circuit LLM if no issues found
+            if not ruff_out and not mypy_out and not custom_issues:
+                logger.info(f"Local validation passed perfectly for {filename}. Skipping expensive LLM analysis.")
+                return
+                
+        prompt = self.build_patch_prompt(
             lang_name, lang_tag, content, ruff_out, mypy_out, custom_issues
         )
-        new_code, explanation, llm_response = getattr(self, "get_valid_edit")(
+        new_code, explanation, llm_response = self.get_valid_edit(
             prompt, content, require_edit=False, target_filepath=filepath
         )
         if new_code == content:
@@ -72,14 +79,14 @@ class FeatureOperationsMixin:
 
     def propose_feature(self, target_path: str):
         rel_path = os.path.relpath(target_path, self.target_dir)
-        lang_name, lang_tag = getattr(self, "get_language_info")(target_path)
+        lang_name, lang_tag = self.get_language_info(target_path)
         with open(target_path, "r", encoding="utf-8") as f:
             content = f.read()
         logger.info(
             f"\nPHASE 2: Generating an interactive feature proposal for [{rel_path}]..."
         )
-        memory_section = getattr(self, "_get_rich_context")()
-        prompt = getattr(self, "load_prompt")(
+        memory_section = self._get_rich_context(query_text=content)
+        prompt = self.load_prompt(
             "PF.md",
             lang_name=lang_name,
             memory_section=memory_section,
@@ -93,7 +100,7 @@ class FeatureOperationsMixin:
         print(
             f"The AI has prepared a prompt to generate a feature proposal for: {rel_path}"
         )
-        user_choice = getattr(self, "get_user_approval")(
+        user_choice = self.get_user_approval(
             "Hit ENTER to send as-is, type 'EDIT_PROMPT' to refine the full prompt, or 'SKIP' to cancel this proposal.",
             timeout=220,
         )
@@ -101,7 +108,7 @@ class FeatureOperationsMixin:
             logger.info("Feature proposal skipped by user.")
             return
         if user_choice == "EDIT_PROMPT":
-            prompt = getattr(self, "_edit_prompt_with_external_editor")(prompt)
+            prompt = self._edit_prompt_with_external_editor(prompt)
             if not prompt.strip():
                 logger.warning("Edited prompt is empty. Skipping feature proposal.")
                 return
@@ -109,7 +116,7 @@ class FeatureOperationsMixin:
         def validator(text):
             return "<SNIPPET>" in text and "</SNIPPET>" in text
 
-        llm_response = getattr(self, "get_valid_llm_response")(
+        llm_response = self.get_valid_llm_response(
             prompt, validator, context=rel_path
         )
         thought_match = re.search(
@@ -146,7 +153,7 @@ class FeatureOperationsMixin:
         rel_path = match.group(1)
         target_path = os.path.join(self.target_dir, rel_path)
         target_folder = os.path.dirname(target_path)
-        lang_name, lang_tag = getattr(self, "get_language_info")(target_path)
+        lang_name, lang_tag = self.get_language_info(target_path)
 
         with open(target_path, "r", encoding="utf-8") as f_handle:
             source_code = f_handle.read()
@@ -197,8 +204,8 @@ class FeatureOperationsMixin:
         logger.info(
             f"Implementing approved feature seamlessly directly into {rel_path}..."
         )
-        memory_section = getattr(self, "_get_rich_context")()
-        prompt = getattr(self, "load_prompt")(
+        memory_section = self._get_rich_context(query_text=feature_content + "\n" + source_code)
+        prompt = self.load_prompt(
             "IF.md",
             memory_section=memory_section,
             feature_content=feature_content,
@@ -208,7 +215,7 @@ class FeatureOperationsMixin:
             rel_path=rel_path,
         )
 
-        new_code, _, _ = getattr(self, "get_valid_edit")(
+        new_code, _, _ = self.get_valid_edit(
             prompt, source_code, require_edit=True, target_filepath=target_path
         )
 
@@ -220,7 +227,7 @@ class FeatureOperationsMixin:
             return False
 
         if lang_tag == "python":
-            new_code = getattr(self, "ensure_imports_retained")(
+            new_code = self.ensure_imports_retained(
                 source_code, new_code, target_path
             )
 
@@ -229,9 +236,9 @@ class FeatureOperationsMixin:
 
         if lang_tag == "python":
             # Verification Pipeline
-            if not getattr(self, "run_linter_fix_loop")(
+            if not self.run_linter_fix_loop(
                 context_of_change=feature_content
-            ) or not getattr(self, "run_and_verify_app")(
+            ) or not self.run_and_verify_app(
                 context_of_change=feature_content
             ):
                 logger.error("Verification failed. Cleaning up spawned modules.")
@@ -240,7 +247,7 @@ class FeatureOperationsMixin:
                         os.remove(file_path)
                 return False
 
-            if not getattr(self, "check_downstream_breakages")(target_path, rel_path):
+            if not self.check_downstream_breakages(target_path, rel_path):
                 logger.error("Downstream breakages. Rolling back spawned modules.")
                 for file_path in created_files:
                     if os.path.exists(file_path):
@@ -296,7 +303,7 @@ class FeatureOperationsMixin:
                 source_code = f.read()
 
             # Apply XML edit logic
-            new_code, explanation, success = getattr(self, "apply_xml_edits")(
+            new_code, explanation, success = self.apply_xml_edits(
                 source_code, section_content
             )
 
@@ -326,9 +333,9 @@ class FeatureOperationsMixin:
                 logger.info(f"Successfully applied patch to {rel_path}.")
 
             # 3. VERIFICATION PIPELINE (The final test)
-            if not getattr(self, "run_linter_fix_loop")(
+            if not self.run_linter_fix_loop(
                 context_of_change=pr_content
-            ) or not getattr(self, "run_and_verify_app")(context_of_change=pr_content):
+            ) or not self.run_and_verify_app(context_of_change=pr_content):
                 logger.error("Verification failed. Changes will be rolled back.")
                 return False
 

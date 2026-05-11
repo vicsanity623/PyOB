@@ -314,13 +314,14 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                 f"--- REFRESHING SYMBOLIC CONTEXT FOR ITERATION {iteration} ---"
             )
 
-            # Clear project map for recursive branch awareness
-            if os.path.exists(self.analysis_path):
-                os.remove(self.analysis_path)
-            if os.path.exists(self.symbols_path):
-                os.remove(self.symbols_path)
+            # Clear project map for recursive branch awareness on the first run only
+            if iteration == 1:
+                if os.path.exists(self.analysis_path):
+                    os.remove(self.analysis_path)
+                if os.path.exists(self.symbols_path):
+                    os.remove(self.symbols_path)
 
-            self.build_initial_analysis()
+                self.build_initial_analysis()
 
             # Check for remote updates
             if self.sync_with_remote():
@@ -430,8 +431,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             logger.error(f"Git Execution Error: {e}")
             return False
 
-    def detect_symbolic_ripples(
-        self, old: str, new: str, source_file: str
+    def detect_symbolic_ripples(self, old: str, new: str, source_file: str
     ) -> list[str]:
         diff = list(difflib.unified_diff(old.splitlines(), new.splitlines()))
         changed_text = "\n".join(
@@ -481,6 +481,11 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         for name in definitions_to_remove:
             del self.ledger["definitions"][name]
 
+        if rel_path in self.ledger["references"]:
+            del self.ledger["references"][rel_path]
+
+        potential_refs = set()
+
         if ext == ".py":
             try:
                 tree = ast.parse(code)
@@ -491,8 +496,17 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                         for target in n.targets:
                             if isinstance(target, ast.Name) and target.id.isupper():
                                 self.ledger["definitions"][target.id] = rel_path
+                    # AST-based call graph detection
+                    elif isinstance(n, ast.Call):
+                        if isinstance(n.func, ast.Name):
+                            potential_refs.add(n.func.id)
+                        elif isinstance(n.func, ast.Attribute):
+                            potential_refs.add(n.func.attr)
+                    elif isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load):
+                        potential_refs.add(n.id)
             except Exception as e:
                 logger.warning(f"Failed to parse Python AST for {rel_path}: {e}")
+                potential_refs.update(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{3,}\b", code))
         elif ext in [".js", ".ts"]:
             defs = re.findall(
                 r"(?:export\s+|async\s+)?(?:function\*?|class|const|var|let)\s+([a-zA-Z0-9_$]+)",
@@ -501,12 +515,11 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             for d in defs:
                 if len(d) > 3:
                     self.ledger["definitions"][d] = rel_path
+            potential_refs.update(re.findall(r"\b[a-zA-Z_$][a-zA-Z0-9_$]{3,}\b", code))
+        else:
+            potential_refs.update(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{3,}\b", code))
 
-        if rel_path in self.ledger["references"]:
-            del self.ledger["references"][rel_path]
-
-        potential_refs = re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{3,}\b", code)
-        self.ledger["references"][rel_path] = list(set(potential_refs))
+        self.ledger["references"][rel_path] = list(potential_refs)
         self.save_ledger()
 
     def append_to_history(self, rel_path: str, old_code: str, new_code: str):

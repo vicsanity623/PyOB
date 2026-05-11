@@ -10,8 +10,7 @@ class ObserverHandler(BaseHTTPRequestHandler):
     # The 'controller' type is 'Any' to avoid circular dependencies with the main application controller.
     controller: Any = None
 
-    def _send_json_response(
-        self, status_code: int, payload: dict, allow_cors: bool = True
+    def _send_json_response(self, status_code: int, payload: dict, allow_cors: bool = True
     ):
         self.send_response(status_code)
         self.send_header("Content-type", "application/json")

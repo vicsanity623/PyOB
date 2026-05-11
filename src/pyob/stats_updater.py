@@ -1,3 +1,4 @@
+from typing import Any
 import json
 
 from dashboard_server import fetch_api

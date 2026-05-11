@@ -26,8 +26,8 @@ try:
 except ImportError:
     OLLAMA_AVAILABLE = False
 
-GEMINI_MODEL = os.environ.get("PYOB_GEMINI_MODEL", "gemini-2.5-flash")
-LOCAL_MODEL = os.environ.get("PYOB_LOCAL_MODEL", "qwen3-coder:30b")
+GEMINI_MODEL = os.environ.get("PYOB_GEMINI_MODEL", "gemini-3.1-flash-lite")
+LOCAL_MODEL = os.environ.get("PYOB_LOCAL_MODEL", "llama3.2:3b")
 
 
 def stream_gemini(prompt: str, api_key: str, on_chunk: Callable[[], None]) -> str:
@@ -97,7 +97,7 @@ def stream_ollama(prompt: str, on_chunk: Callable[[], None]) -> str:
                 on_chunk()
                 print(content, end="", flush=True)
                 response_text += content
-    except Exception as e:
+    except (RuntimeError, ConnectionError, OSError, requests.RequestException) as e:
         logger.error(f"Ollama Error: {e}")
         time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {e}"
@@ -150,10 +150,10 @@ def stream_github_models(
                     last_chunk_time = time.time()
                     full_text += content
                     on_chunk()
-            except Exception:
+            except (json.JSONDecodeError, KeyError, IndexError):
                 continue
         return full_text
-    except Exception as e:
+    except (requests.RequestException, OSError) as e:
         return f"ERROR_CODE_EXCEPTION: {str(e)}"
 
 
@@ -237,7 +237,7 @@ def stream_single_llm(
 
         else:
             response_text = stream_ollama(prompt, on_chunk)
-    except Exception as e:
+    except (requests.RequestException, ConnectionError, OSError, ValueError, RuntimeError) as e:
         first_chunk_received[0] = True
         if is_cloud:
             time.sleep(30)

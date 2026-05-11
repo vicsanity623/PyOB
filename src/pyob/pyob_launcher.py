@@ -7,8 +7,8 @@ from pathlib import Path
 
 CONFIG_FILE = Path.home() / ".pyob_config"
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-DEFAULT_LOCAL_MODEL = "qwen3-coder:30b"
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+DEFAULT_LOCAL_MODEL = "llama3.2:3b"
 
 # OBSERVER_PATCH_REVIEW_HTML content has been moved to pyob_dashboard.py
 # or a dedicated UI template file, as it is UI-specific content.
@@ -77,7 +77,7 @@ def load_config():
         sys.exit(1)
 
     print("\nStep 2: Model Configuration")
-    print("WARNING: PYOB is optimized for 'gemini-2.0-flash' and 'qwen3-coder:30b'.")
+    print("WARNING: PYOB is optimized for 'gemini-3.1-flash-lite' and 'llama3.2:3b'.")
     print("   Changing these may result in parsing errors or logic loops.")
 
     g_model = (

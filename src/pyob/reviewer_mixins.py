@@ -1,3 +1,4 @@
+from typing import Any
 import os
 import re
 import shutil
@@ -106,19 +107,18 @@ class ValidationMixin:
                                 f"CSS Syntax Error in {file}: Unbalanced braces."
                             )
                             success = False
-                    except Exception:
+                    except (OSError, IOError, UnicodeDecodeError):
                         pass
         return success
 
-    def _apply_linter_fixes(
-        self, filepath: str, err_text: str, context_of_change: str = ""
+    def _apply_linter_fixes(self, filepath: str, err_text: str, context_of_change: str = ""
     ):
         with open(filepath, "r", encoding="utf-8") as f:
             code = f.read()
         rel_path = os.path.relpath(filepath, self.target_dir)
         if context_of_change:
             logger.info(f"Applying CONTEXT-AWARE fix for `{rel_path}`...")
-            prompt = getattr(self, "load_prompt")(
+            prompt = self.load_prompt(
                 "PIR.md",
                 context_of_change=context_of_change,
                 rel_path=rel_path,
@@ -127,10 +127,10 @@ class ValidationMixin:
             )
         else:
             logger.info(f"Applying standard linter fix for `{rel_path}`...")
-            prompt = getattr(self, "load_prompt")(
+            prompt = self.load_prompt(
                 "ALF.md", rel_path=rel_path, err_text=err_text, code=code
             )
-        new_code, _, _ = getattr(self, "get_valid_edit")(
+        new_code, _, _ = self.get_valid_edit(
             prompt, code, require_edit=True, target_filepath=filepath
         )
         if new_code != code:
@@ -169,13 +169,13 @@ class ValidationMixin:
                         context_of_change,
                     )
                     return False
-            except Exception as e:
+            except (OSError, IOError, subprocess.SubprocessError) as e:
                 logger.error(f"Failed to execute validation script: {e}")
                 return False
         else:
             logger.warning("No check.sh found in target project. Skipping PHASE 3.5.")
 
-        entry_file = getattr(self, "_find_entry_file")()
+        entry_file = self._find_entry_file()
         if not entry_file:
             logger.warning("No entry point detected. Skipping runtime smoke test.")
             return True
@@ -240,8 +240,7 @@ class ValidationMixin:
         logger.error("Exhausted runtime auto-fix attempts.")
         return False
 
-    def _fix_runtime_errors(
-        self, logs: str, entry_file: str, context_of_change: str = ""
+    def _fix_runtime_errors(self, logs: str, entry_file: str, context_of_change: str = ""
     ):
         """Detects crashes. Handles missing packages automatically, otherwise asks AI."""
         package_match = re.search(r"ModuleNotFoundError: No module named '(.*?)'", logs)
@@ -295,7 +294,7 @@ class ValidationMixin:
                 # --- AUTO-DEPENDENCY LOCKING ---
                 try:
                     req_path = os.path.join(
-                        getattr(self, "target_dir"), "requirements.txt"
+                        self.target_dir, "requirements.txt"
                     )
                     with open(req_path, "w", encoding="utf-8") as f_req:
                         subprocess.run(
@@ -304,7 +303,7 @@ class ValidationMixin:
                             check=True,
                         )
                     logger.info("Auto-locked dependencies in requirements.txt")
-                except Exception as e:
+                except (OSError, IOError, subprocess.SubprocessError) as e:
                     logger.warning(f"Failed to lock dependencies: {e}")
                 # -------------------------------
 
@@ -330,7 +329,7 @@ class ValidationMixin:
             logger.info(
                 f"Applying CONTEXT-AWARE fix for runtime crash in `{rel_path}`..."
             )
-            prompt = getattr(self, "load_prompt")(
+            prompt = self.load_prompt(
                 "PIR.md",
                 context_of_change=context_of_change,
                 rel_path=rel_path,
@@ -344,14 +343,14 @@ class ValidationMixin:
                 if self.memory
                 else ""
             )
-            prompt = getattr(self, "load_prompt")(
+            prompt = self.load_prompt(
                 "FRE.md",
                 memory_section=memory_section,
                 logs=logs[-2000:],
                 rel_path=rel_path,
                 code=code,
             )
-        new_code, explanation, _ = getattr(self, "get_valid_edit")(
+        new_code, explanation, _ = self.get_valid_edit(
             prompt, code, require_edit=True, target_filepath=target_file
         )
         if new_code != code:
@@ -392,7 +391,7 @@ class ValidationMixin:
                 return self.propose_cascade_fix(result.stdout.strip(), rel_path)
             logger.info("No downstream breakages detected.")
             return True
-        except Exception as e:
+        except (OSError, IOError, subprocess.SubprocessError) as e:
             logger.error(f"Error during Phase 3 assessment: {e}")
             return True
 
@@ -417,7 +416,7 @@ class ValidationMixin:
         memory_section = (
             f"### Project Context:\n{self.memory}\n\n" if self.memory else ""
         )
-        prompt = getattr(self, "load_prompt")(
+        prompt = self.load_prompt(
             "PCF.md",
             memory_section=memory_section,
             trigger_file=trigger_file,
@@ -425,7 +424,7 @@ class ValidationMixin:
             mypy_errors=mypy_errors,
             broken_code=broken_code,
         )
-        new_code, _, _ = getattr(self, "get_valid_edit")(
+        new_code, _, _ = self.get_valid_edit(
             prompt, broken_code, require_edit=True, target_filepath=problem_file
         )
         if new_code != broken_code:

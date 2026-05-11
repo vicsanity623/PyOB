@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class EntranceMixin:
-    def start_dashboard(self: Any):
+    def start_dashboard(self):
         # 1. Save to the internal .pyob folder
         obs_path = os.path.join(self.pyob_dir, "observer.html")
 
@@ -168,7 +168,7 @@ class EntranceMixin:
         print(f"FILE: {obs_path}")
         print("=" * 60 + "\n")
 
-    def execute_targeted_iteration(self: Any, iteration: int):
+    def execute_targeted_iteration(self, iteration: int):
         backup_state = self.llm_engine.backup_workspace()
         target_diff = ""
         if self.cascade_queue:

@@ -1,3 +1,4 @@
+from typing import Any
 import ast
 import re
 
@@ -5,13 +6,12 @@ from .core_utils import logger
 
 
 class ApplyXMLMixin:
-    def ensure_imports_retained(
-        self, orig_code: str, new_code: str, filepath: str
+    def ensure_imports_retained(self, orig_code: str, new_code: str, filepath: str
     ) -> str:
         try:
             orig_tree = ast.parse(orig_code)
             new_tree = ast.parse(new_code)
-        except Exception:
+        except SyntaxError:
             return new_code
         orig_imports = []
         for node in orig_tree.body:
@@ -47,8 +47,7 @@ class ApplyXMLMixin:
             return "\n".join(missing_imports) + "\n\n" + new_code
         return new_code
 
-    def apply_xml_edits(
-        self, source_code: str, llm_response: str
+    def apply_xml_edits(self, source_code: str, llm_response: str
     ) -> tuple[str, str, bool]:
         source_code = source_code.replace("\r\n", "\n")
         llm_response = llm_response.replace("\r\n", "\n")
@@ -129,8 +128,7 @@ class ApplyXMLMixin:
                 fixed_replace_lines.append("")
         return "\n".join(fixed_replace_lines)
 
-    def _apply_single_block(
-        self, source: str, search: str, replace: str
+    def _apply_single_block(self, source: str, search: str, replace: str
     ) -> tuple[str, bool]:
         # Strategy 1: Exact Match
         if search in source:
@@ -158,10 +156,37 @@ class ApplyXMLMixin:
         if success:
             return source, True
 
+        # Strategy 6: Substring Match (Most Forgiving)
+        source, success = self._attempt_substring_match(source, search, replace)
+        if success:
+            return source, True
+
         return source, False
 
-    def _attempt_normalized_match(
-        self, source: str, search: str, replace: str
+    def _attempt_substring_match(self, source: str, search: str, replace: str
+    ) -> tuple[str, bool]:
+        """Final fallback: strips all extra whitespace and tries to find the block."""
+        def super_clean(t: str) -> str:
+            return "".join(t.split())
+
+        clean_search = super_clean(search)
+        if not clean_search:
+            return source, False
+
+        search_lines = search.splitlines()
+        source_lines = source.splitlines()
+        
+        # We look for a window of lines that matches the super_clean search
+        for i in range(len(source_lines) - len(search_lines) + 1):
+            window = "".join(super_clean(line) for line in source_lines[i:i+len(search_lines)])
+            if clean_search in window:
+                new_lines = source_lines[:i] + replace.splitlines() + source_lines[i+len(search_lines):]
+                logger.info(f"Substring match succeeded at line {i + 1}.")
+                return "\n".join(new_lines), True
+                
+        return source, False
+
+    def _attempt_normalized_match(self, source: str, search: str, replace: str
     ) -> tuple[str, bool]:
         def normalize(t: str) -> str:
             t = re.sub(r"#.*", "", t)
@@ -181,8 +206,7 @@ class ApplyXMLMixin:
                 return "\n".join(lines), True
         return source, False
 
-    def _attempt_regex_fuzzy_match(
-        self, source: str, clean_search: str, replace: str
+    def _attempt_regex_fuzzy_match(self, source: str, clean_search: str, replace: str
     ) -> tuple[str, bool]:
         try:
             search_lines_cleaned = [
@@ -208,12 +232,11 @@ class ApplyXMLMixin:
                     + source[fuzzy_match.end() :]
                 )
                 return new_code, True
-        except Exception:
+        except re.error:
             pass
         return source, False
 
-    def _attempt_line_by_line_match(
-        self, source: str, search: str, replace: str
+    def _attempt_line_by_line_match(self, source: str, search: str, replace: str
     ) -> tuple[str, bool]:
         search_lines = search.split("\n")
         search_lines_stripped = [line.strip() for line in search_lines if line.strip()]
