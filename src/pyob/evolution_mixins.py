@@ -217,21 +217,29 @@ class EvolutionMixin:
         except Exception:
             pass
 
-        # Build an authoritative list of files that actually exist in the repo.
-        # This grounds the LLM so it cannot hallucinate filenames (e.g. "main.js")
-        # that are not present in the target directory.
-        try:
-            real_files = sorted(
-                os.path.relpath(os.path.join(root, fname), self.target_dir)
-                for root, dirs, files in os.walk(self.target_dir)
-                for fname in files
-                if not any(
-                    part.startswith(".")
-                    for part in os.path.relpath(
-                        os.path.join(root, fname), self.target_dir
-                    ).split(os.sep)
-                )
-            )
+        from pyob.core_utils import IGNORE_FILES, IGNORE_DIRS, SUPPORTED_EXTENSIONS
+
+            real_files = []
+            for root, dirs, files in os.walk(self.target_dir):
+                for fname in files:
+                    rel_path = os.path.relpath(os.path.join(root, fname), self.target_dir)
+                    path_parts = rel_path.split(os.sep)
+
+                    if any(part.startswith(".") for part in path_parts):
+                        continue
+                    
+                    if any(part in IGNORE_DIRS for part in path_parts):
+                        continue
+
+                    if fname in IGNORE_FILES:
+                        continue
+
+                    if not any(fname.endswith(ext) for ext in SUPPORTED_EXTENSIONS):
+                        continue
+
+                    real_files.append(rel_path)
+            
+            real_files.sort()
         except Exception:
             real_files = []
 
