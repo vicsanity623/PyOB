@@ -1,5 +1,5 @@
-from typing import Any
 import json
+
 from pyob.dashboard_server import fetch_api
 
 
