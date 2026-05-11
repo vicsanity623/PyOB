@@ -7,9 +7,9 @@ from pathlib import Path
 def main():
     os_name = platform.system().lower()
     project_root = Path(__file__).parent.absolute()
-    VERSION = "1.0.0"
+    VERSION = "1.0.1"
     APP_NAME = "Py-OB"
-    print(f"🚀 Forging {APP_NAME} v{VERSION} for {os_name}...")
+    print(f"🚀 Building {APP_NAME} v{VERSION} for {os_name}...")
 
     common = [
         f"--name={APP_NAME}",
@@ -29,6 +29,7 @@ def main():
         "--hidden-import=pyob.feature_mixins",
         "--hidden-import=pyob.get_valid_edit",
         "--hidden-import=pyob.models",
+        "--hidden-import=pyob.prompts",
         "--hidden-import=pyob.prompts_and_memory",
         "--hidden-import=pyob.pyob_code_parser",
         "--hidden-import=pyob.pyob_dashboard",

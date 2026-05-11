@@ -86,7 +86,7 @@ class ApplyXMLMixin:
 
     def _extract_explanation(self, llm_response: str) -> str:
         thought_match = re.search(
-            r"<THOUGHT>(.*?)</THOUGHT>", llm_response, re.DOTALL | re.IGNORECASE
+            r"<\s*THOUGHT[^>]*>(.*?)<\s*/\s*THOUGHT\s*>", llm_response, re.DOTALL | re.IGNORECASE
         )
         return (
             thought_match.group(1).strip()
@@ -96,7 +96,10 @@ class ApplyXMLMixin:
 
     def _extract_edit_blocks(self, llm_response: str) -> list[re.Match]:
         pattern = re.compile(
-            r"<EDIT>\s*<SEARCH>\s*\n?(.*?)\n?\s*</SEARCH>\s*<REPLACE>\s*\n?(.*?)\n?\s*</REPLACE>\s*</EDIT>",
+            r"(?:<\s*EDIT[^>]*>\s*)?"
+            r"<\s*SEARCH[^>]*>\s*\n?(.*?)\n?\s*<\s*/\s*SEARCH\s*>\s*"
+            r"<\s*REPLACE[^>]*>\s*\n?(.*?)\n?\s*<\s*/\s*REPLACE\s*>"
+            r"(?:\s*<\s*/\s*EDIT\s*>)?",
             re.DOTALL | re.IGNORECASE,
         )
         return list(pattern.finditer(llm_response))
@@ -227,12 +230,16 @@ class ApplyXMLMixin:
             if not search_lines_cleaned:
                 return source, False
 
+            def make_flexible(line: str) -> str:
+                parts = re.split(r'[ \t]+', line)
+                return r'\s+'.join(re.escape(p) for p in parts)
+
             regex_parts = [
-                r"^[ \t]*" + re.escape(line) + r"[ \t]*\n+"
+                r"^[ \t]*" + make_flexible(line) + r"[ \t]*\n+"
                 for line in search_lines_cleaned[:-1]
             ]
             regex_parts.append(
-                r"^[ \t]*" + re.escape(search_lines_cleaned[-1]) + r"[ \t]*\n?"
+                r"^[ \t]*" + make_flexible(search_lines_cleaned[-1]) + r"[ \t]*\n?"
             )
             pattern_str = r"".join(regex_parts)
             fuzzy_match = re.search(pattern_str, source, re.MULTILINE)
