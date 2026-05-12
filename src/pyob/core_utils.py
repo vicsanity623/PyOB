@@ -56,29 +56,36 @@ IGNORE_DIRS = {
     ".vscode",
     ".idea",
     "tests",
+    "tools",
 }
 
 IGNORE_FILES = {
     "package-lock.json",
     "LICENSE",
+    ".pre-commit-config.yml",
     "manifest.json",
+    "maintain_feeds.py",
     "action.yml",
     "brain.json",
     "evolved_core_brain.pkl",
     "Dockerfile",
     "build_pyinstaller_multiOS.py",
     "check.sh",
+    "ci.sh",
     ".pyob_config",
     ".DS_Store",
     ".gitignore",
     "pyob.icns",
     "pyob.ico",
     "pyob.png",
+    "pyproject.toml",
+    "uv.lock",
     "ROADMAP.md",
     "README.md",
     "DOCUMENTATION.md",
     "observer.html",
     "sw.js",
+    "zizmor.yml",
 }
 SUPPORTED_EXTENSIONS = {".py", ".js", ".ts", ".html", ".css", ".json", ".sh"}
 
