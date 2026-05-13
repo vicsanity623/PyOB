@@ -190,7 +190,7 @@ class AutoReviewer(
         memory_section = self._get_rich_context(query_text=content)
         ruff_section = f"### Ruff Errors:\n{ruff_out}\n\n" if ruff_out else ""
         mypy_section = f"### Mypy Errors:\n{mypy_out}\n\n" if mypy_out else ""
-        
+
         strict_typing_directives = (
             "### STRICT TYPING DIRECTIVES (CRITICAL)\n"
             "This repository operates under `mypy --strict`. You MUST follow these rules:\n"
@@ -198,7 +198,7 @@ class AutoReviewer(
             "2. **Unimported Modules:** If your edit causes a `[no-any-unimported]` error due to an external library, you MUST append `# type: ignore` to that specific import line.\n"
             "3. **No Implicit Any:** Avoid using `Any` unless strictly necessary. If used, ensure `typing.Any` is imported.\n\n"
         )
-        
+
         custom_issues_section = (
             "### Code Quality Issues:\n"
             + "\n".join(f"- {i}" for i in custom_issues)
@@ -206,7 +206,7 @@ class AutoReviewer(
             if custom_issues
             else ""
         )
-        
+
         combined_issues = strict_typing_directives + custom_issues_section
 
         return str(
@@ -218,7 +218,7 @@ class AutoReviewer(
                 memory_section=memory_section,
                 ruff_section=ruff_section,
                 mypy_section=mypy_section,
-                custom_issues_section=combined_issues, # Pass the combined string here
+                custom_issues_section=combined_issues,  # Pass the combined string here
             )
         )
 
