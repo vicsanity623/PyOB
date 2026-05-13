@@ -234,7 +234,7 @@ def api_history_data():
 
 def read_file(filename: str) -> str:
     with open(filename, "r", encoding="utf-8") as f:
-        return f.read()
+        return str(f.read())
 
 
 def is_port_available(port: int) -> bool:
