@@ -140,6 +140,15 @@ class CoreUtilsMixin:
     key_cooldowns: dict[str, float]
     _workspace_cache: dict[str, tuple[float, str]]
 
+    def _ensure_initialized(
+        self, target_dir: str = ".", memory_path: str = "MEMORY.md"
+    ) -> None:
+        if not hasattr(self, "target_dir"):
+            self.target_dir = target_dir
+            self.memory_path = memory_path
+            self.key_cooldowns = {}
+            self._workspace_cache = {}
+
     def generate_pr_summary(self, rel_path: str, diff_text: str) -> dict:
         """Analyzes a git diff and returns a professional title and body for the PR."""
         prompt = f"""
