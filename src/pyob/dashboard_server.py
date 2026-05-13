@@ -232,7 +232,7 @@ def api_history_data():
         return jsonify({"success": False, "message": "History data not available"}), 404
 
 
-def read_file(filename):
+def read_file(filename: str) -> str:
     with open(filename, "r", encoding="utf-8") as f:
         return f.read()
 
