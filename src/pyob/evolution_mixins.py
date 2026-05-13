@@ -16,9 +16,9 @@ class EvolutionMixin:
     analysis_path: str
     history_path: str
     symbols_path: str
-    llm_engine: Any
-    code_parser: Any
-    ledger: dict
+    llm_engine: object
+    code_parser: object
+    ledger: dict[str, Any]
     key_cooldowns: dict
     manual_target_file: Optional[str]
 
@@ -127,7 +127,8 @@ class EvolutionMixin:
             use_shell = bool(cmd and (cmd[0].startswith("start") or cmd[0] == "open"))
 
             start_time = time.time()
-            stdout, stderr = "", ""  # Initialize stdout and stderr
+            stdout, stderr = "", ""
+            process: Optional[subprocess.Popen[str]] = None
             try:
                 process = subprocess.Popen(
                     cmd,
@@ -165,7 +166,7 @@ class EvolutionMixin:
                     "ImportError",
                 ]
             )
-            if process.returncode not in (0, 15, -15, None) or has_error:
+            if process and process.returncode not in (0, 15, -15, None) or has_error:
                 logger.warning(f"App crashed after {duration:.1f}s!")
                 if attempt < 2:
                     self.llm_engine._fix_runtime_errors(
