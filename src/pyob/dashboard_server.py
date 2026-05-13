@@ -27,7 +27,7 @@ data_parser_instance = DataParser()  # Initialize DataParser once globally
 
 
 @app.route("/")
-def index():
+def index() -> str:
     return render_template("index.html")
 
 
