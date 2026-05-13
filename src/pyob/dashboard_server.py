@@ -6,8 +6,9 @@ import socket  # Added for port availability check
 import sys
 import threading
 from datetime import datetime
+from typing import Tuple, Union
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 from pyob.data_parser import DataParser
 
@@ -32,7 +33,7 @@ def index() -> str:
 
 
 @app.route("/analysis")
-def analysis():
+def analysis() -> Union[Response, Tuple[Response, int]]:
     try:
         analysis_content = read_file("ANALYSIS.md")
         return jsonify({"success": True, "data": analysis_content})
