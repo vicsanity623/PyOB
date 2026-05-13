@@ -226,7 +226,7 @@ class CoreUtilsMixin:
             return self._unix_input(start_time, timeout)
 
     def _win32_input(self, start_time: float, timeout: int) -> str:
-        import msvcrt
+        import msvcrt  # type: ignore
 
         input_str = ""
         prev_line_len = 0
