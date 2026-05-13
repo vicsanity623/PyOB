@@ -23,7 +23,7 @@ app = Flask(__name__)
 logger = logging.getLogger(__name__)
 status_lock = threading.Lock()  # Initialize a lock for issue_statuses.json
 decision_lock = threading.Lock()  # Initialize a lock for proposal_decisions.json
-data_parser_instance = DataParser()  # Initialize DataParser once globally
+data_parser_instance: DataParser = DataParser()  # Initialize DataParser once globally
 
 
 @app.route("/")
@@ -234,7 +234,7 @@ def api_history_data():
 
 def read_file(filename: str) -> str:
     with open(filename, "r", encoding="utf-8") as f:
-        return f.read()
+        return str(f.read())
 
 
 def is_port_available(port: int) -> bool:
