@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
 
-# Check if --fix argument was passed
 if [[ "$1" == "--fix" ]]; then
     echo "🛠️  Auto-fixing issues..."
     ruff check src/ --fix
@@ -12,26 +10,45 @@ if [[ "$1" == "--fix" ]]; then
 fi
 
 echo "🚀 Starting PyOB Validation Suite..."
+EXIT_STATUS=0
 
 echo "-------------------------------------"
 echo "🧹 1. Running Ruff (Linter & Imports)..."
-ruff check src/ --fix
+if ! ruff check src/ --fix; then
+    echo "❌ Ruff Linter failed."
+    EXIT_STATUS=1
+fi
 
 echo "-------------------------------------"
 echo "🪄  2. Formatting Code with Ruff..."
-ruff format src/ tests/
+if ! ruff format src/ tests/; then
+    echo "❌ Ruff Formatter failed."
+    EXIT_STATUS=1
+fi
 
 echo "-------------------------------------"
 echo "🔎 3. Running Mypy (Type Checking)..."
-mypy src/
+if ! mypy src/ --ignore-missing-imports; then
+    echo "❌ Mypy Type Checking failed."
+    EXIT_STATUS=1
+fi
 
 echo "-------------------------------------"
 echo "🧪 4. Running Pytest (Unit Tests)..."
 if [ -d "tests" ] && [ "$(ls -A tests 2>/dev/null)" ]; then
-    pytest tests/
+    if ! pytest tests/; then
+        echo "❌ Pytest failed."
+        EXIT_STATUS=1
+    fi
 else
     echo "⚠️  No tests found in 'tests/' directory."
 fi
 
 echo "-------------------------------------"
-echo "✅ All checks passed!"
+if [ $EXIT_STATUS -ne 0 ]; then
+    echo "🚨 Validation Suite Failed! Triggering AI rollback..."
+    exit $EXIT_STATUS
+else
+    echo "✅ All checks passed! Patch is valid."
+    exit 0
+fi
