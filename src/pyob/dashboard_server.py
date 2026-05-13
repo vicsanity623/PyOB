@@ -237,7 +237,7 @@ def read_file(filename: str) -> str:
         return f.read()
 
 
-def is_port_available(port):
+def is_port_available(port: int) -> bool:
     """Checks if a given port is available."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
@@ -247,7 +247,7 @@ def is_port_available(port):
             return False
 
 
-def run_server():
+def run_server() -> None:
     logger.info("Starting Flask server...")
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     initial_port = int(os.environ.get("FLASK_PORT", 5000))
