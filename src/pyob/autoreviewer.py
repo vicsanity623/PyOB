@@ -59,6 +59,7 @@ class AutoReviewer(
         self.memory = self.load_memory()
         self.session_context: list[str] = []
         self.manual_target_file: str | None = None
+        self.ledger: dict[str, dict[str, dict[str, str]]] = {}
         self._ensure_prompt_files()
         if AutoReviewer._shared_cooldowns is None:
             AutoReviewer._shared_cooldowns = {
