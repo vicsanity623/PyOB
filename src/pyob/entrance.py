@@ -81,6 +81,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         "evolution_mixins.py",
         "feature_mixins.py",
         "models.py",
+        "prompts.py",
         "prompts_and_memory.py",
         "pyob_code_parser.py",
         "pyob_dashboard.py",
