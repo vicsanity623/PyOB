@@ -77,6 +77,7 @@ IGNORE_FILES = {
     ".pyob_config",
     ".DS_Store",
     ".gitignore",
+    "ledger.json",
     "pyob.icns",
     "pyob.ico",
     "pyob.png",
