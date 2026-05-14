@@ -1,5 +1,6 @@
 import ast
 import os
+import random
 import subprocess
 import sys
 import time
@@ -372,8 +373,6 @@ class AutoReviewer(
                                 return
                         elif not changed_files:
                             # If no git changes, maybe we just analyze a random subset instead of all to save tokens
-                            import random
-
                             all_files = random.sample(all_files, min(3, len(all_files)))
 
                     except Exception as e:

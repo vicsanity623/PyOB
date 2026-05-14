@@ -128,8 +128,10 @@ class CodeParser:
         unique_selectors = list(dict.fromkeys(selectors))
         return self._format_dropdowns([], [], unique_selectors[:50], [])
 
-    def _format_dropdowns(self, imp: list, cls: list, fn: list, cnst: list) -> str:
-        res = ""
+    def _format_dropdowns(
+        self, imp: list[str], cls: list[str], fn: list[str], cnst: list[str]
+    ) -> str:
+        res: str = ""
         if imp:
             res += f"<details><summary>Imports ({len(imp)})</summary>{'<br>'.join(sorted(imp))}</details>\n"
         if cnst:
