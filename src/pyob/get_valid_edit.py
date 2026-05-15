@@ -106,8 +106,9 @@ class GetValidEditMixin:
 
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
+                provider_name = "OpenRouter API Key" if key == "openrouter" else "Gemini API Key"
                 logger.info(
-                    f"\n[Attempting Gemini API Key {attempts % len(available_keys) + 1}/{len(gemini_keys)}]"
+                    f"\n[Attempting {provider_name} {attempts % len(available_keys) + 1}/{len(gemini_keys)}]"
                 )
                 response = self._stream_single_llm(
                     prompt, key=key, context=display_name

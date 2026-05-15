@@ -21,7 +21,7 @@ def load_config():
         return {
             "openrouter_key": os.environ.get("PYOB_OPENROUTER_KEY", ""),
             "openrouter_model": os.environ.get(
-                "PYOB_OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free"
+                "PYOB_OPENROUTER_MODEL", "deepseek/deepseek-v4-flash:free"
             ),
             "gemini_keys": os.environ.get("PYOB_GEMINI_KEYS", ""),
             "gemini_model": os.environ.get("PYOB_GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
@@ -38,7 +38,7 @@ def load_config():
                     if "openrouter_key" not in config_data:
                         config_data["openrouter_key"] = ""
                         config_data["openrouter_model"] = (
-                            "meta-llama/llama-3.1-8b-instruct:free"
+                            "deepseek/deepseek-v4-flash:free"
                         )
                     return config_data
         except Exception as e:
@@ -69,7 +69,7 @@ def load_config():
 
     config = {
         "openrouter_key": or_key,
-        "openrouter_model": "meta-llama/llama-3.1-8b-instruct:free",
+        "openrouter_model": "deepseek/deepseek-v4-flash:free",
         "gemini_keys": g_keys,
         "gemini_model": g_model,
         "local_model": l_model,
@@ -104,7 +104,7 @@ def main():
     os.environ.setdefault("PYOB_OPENROUTER_KEY", config.get("openrouter_key", ""))
     os.environ.setdefault(
         "PYOB_OPENROUTER_MODEL",
-        config.get("openrouter_model", "meta-llama/llama-3.1-8b-instruct:free"),
+        config.get("openrouter_model", "deepseek/deepseek-v4-flash:free"),
     )
     os.environ.setdefault("PYOB_GEMINI_KEYS", config.get("gemini_keys", ""))
     os.environ.setdefault(
