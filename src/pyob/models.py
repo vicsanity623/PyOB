@@ -367,6 +367,31 @@ def stream_single_llm(
 
     first_chunk_received[0] = True
     if response_text and not response_text.startswith("ERROR_CODE_"):
+        # Strip DeepSeek / "thinking" model chain-of-thought preamble.
+        # These models sometimes bleed raw reasoning text before the actual XML
+        # answer. If we find a recognised XML opener, discard everything before it.
+        xml_openers = [
+            "<THOUGHT>",
+            "<SNIPPET>",
+            "<EDIT>",
+            "<thought>",
+            "<snippet>",
+            "<edit>",
+        ]
+        first_tag_pos = -1
+        for tag in xml_openers:
+            pos = response_text.find(tag)
+            if pos != -1 and (first_tag_pos == -1 or pos < first_tag_pos):
+                first_tag_pos = pos
+        if first_tag_pos > 0:
+            stripped = response_text[first_tag_pos:]
+            # Only strip if the preamble is suspiciously long (> 200 chars of non-XML text)
+            if first_tag_pos > 200:
+                logger.warning(
+                    f"Stripping {first_tag_pos} chars of thinking-model preamble before XML."
+                )
+                response_text = stripped
+
         print(
             f"\n\n[Generation Complete: ~{len(response_text) // 4} tokens in {time.time() - gen_start_time:.1f}s]"
         )
