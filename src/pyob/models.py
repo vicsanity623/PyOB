@@ -98,13 +98,16 @@ def stream_openrouter(prompt: str, key: str, on_chunk: Callable[[], None]) -> st
     full_text = ""
 
     try:
+        # Reduced timeout slightly for faster debugging
         response = requests.post(
-            url, headers=headers, json=data, stream=True, timeout=120
+            url, headers=headers, json=data, stream=True, timeout=60
         )
 
         # OpenRouter returns 429 if you hit the free tier rate limit
         if response.status_code != 200:
-            return f"ERROR_CODE_{response.status_code}: {response.text}"
+            error_msg = f"ERROR_CODE_{response.status_code}: {response.text}"
+            logger.error(f"OpenRouter API Error: {error_msg}")
+            return error_msg
 
         for line in response.iter_lines():
             if not line:
@@ -494,9 +497,16 @@ def get_valid_llm_response_engine(
             else:
                 # Key failed for unknown reason
                 if provider == "openrouter":
-                    key_cooldowns["openrouter"] = time.time() + 30
+                    logger.warning(
+                        f"OpenRouter failed ({response_text}). Pivoting to Gemini fallback..."
+                    )
+                    key_cooldowns["openrouter"] = time.time() + 60
+                elif provider == "gemini" and key:
+                    logger.warning(f"Gemini Key {key[-4:]} failed. Rotating...")
+                    key_cooldowns[key] = time.time() + 180
                 elif key:
                     key_cooldowns[key] = time.time() + 30
+
                 attempts += 1
                 time.sleep(2)
                 continue
