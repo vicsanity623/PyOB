@@ -106,7 +106,9 @@ class GetValidEditMixin:
 
             if available_keys:
                 key = available_keys[attempts % len(available_keys)]
-                provider_name = "OpenRouter API Key" if key == "openrouter" else "Gemini API Key"
+                provider_name = (
+                    "OpenRouter API Key" if key == "openrouter" else "Gemini API Key"
+                )
                 logger.info(
                     f"\n[Attempting {provider_name} {attempts % len(available_keys) + 1}/{len(gemini_keys)}]"
                 )

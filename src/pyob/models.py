@@ -123,7 +123,7 @@ def stream_openrouter(
 
         for line in response.iter_lines():
             if not line:
-                if time.time() - last_chunk_time > 30:
+                if time.time() - last_chunk_time > 90:
                     logger.warning("OpenRouter stream stalled. Forcing closure.")
                     break
                 continue
