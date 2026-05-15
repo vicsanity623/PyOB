@@ -16,86 +16,67 @@ DEFAULT_LOCAL_MODEL = "llama3.2:3b"
 
 def load_config():
     """Load config from file or environment, or prompt user if missing."""
-    # 1. Check for Environment Variables (Ensures it works in GitHub Actions/Docker)
-    #    This takes highest priority as per "Override by PYOB_GEMINI_KEYS" rule.
-    env_keys = os.environ.get("PYOB_GEMINI_KEYS")
-    if env_keys:
+    # 1. Highest Priority: Environment Variables (Cloud/Docker)
+    if os.environ.get("PYOB_OPENROUTER_KEY") or os.environ.get("PYOB_GEMINI_KEYS"):
         return {
-            "gemini_keys": env_keys,
+            "openrouter_key": os.environ.get("PYOB_OPENROUTER_KEY", ""),
+            "openrouter_model": os.environ.get(
+                "PYOB_OPENROUTER_MODEL", "meta-llama/llama-3-8b-instruct:free"
+            ),
+            "gemini_keys": os.environ.get("PYOB_GEMINI_KEYS", ""),
             "gemini_model": os.environ.get("PYOB_GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
             "local_model": os.environ.get("PYOB_LOCAL_MODEL", DEFAULT_LOCAL_MODEL),
         }
 
-    # 1. Check for Environment Variables (Ensures it works in GitHub Actions/Docker)
-    #    This takes highest priority as per "Override by PYOB_GEMINI_KEYS" rule.
-    env_keys = os.environ.get("PYOB_GEMINI_KEYS")
-    if env_keys:
-        return {
-            "gemini_keys": env_keys,
-            "gemini_model": os.environ.get("PYOB_GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-            "local_model": os.environ.get("PYOB_LOCAL_MODEL", DEFAULT_LOCAL_MODEL),
-        }
-
-    # 2. Try loading from the local configuration file
+    # 2. Try loading from the local configuration file (.pyob_config)
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "r") as f:
                 config_data = json.load(f)
                 if isinstance(config_data, dict):
+                    # Migration: If it's an old config, ensure new keys exist
+                    if "openrouter_key" not in config_data:
+                        config_data["openrouter_key"] = ""
+                        config_data["openrouter_model"] = (
+                            "meta-llama/llama-3-8b-instruct:free"
+                        )
                     return config_data
-                else:
-                    raise ValueError("Configuration file content is not a dictionary.")
-        except (json.JSONDecodeError, OSError, ValueError) as e:
-            print(
-                f"Warning: Configuration file {CONFIG_FILE} is invalid or inaccessible ({e}). Re-creating."
-            )
-            CONFIG_FILE.unlink(missing_ok=True)  # Delete invalid file
+        except Exception as e:
+            print(f"Warning: Configuration file error ({e}).")
 
-    # 2. Check for Environment Variables (Ensures it works in GitHub Actions/Docker)
-    env_keys = os.environ.get("PYOB_GEMINI_KEYS")
-    if env_keys:
-        return {
-            "gemini_keys": env_keys,
-            "gemini_model": os.environ.get("PYOB_GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-            "local_model": os.environ.get("PYOB_LOCAL_MODEL", DEFAULT_LOCAL_MODEL),
-        }
-
-    # 3. Safety Check for Headless Environments
+    # 3. Standard Interactive Setup (First run on iMac)
     if not sys.stdin.isatty():
-        print("Error: No API keys found in environment and stdin is not a TTY.")
-        print("   In GitHub Actions, please set the PYOB_GEMINI_KEYS secret.")
         sys.exit(1)
 
-    # 4. Standard Interactive Setup (reached on local iMac first-run)
     print("PYOB First-Time Setup")
     print("═" * 40)
-    print("\nStep 1: Gemini API Keys")
-    print("Enter up to 10 keys separated by commas:")
-    keys = input("Keys: ").strip()
-    if not keys:
-        print("Error: Gemini API keys cannot be empty during interactive setup.")
-        sys.exit(1)
+    print("\nStep 1: OpenRouter API Key (Optional but Recommended)")
+    or_key = input("Enter OpenRouter Key (press Enter to skip): ").strip()
 
-    print("\nStep 2: Model Configuration")
-    print("WARNING: PYOB is optimized for 'gemini-3.1-flash-lite' and 'llama3.2:3b'.")
-    print("   Changing these may result in parsing errors or logic loops.")
+    print("\nStep 2: Gemini API Keys (Fallback)")
+    print("Enter keys separated by commas:")
+    g_keys = input("Keys: ").strip()
 
+    print("\nStep 3: Model Configuration")
     g_model = (
-        input(f"\nEnter Gemini Model [default: {DEFAULT_GEMINI_MODEL}]: ").strip()
+        input(f"Gemini Model [default: {DEFAULT_GEMINI_MODEL}]: ").strip()
         or DEFAULT_GEMINI_MODEL
     )
     l_model = (
-        input(f"Enter Local Ollama Model [default: {DEFAULT_LOCAL_MODEL}]: ").strip()
+        input(f"Local Model [default: {DEFAULT_LOCAL_MODEL}]: ").strip()
         or DEFAULT_LOCAL_MODEL
     )
 
-    config = {"gemini_keys": keys, "gemini_model": g_model, "local_model": l_model}
+    config = {
+        "openrouter_key": or_key,
+        "openrouter_model": "meta-llama/llama-3-8b-instruct:free",
+        "gemini_keys": g_keys,
+        "gemini_model": g_model,
+        "local_model": l_model,
+    }
 
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
-
-    print(f"\nConfiguration saved to {CONFIG_FILE}")
-    print("   (To change these later, simply delete that file and restart PYOB.)\n")
     return config
 
 
@@ -119,7 +100,12 @@ def main():
 
     config = load_config()
 
-    # Prioritize environment variables if set (e.g. by Docker/Actions)
+    # Inject into environment so models.py can see them
+    os.environ.setdefault("PYOB_OPENROUTER_KEY", config.get("openrouter_key", ""))
+    os.environ.setdefault(
+        "PYOB_OPENROUTER_MODEL",
+        config.get("openrouter_model", "meta-llama/llama-3-8b-instruct:free"),
+    )
     os.environ.setdefault("PYOB_GEMINI_KEYS", config.get("gemini_keys", ""))
     os.environ.setdefault(
         "PYOB_GEMINI_MODEL", config.get("gemini_model", DEFAULT_GEMINI_MODEL)
@@ -127,6 +113,7 @@ def main():
     os.environ.setdefault(
         "PYOB_LOCAL_MODEL", config.get("local_model", DEFAULT_LOCAL_MODEL)
     )
+
     # Determine if dashboard is active, e.g., via environment variable
     dashboard_active = (
         os.environ.get("PYOB_DASHBOARD_ACTIVE", "false").lower() == "true"
@@ -197,6 +184,10 @@ def main():
     # ----------------------------------------
 
     print(f"\nStarting PYOB on: {target_dir}")
+    or_status = (
+        config.get("openrouter_model") if config.get("openrouter_key") else "DISABLED"
+    )
+    print(f"OpenRouter:   {or_status}")
     print(f"Gemini Model: {os.environ['PYOB_GEMINI_MODEL']}")
     print(f"Local Model:  {os.environ['PYOB_LOCAL_MODEL']}")
     print("   (Terminal will stay open — press Ctrl+C to stop)\n")

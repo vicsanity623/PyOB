@@ -99,11 +99,20 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         self.pyob_dir = os.path.join(self.target_dir, ".pyob")
         os.makedirs(self.pyob_dir, exist_ok=True)
 
-        from pyob.core_utils import GEMINI_API_KEYS
+        # Import the keys we resolved in models.py
+        from pyob.models import GEMINI_API_KEYS, OPENROUTER_KEY
 
-        self.key_cooldowns: dict[str, float] = {
-            key: 0.0 for key in GEMINI_API_KEYS if key.strip()
-        }
+        # Initialize cooldowns for EVERYTHING
+        self.key_cooldowns: dict[str, float] = {}
+
+        # Add OpenRouter if key exists
+        if OPENROUTER_KEY:
+            self.key_cooldowns["openrouter"] = 0.0
+
+        # Add Gemini Keys
+        for key in GEMINI_API_KEYS:
+            if key.strip():
+                self.key_cooldowns[key] = 0.0
 
         self.skip_dashboard = ("--no-dashboard" in sys.argv) or (not dashboard_active)
 

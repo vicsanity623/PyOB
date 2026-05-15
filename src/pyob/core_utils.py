@@ -11,17 +11,16 @@ import time
 from typing import Callable, Optional
 
 from .models import (
+    OPENROUTER_KEY,
     get_valid_llm_response_engine,
+    raw_gemini_keys,
     stream_gemini,
     stream_github_models,
     stream_ollama,
     stream_single_llm,
 )
 
-env_keys = os.environ.get("PYOB_GEMINI_KEYS", "")
-GEMINI_API_KEYS = [k.strip() for k in env_keys.split(",") if k.strip()]
-GEMINI_MODEL = os.environ.get("PYOB_GEMINI_MODEL", "gemini-3.1-flash-lite")
-LOCAL_MODEL = os.environ.get("PYOB_LOCAL_MODEL", "llama3.2:3b")
+GEMINI_API_KEYS = [k.strip() for k in raw_gemini_keys.split(",") if k.strip()]
 PR_FILE_NAME = "PEER_REVIEW.md"
 FEATURE_FILE_NAME = "FEATURE.md"
 FAILED_PR_FILE_NAME = "FAILED_PEER_REVIEW.md"
@@ -205,7 +204,24 @@ class CoreUtilsMixin:
         context: str = "",
         gh_model: str = "Llama-3",
     ) -> str:
-        return str(stream_single_llm(prompt, key, context, gh_model))
+        provider = "local"
+        if OPENROUTER_KEY and not self.key_cooldowns.get("openrouter"):
+            provider = "openrouter"
+            key = OPENROUTER_KEY
+        elif key:
+            provider = "gemini"
+        elif os.environ.get("GITHUB_ACTIONS") == "true":
+            provider = "github"
+
+        return str(
+            stream_single_llm(
+                prompt=prompt,
+                provider=provider,
+                key=key,
+                context=context,
+                gh_model=gh_model,
+            )
+        )
 
     def get_user_approval(self, prompt_text: str, timeout: int = 220) -> str:
         if (

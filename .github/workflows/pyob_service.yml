@@ -42,6 +42,7 @@ jobs:
 
       - name: Run PyOB Service
         env:
+          PYOB_OPENROUTER_KEY: ${{ secrets.PYOB_OPENROUTER_KEY }}
           PYOB_GEMINI_KEYS: ${{ secrets.PYOB_GEMINI_KEYS }}
           GITHUB_TOKEN: ${{ secrets.AI_MODELS_TOKEN }} 
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
