@@ -209,7 +209,9 @@ class CoreUtilsMixin:
         # "openrouter" sentinel means the caller wants OpenRouter.
         if key and key != "openrouter":
             provider = "gemini"
-        elif key == "openrouter" or (OPENROUTER_KEY and not key and not self.key_cooldowns.get("openrouter")):
+        elif key == "openrouter" or (
+            OPENROUTER_KEY and not key and not self.key_cooldowns.get("openrouter")
+        ):
             provider = "openrouter"
             key = OPENROUTER_KEY
         elif os.environ.get("GITHUB_ACTIONS") == "true":
