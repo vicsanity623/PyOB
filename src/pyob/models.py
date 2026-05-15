@@ -60,11 +60,18 @@ config = load_config()
 # 3. Defaults
 
 OPENROUTER_KEY = os.environ.get("PYOB_OPENROUTER_KEY") or config.get("openrouter_key")
-OPENROUTER_MODEL = (
+_user_or_model = (
     os.environ.get("PYOB_OPENROUTER_MODEL")
     or config.get("openrouter_model")
-    or "meta-llama/llama-3-8b-instruct:free"
+    or "deepseek/deepseek-v4-flash:free"
 )
+OPENROUTER_MODELS = [
+    _user_or_model,
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "openrouter/free",
+]
+OPENROUTER_MODELS = list(dict.fromkeys(OPENROUTER_MODELS))
 
 GEMINI_MODEL = (
     os.environ.get("PYOB_GEMINI_MODEL")
@@ -79,17 +86,19 @@ LOCAL_MODEL = (
 )
 
 
-def stream_openrouter(prompt: str, key: str, on_chunk: Callable[[], None]) -> str:
+def stream_openrouter(
+    prompt: str, key: str, on_chunk: Callable[[], None], model: str
+) -> str:
     """Streams response from OpenRouter using a standard requests approach."""
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/your-repo",  # Optional, good for OpenRouter rankings
+        "HTTP-Referer": "https://github.com/vicsanity623/PyOB.git",  # Optional, good for OpenRouter rankings
         "X-Title": "PyOuroBoros",  # Optional
     }
     data = {
-        "model": OPENROUTER_MODEL,
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "stream": True,
     }
@@ -108,6 +117,9 @@ def stream_openrouter(prompt: str, key: str, on_chunk: Callable[[], None]) -> st
             error_msg = f"ERROR_CODE_{response.status_code}: {response.text}"
             logger.error(f"OpenRouter API Error: {error_msg}")
             return error_msg
+
+        # Reset chunk time so connection latency isn't counted against stream stall
+        last_chunk_time = time.time()
 
         for line in response.iter_lines():
             if not line:
@@ -267,7 +279,10 @@ def stream_single_llm(
     key: Optional[str] = None,
     context: str = "",
     gh_model: str = "Llama-3",
+    or_model: Optional[str] = None,
 ) -> str:
+    if or_model is None:
+        or_model = OPENROUTER_MODELS[0]
     input_tokens = len(prompt) // 4
     first_chunk_received = [False]
     gen_start_time = time.time()
@@ -309,7 +324,7 @@ def stream_single_llm(
 
             # Setup AI Identity String
             if provider == "openrouter":
-                source = f"OpenRouter ({OPENROUTER_MODEL.split('/')[-1]})"
+                source = f"OpenRouter ({or_model.split('/')[-1]})"
             elif provider == "gemini":
                 source = f"Gemini ...{key[-4:]}" if key else "Gemini"
             elif provider == "github":
@@ -322,7 +337,7 @@ def stream_single_llm(
     response_text = ""
     try:
         if provider == "openrouter" and key:
-            response_text = stream_openrouter(prompt, key, on_chunk)
+            response_text = stream_openrouter(prompt, key, on_chunk, model=or_model)
         elif provider == "gemini" and key:
             response_text = stream_gemini(prompt, key, on_chunk)
         elif provider == "github":
@@ -380,14 +395,21 @@ def get_valid_llm_response_engine(
         now = time.time()
 
         # 1. Evaluate key availabilities
-        openrouter_available = OPENROUTER_KEY and now > key_cooldowns.get(
-            "openrouter", 0
-        )
+        global_or_cooldown = key_cooldowns.get("openrouter", 0)
+        openrouter_available = OPENROUTER_KEY and now > global_or_cooldown
+
+        available_or_models = []
+        if openrouter_available:
+            available_or_models = [
+                m
+                for m in OPENROUTER_MODELS
+                if now > key_cooldowns.get(f"openrouter_{m}", 0)
+            ]
 
         gemini_keys = [
             k
             for k in list(key_cooldowns.keys())
-            if "github" not in k and k != "openrouter"
+            if "github" not in k and not k.startswith("openrouter")
         ]
         # Add env keys to pool if not present in cooldowns yet
         env_gem_keys = [k.strip() for k in raw_gemini_keys.split(",") if k.strip()]
@@ -400,12 +422,17 @@ def get_valid_llm_response_engine(
         response_text = None
 
         # 2. DECISION LOGIC: Prioritize OpenRouter > Gemini > GitHub > Ollama
-        if openrouter_available:
-            logger.info("Attempting OpenRouter...")
+        if available_or_models:
+            current_or_model = available_or_models[attempts % len(available_or_models)]
+            logger.info(f"Attempting OpenRouter ({current_or_model})...")
             key = OPENROUTER_KEY
             provider = "openrouter"
             response_text = stream_single_llm(
-                prompt, provider=provider, key=key, context=context
+                prompt,
+                provider=provider,
+                key=key,
+                context=context,
+                or_model=current_or_model,
             )
 
         elif available_gemini_keys:
@@ -451,10 +478,12 @@ def get_valid_llm_response_engine(
         if not response_text or response_text.startswith("ERROR_CODE_"):
             # A. OpenRouter Rate Limit (429)
             if provider == "openrouter" and "429" in (response_text or ""):
-                key_cooldowns["openrouter"] = (
+                key_cooldowns[f"openrouter_{current_or_model}"] = (
                     time.time() + 60
-                )  # 1 minute rest for openrouter
-                logger.warning("OpenRouter rate-limited. Pivoting to Gemini...")
+                )  # 1 minute rest for this openrouter model
+                logger.warning(
+                    f"OpenRouter ({current_or_model}) rate-limited. Pivoting..."
+                )
                 attempts += 1
                 continue
 
@@ -486,7 +515,7 @@ def get_valid_llm_response_engine(
                 continue
 
             # D. Generic Error Handling / Fail-Safe Sleep
-            if not openrouter_available and not available_gemini_keys and not is_cloud:
+            if not available_or_models and not available_gemini_keys and not is_cloud:
                 wait = 300
                 logger.warning(
                     f"All API resources exhausted. Sleeping {wait}s for refill..."
@@ -497,10 +526,18 @@ def get_valid_llm_response_engine(
             else:
                 # Key failed for unknown reason
                 if provider == "openrouter":
-                    logger.warning(
-                        f"OpenRouter failed ({response_text}). Pivoting to Gemini fallback..."
-                    )
-                    key_cooldowns["openrouter"] = time.time() + 60
+                    if "401" in (response_text or ""):
+                        logger.warning(
+                            f"OpenRouter API Key invalid ({response_text}). Disabling OpenRouter..."
+                        )
+                        key_cooldowns["openrouter"] = time.time() + 86400
+                    else:
+                        logger.warning(
+                            f"OpenRouter failed ({response_text}). Pivoting to fallback..."
+                        )
+                        key_cooldowns[f"openrouter_{current_or_model}"] = (
+                            time.time() + 60
+                        )
                 elif provider == "gemini" and key:
                     logger.warning(f"Gemini Key {key[-4:]} failed. Rotating...")
                     key_cooldowns[key] = time.time() + 180

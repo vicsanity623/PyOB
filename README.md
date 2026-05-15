@@ -8,6 +8,7 @@
 ### The Self-Healing, Symbolic Autonomous Code Architect
 
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-API-blueviolet?style=for-the-badge)](https://openrouter.ai/)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-8E75B2?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
 [![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-000000?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.ai)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)]()
@@ -49,7 +50,7 @@ PyOB is NOT a personal AI CHAT assistant. PyOB is an **autonomous code review an
 | **Error Recovery** | Manual | Context-aware self-healing with auto-rollback |
 | **Verification** | None | 5-layer pipeline: XML matching → linting → Mypy → PIR → runtime test |
 | **State Persistence** | Stateless | Hidden `.pyob/` vault: `MEMORY.md`, `ANALYSIS.md`, `HISTORY.md` |
-| **API Resilience** | Single key, fails on rate limit | 10-key rotation with **Smart Sleep Backoff** and local fallback |
+| **API Resilience** | Single key, fails on rate limit | Primary OpenRouter multi-model fallback, auto-rotates to Gemini 10-key pool, then GitHub Models, then Local Ollama. |
 
 ---
 
@@ -94,6 +95,7 @@ Add PyOB to any repository by creating `.github/workflows/pyob.yml`:
 ```yaml
 uses: vicsanity623/PyOB@main
 with:
+  openrouter_key: ${{ secrets.PYOB_OPENROUTER_KEY }}
   gemini_keys: ${{ secrets.PYOB_GEMINI_KEYS }}
 ```
 
@@ -182,7 +184,7 @@ PyOB is built using a **Mixin-based architecture** to separate concerns and prev
 │  ┌─────▼───────────────────────────────▼─────────────────────┐  │
 │  │                    CORE UTILITIES MIXIN                   │  │
 │  │                      (core_utils.py)                      │  │
-│  │  • Gemini / Ollama Streaming   • Smart Key Rotation       │  │
+│  │  • OpenRouter/Gemini/Ollama    • Smart Key Rotation       │  │
 │  │  • Headless Auto-Approval      • Workspace Backup/Restore │  │
 │  └─────────────────────────────────────┬─────────────────────┘  │
 │                                        │                        │
@@ -251,14 +253,16 @@ PyOB uses 8 specialized prompt templates, auto-generated as `.md` files in the t
 ## ⚙️ Configuration
 
 ### API Keys
-Gemini API keys are configured in `core_utils.py` in the `GEMINI_API_KEYS` list. Multiple keys enable automatic rotation and rate-limit resilience.
+PyOB utilizes a robust hierarchy: **OpenRouter** -> **Gemini** -> **GitHub Models** -> **Local Ollama**. 
+- **OpenRouter** keys can be configured in `~/.pyob_config` or via `PYOB_OPENROUTER_KEY`.
+- **Gemini** API keys are configured as a comma-separated list. Multiple keys enable automatic rotation and rate-limit resilience.
 
 ### Models
 | Setting | Default | Location |
 |---|---|---|
-| Gemini Model | `gemini-1.5-flash` | `core_utils.py` → `GEMINI_MODEL` |
-| Local Model  | `llama3.2:3b` | `core_utils.py` → `LOCAL_MODEL` |
-| Temperature | `0.1` | `core_utils.py` → `stream_gemini()` / `stream_ollama()` |
+| OpenRouter Models | `deepseek-v4-flash`, `llama-3.3-70b`, `qwen-2.5-coder`, `openrouter/free` | `models.py` → `OPENROUTER_MODELS` |
+| Gemini Model | `gemini-3.1-flash-lite` | `models.py` → `GEMINI_MODEL` |
+| Local Model  | `llama3.2:3b` | `models.py` → `LOCAL_MODEL` |
 
 ### Ignored Paths
 PyOB automatically skips certain directories and files to avoid self-modification and virtual environments:
@@ -350,6 +354,7 @@ PyOB/
 │       ├── reviewer_mixins.py   # 🛠️ Implementation logic for linters & healing
 │       ├── pyob_code_parser.py  # 🔬 AST/Regex structure analysis
 │       ├── pyob_dashboard.py    # 📺 Architect HUD (Observer UI)
+│       ├── models.py            # 🤖 LLM Router, OpenRouter/Gemini configuration
 │       ├── core_utils.py        # ⚙️ LLM streaming & XML edit engine
 │       └── prompts_and_memory.py # 📝 Template & persistence management
 └── tests/                   # 🧪 Engine unit tests
@@ -579,13 +584,14 @@ PyOB detects when it is running in **GitHub Actions** (via the `GITHUB_ACTIONS=t
 
 ## 9. LLM Backend & Smart Sleep Backoff
 
+### OpenRouter Multi-Model Fallback
+PyOB defaults to the **OpenRouter API** with intelligent per-model cooldowns. If your primary model (e.g. DeepSeek V4 Flash) stalls, hits a 429 rate limit, or goes offline (404), PyOB instantly pivots to a fallback model (like Llama 3.3 70B or Qwen 2.5 Coder) before putting the entire provider on cooldown. It explicitly loops through the smartest models available before utilizing the generic auto-router (`openrouter/free`).
+
 ### Multi-Key Key Rotation
-PyOB rotates through a pool of up to 10 Gemini API keys. Keys that hit a `429 Rate Limit` are quarantined for 20 minutes.
+If OpenRouter is exhausted, PyOB rotates through a pool of up to 10 Gemini API keys. Keys that hit a `429 Rate Limit` are quarantined for 3 minutes.
 
 ### Smart Sleep Backoff
-When all keys are rate-limited, the engine calculates:
-`sleep_duration = min(key_cooldowns) - current_time`
-The bot "naps" for the exact number of seconds until the first key is available, ensuring zero waste of Cloud Runner minutes.
+When all API keys across all providers are rate-limited, the engine calculates the time remaining until the next key is available and puts the bot to "sleep" for the exact number of seconds, preventing API spam and waste of Cloud Runner minutes.
 
 ---
 
