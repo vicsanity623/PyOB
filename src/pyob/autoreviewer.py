@@ -327,6 +327,13 @@ class AutoReviewer(
                 else:
                     all_files = self.scan_directory()
 
+                # Capture the full project file list BEFORE incremental filtering.
+                # This is used by Phase 2 so the feature proposal has the full
+                # universe of files to draw from, not just the 1-2 files that
+                # happened to change this cycle.
+                full_project_files = list(all_files)
+
+                if not self.manual_target_file:
                     # Incremental Analysis: Only analyze changed files + direct dependencies
                     try:
                         res = subprocess.run(
@@ -372,7 +379,7 @@ class AutoReviewer(
                                 )
                                 return
                         elif not changed_files:
-                            # If no git changes, maybe we just analyze a random subset instead of all to save tokens
+                            # If no git changes, analyze a random subset to save tokens
                             all_files = random.sample(all_files, min(3, len(all_files)))
 
                     except Exception as e:
@@ -390,9 +397,12 @@ class AutoReviewer(
                         "Skipping Phase 2 (Feature Proposal) because Phase 1 found bugs."
                     )
                     logger.info("Applying fixes first to prevent code collisions...")
-                elif all_files:
+                elif full_project_files:
+                    # Phase 2 draws from the FULL project file list, not just the
+                    # incremental subset — so the feature isn't always proposed for
+                    # whichever single file happened to change this cycle.
                     logger.info("Moving to Phase 2: Generating Feature Proposal...")
-                    self.propose_feature(random.choice(all_files))
+                    self.propose_feature(random.choice(full_project_files))
                 if os.path.exists(self.pr_file) or os.path.exists(self.feature_file):
                     print("\n" + "=" * 50)
                     print(" ACTION REQUIRED: Proposals Generated")

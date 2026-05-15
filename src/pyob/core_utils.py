@@ -204,14 +204,20 @@ class CoreUtilsMixin:
         context: str = "",
         gh_model: str = "Llama-3",
     ) -> str:
-        provider = "local"
-        if OPENROUTER_KEY and not self.key_cooldowns.get("openrouter"):
+        # If an explicit key is provided, honour the caller's intent.
+        # A Gemini key is passed when the caller explicitly wants Gemini;
+        # "openrouter" sentinel means the caller wants OpenRouter.
+        if key and key != "openrouter":
+            provider = "gemini"
+        elif key == "openrouter" or (OPENROUTER_KEY and not key and not self.key_cooldowns.get("openrouter")):
             provider = "openrouter"
             key = OPENROUTER_KEY
-        elif key:
-            provider = "gemini"
         elif os.environ.get("GITHUB_ACTIONS") == "true":
             provider = "github"
+            key = None
+        else:
+            provider = "local"
+            key = None
 
         return str(
             stream_single_llm(
