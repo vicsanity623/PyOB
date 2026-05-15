@@ -43,6 +43,7 @@ IGNORE_DIRS = {
     "build",
     "dist",
     "docs",
+    "Docs",
     "venv",
     ".venv",
     "code",
