@@ -7,7 +7,7 @@ from pathlib import Path
 def main():
     os_name = platform.system().lower()
     project_root = Path(__file__).parent.absolute()
-    VERSION = "1.0.1"
+    VERSION = "2.0.0"
     APP_NAME = "Py-OB"
     print(f"🚀 Building {APP_NAME} v{VERSION} for {os_name}...")
 
@@ -24,8 +24,11 @@ def main():
         "--hidden-import=pyob.autoreviewer",
         "--hidden-import=pyob.core_utils",
         "--hidden-import=pyob.dashboard_html",
+        "--hidden-import=pyob.dashboard_server",
+        "--hidden-import=pyob.data_parser",
         "--hidden-import=pyob.entrance",
         "--hidden-import=pyob.entrance_mixins",
+        "--hidden-import=pyob.evolution_mixins",
         "--hidden-import=pyob.feature_mixins",
         "--hidden-import=pyob.get_valid_edit",
         "--hidden-import=pyob.models",
@@ -36,6 +39,9 @@ def main():
         "--hidden-import=pyob.pyob_launcher",
         "--hidden-import=pyob.reviewer_mixins",
         "--hidden-import=pyob.scanner_mixins",
+        "--hidden-import=pyob.stats_updater",
+        "--hidden-import=pyob.targeted_reviewer",
+        "--hidden-import=pyob.xml_mixins",
         "--hidden-import=ollama",
         "--hidden-import=textwrap",
         "--hidden-import=pathlib",

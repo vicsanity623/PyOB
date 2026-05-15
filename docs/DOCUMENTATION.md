@@ -1,6 +1,6 @@
 # PyOB — Complete Technical Documentation
 
-> **Version**: 0.3.1 · **Last Updated**: March 2026
+> **Version**: 2.0.0 · **Last Updated**: May 2026
 > **Architecture**: Python 3.12+ · Mixin-Based Package · GitHub Marketplace Action
 
 ---
@@ -10,19 +10,12 @@
 1. [System Philosophy](#1-system-philosophy-constrained-surgical-autonomy)
 2. [Architecture Overview](#2-architecture-overview)
 3. [Module Reference](#3-module-reference)
-   - 3.1 [pyob_launcher.py — Entry Point](#31-pyob_launcherpy--main-cli-entry-point)
-   - 3.2 [entrance.py — The Entrance Controller](#32-entrancepy--the-entrance-controller)
-   - 3.3 [autoreviewer.py — The Pipeline Orchestrator](#33-autoreviewerpy--the-auto-reviewer)
-   - 3.4 [reviewer_mixins.py — Implementation Muscles](#34-reviewer_mixinspy--engine-implementations)
-   - 3.5 [pyob_code_parser.py — Structural Analysis](#35-pyob_code_parserpy--structural-analysis)
-   - 3.6 [pyob_dashboard.py — SOTA Architect HUD](#36-pyob_dashboardpy--the-architect-hud)
-   - 3.7 [core_utils.py — Cloud-Aware Foundation](#37-core_utilspy--core-utilities-mixin)
 4. [The Verification & Healing Pipeline](#4-the-verification--healing-pipeline)
 5. [Symbolic Dependency Management](#5-symbolic-dependency-management)
 6. [The XML Edit Engine](#6-the-xml-edit-engine)
 7. [The GitHub Librarian](#7-the-github-librarian-integration)
 8. [Headless & Cloud Autonomy](#8-headless--cloud-autonomy)
-9. [LLM Backend & Smart Sleep Backoff](#9-llm-backend--resilience)
+9. [LLM Backend & Smart Fallbacks](#9-llm-backend--smart-fallbacks)
 10. [Persistence & State Vault (.pyob/)](#10-persistence--state-management)
 11. [Safety & Rollback Mechanisms](#11-safety--rollback-mechanisms)
 12. [Marketplace & Docker Infrastructure](#12-marketplace--docker-infrastructure)
@@ -38,7 +31,7 @@ PyOB is an autonomous agent built on **constrained agency**. Unlike chat-based a
 
 1. **Surgical Patching** — Patches are applied via `<SEARCH>/<REPLACE>` blocks limited to 2-5 line anchors.
 2. **Atomic Commits** — Changes are isolated in unique Git branches and submitted as PRs via the Librarian.
-3. **Multi-Step Verification** — Every edit must pass a 5-layer gate (XML match → Linter → Mypy → PIR → Smoke Test).
+3. **Multi-Step Verification** — Every edit must pass a multi-layer gate (XML match → Linter → Mypy → PIR → Smoke Test).
 4. **Self-Evolution** — The engine is recursive; it can identify its own logic flaws and refactor its source code.
 
 ---
@@ -46,23 +39,29 @@ PyOB is an autonomous agent built on **constrained agency**. Unlike chat-based a
 ## 2. Architecture Overview
 
 ### Modular Package Structure
-PyOB has transitioned from a script collection to a standardized Python package located in `src/pyob/`.
+PyOB has been heavily refactored from a monolithic script into a highly decoupled, mixin-based architecture located in `src/pyob/`.
 
 ```text
-CoreUtilsMixin (core_utils.py)
-├── Provides: Smart Sleep, Headless Approval, XML Engine, LLM Streaming
-│
-PromptsAndMemoryMixin (prompts_and_memory.py)
-├── Provides: Rule-based Templates (Rule 7: No src. imports), CRUD Memory
-│
-ValidationMixin + FeatureOperationsMixin (reviewer_mixins.py)
-├── Provides: Ruff/Mypy validation, Runtime Auto-Heal, XML Implementation
-│
-AutoReviewer(All Mixins) (autoreviewer.py)
-├── Provides: 6-Phase orchestrator logic
-│
-EntranceController (entrance.py)
-├── Provides: Master loop, Remote Sync, Librarian PR logic, Reboot Flag
+Entrance System (entrance.py, entrance_mixins.py)
+├── Master loop, Librarian PR logic, Recursive Reboot Management
+
+Review & Pipeline Orchestration (autoreviewer.py, targeted_reviewer.py)
+├── Orchestrates the 6-Phase Pipeline over the codebase
+
+Implementation & Validation Mixins (feature_mixins.py, scanner_mixins.py, evolution_mixins.py)
+├── Ruff/Mypy validation, Runtime Auto-Heal, AI Proposal interpretation
+
+XML Engine (xml_mixin.py, get_valid_edit.py)
+├── Multi-strategy patch matching, strict syntax enforcement
+
+LLM & Models (models.py, prompts_and_memory.py, prompts.py)
+├── OpenRouter/Gemini streaming, Rule-based Templates, CRUD Memory
+
+Architect HUD & Stats (dashboard_server.py, dashboard_html.py, stats_updater.py)
+├── SOTA Real-time Cyberpunk Web Interface
+
+Core Utilities (core_utils.py, pyob_launcher.py, data_parser.py)
+├── Smart Sleep, Environment Detection, Config parsing
 ```
 
 ### System Data Flow (Cloud Service Mode)
@@ -75,7 +74,7 @@ EntranceController (entrance.py)
                     └───────────┬────────────────────────────┬─────────┘
                                 ▼                            ▼
                     ┌──────────────────────┐      ┌────────────────────┐
-                    │   AUTO REVIEWER      │      │    LIBRARIAN       │
+                    │ TARGETED REVIEWER    │      │    LIBRARIAN       │
                     │ (6-Phase Pipeline)   │      │ (Branch/Commit/PR) │
                     └───────────┬──────────┘      └────────────────────┘
                                 ▼
@@ -89,39 +88,23 @@ EntranceController (entrance.py)
 
 ## 3. Module Reference
 
-### 3.1 `pyob_launcher.py` — Main CLI Entry Point
-The environment bootstrapper. It configures the runtime, handles macOS terminal re-launching, and detects "Headless" environments.
+### 3.1 `pyob_launcher.py` & `data_parser.py`
+The environment bootstrapper. It loads the `~/.pyob_config`, configures the OS runtime, and ensures proper terminal rendering. 
 
-| Method | Description |
-|---|---|
-| `load_config` | Pulls keys from `~/.pyob_config` (Local) or `os.environ` (Cloud). Detects non-TTY to skip prompts. |
-| `ensure_terminal` | macOS-specific logic to force PyOB into a visible Terminal window for DMG users. |
-| `main` | Entry point. Detects macOS app bundle paths and ignores them to ensure clean targeting. |
+### 3.2 `entrance.py` & `entrance_mixins.py`
+The master orchestrator. Runs the infinite loop, manages Git lifecycles, and evaluates the `self_evolved_flag` for Hot-Reboots.
 
-### 3.2 `entrance.py` — The Entrance Controller
-The master orchestrator. Manages symbolic targeting, Git lifecycle, and Hot-Reboots.
+### 3.3 `targeted_reviewer.py` & `autoreviewer.py`
+Ties the specialized mixins together to execute the autonomous analysis cycle on individual files or entire projects.
 
-| Method | Description |
-|---|---|
-| `run_master_loop` | Infinite loop with `sync_with_remote` check. Manages the `self_evolved_flag`. |
-| `sync_with_remote` | Fetches `origin/main`. If behind, performs a merge. Triggers reboot if engine files change. |
-| `handle_git_librarian` | Creates branch `pyob-evolution-vX-timestamp`, commits as `pyob-bot`, and opens PR. |
-| `reboot_pyob` | **Verified Hot-Reboot:** Tests if new code is importable before calling `os.execv` to restart. |
+### 3.4 `models.py` & `prompts_and_memory.py`
+Handles all interaction with the AI. `models.py` controls the OpenRouter/Gemini/Ollama hierarchy, executing the multi-model fallback logic.
 
-### 3.3 `autoreviewer.py` — The Auto Reviewer
-The high-level pipeline orchestrator. Ties together the specialized mixins into the 6-phase autonomous cycle.
+### 3.5 `xml_mixin.py` & `get_valid_edit.py`
+The surgical engine. Analyzes the AI's `<SEARCH>/<REPLACE>` payloads and carefully splices them into the live codebase using advanced whitespace and AST tolerance.
 
-### 3.4 `reviewer_mixins.py` — Engine Implementations
-Separates "Muscle" from "Brain."
-
-- **`ValidationMixin`**: Runs `ruff format`, then `ruff check --fix`. If errors remain, it triggers the PIR loop.
-- **`FeatureOperationsMixin`**: The heavy-duty XML matcher. Interprets AI proposals and writes them to `PEER_REVIEW.md`.
-
-### 3.5 `pyob_code_parser.py` — Structural Analysis
-A high-fidelity analysis tool that uses **AST (Python)** and **Regex (JS/CSS)** to map the project architecture. It generates the `<details>` dropdowns seen in `ANALYSIS.md`.
-
-### 3.6 `pyob_dashboard.py` — The Architect HUD
-A `BaseHTTPRequestHandler` that serves the SOTA Cyberpunk HUD. Features glassmorphism, responsive mobile layout, and real-time AJAX stats updates.
+### 3.6 `dashboard_server.py` & `dashboard_html.py`
+A modern Python HTTP server serving the Cyberpunk Architect HUD. Provides a responsive HTML/CSS dashboard with live AJAX updates powered by `stats_updater.py`.
 
 ---
 
@@ -130,15 +113,15 @@ A `BaseHTTPRequestHandler` that serves the SOTA Cyberpunk HUD. Features glassmor
 PyOB follows a "Proactive Defense" model to ensure code stability.
 
 ### Layer 1: Atomic XML Match
-Edits are binary: either every block in a response matches perfectly, or the entire iteration is discarded.
+Edits are binary: either every block in a response matches perfectly against the live file, or the entire iteration is discarded.
 
 ### Layer 2: Syntactic "Broom"
 1. **`ruff format`**: Normalizes all whitespace.
 2. **`ruff check --fix`**: Automatically clears unused imports and variables without costing AI tokens.
-3. **Remaining Errors**: Grouped by file and fed into the AI for surgical repair.
+3. **Remaining Errors**: Grouped by file and fed into the AI for surgical repair via the Post-Implementation Repair (PIR) loop.
 
 ### Layer 3: Runtime Smoke Test
-- Locates the entry point via `_find_entry_file`.
+- Locates the project entry point.
 - Launches the process for 10 seconds.
 - **Auto-Dependency Locking**: If a `ModuleNotFoundError` is detected, PyOB runs `pip install` and immediately updates `requirements.txt`.
 
@@ -160,8 +143,8 @@ PyOB maintains a mapping of **Definitions** (where a function/class is born) to 
 ## 6. The XML Edit Engine
 
 ### Multi-Strategy Matching
-`apply_xml_edits` attempts 5 strategies per block:
-1. **Exact** (Literal)
+`xml_mixin.py` attempts 5 strategies per block:
+1. **Exact** (Literal string match)
 2. **Stripped** (Newline tolerance)
 3. **Normalized** (Comment/Whitespace stripping)
 4. **Regex Fuzzy** (Indentation tolerance)
@@ -174,10 +157,10 @@ The engine detects the target line's indentation and re-aligns the AI's `<REPLAC
 
 ## 7. The GitHub Librarian Integration
 
-PyOB acts as a professional developer through the **Librarian** module:
+PyOB acts as a professional developer through the **Librarian** logic:
 
-- **Isolated Branches:** Every change is pushed to a unique branch.
-- **Bot Identity:** Commits are attributed to `pyob-bot` using the `BOT_GITHUB_TOKEN`.
+- **Isolated Branches:** Every change is pushed to a unique branch (`pyob-evolution-vX...`).
+- **Bot Identity:** Commits are attributed to `pyob-bot` using `BOT_GITHUB_TOKEN`.
 - **Automated PRs:** Uses the GitHub CLI (`gh`) to open Pull Requests targeting `main`.
 - **PR Body:** Includes the AI's `<THOUGHT>` process as the PR description for human review.
 
@@ -185,23 +168,28 @@ PyOB acts as a professional developer through the **Librarian** module:
 
 ## 8. Headless & Cloud Autonomy
 
-PyOB detects when it is running in **GitHub Actions** (via the `GITHUB_ACTIONS=true` env var):
+PyOB detects when it is running in **GitHub Actions** (via `GITHUB_ACTIONS=true`):
 
 - **Auto-Approval:** Bypasses "Press ENTER to apply" prompts.
-- **Non-TTY Safety:** Skips all `termios` and `input()` calls to prevent `EOFError` or `ioctl` crashes.
-- **Cloud Tunneling:** Starts a background **Pinggy** tunnel to provide a public URL for the dashboard HUD.
+- **Non-TTY Safety:** Skips all terminal UI manipulations to prevent crashes.
+- **Cloud Tunneling:** Starts a background **Pinggy** tunnel to provide a public URL for the dashboard HUD directly to your phone.
 
 ---
 
-## 9. LLM Backend & Smart Sleep Backoff
+## 9. LLM Backend & Smart Fallbacks
 
-### Multi-Key Key Rotation
-PyOB rotates through a pool of up to 10 Gemini API keys. Keys that hit a `429 Rate Limit` are quarantined for 20 minutes.
+### OpenRouter Multi-Model Pivot
+PyOB defaults to the **OpenRouter API** with highly sophisticated per-model cooldowns configured in `models.py`. 
+It prioritizes heavy-hitting models like **DeepSeek V4 Flash**, **Llama 3.3 70B**, and **Qwen 2.5 Coder 32B**. 
+If a specific model stalls, 404s, or hits a rate limit, PyOB immediately places *only that model* on cooldown and seamlessly pivots to the next OpenRouter model in the list, eventually hitting the `openrouter/free` auto-router.
+
+### Gemini API Rotation
+If the entire OpenRouter provider goes offline, PyOB falls back to a massive pool of up to 10 Gemini API keys (`GEMINI_API_KEYS`). It actively tracks which keys are rate-limited and rotates through them on the fly.
 
 ### Smart Sleep Backoff
-When all keys are rate-limited, the engine calculates:
+When all keys across all providers are exhausted, the engine calculates:
 `sleep_duration = min(key_cooldowns) - current_time`
-The bot "naps" for the exact number of seconds until the first key is available, ensuring zero waste of Cloud Runner minutes.
+The bot "naps" for the exact number of seconds until the very first key is freed up, ensuring zero API spam while preserving Cloud Runner minutes.
 
 ---
 
@@ -220,9 +208,9 @@ All project metadata is stored in the hidden `.pyob/` vault to prevent root dire
 
 ## 11. Safety & Rollback Mechanisms
 
-- **External Safety Pods:** Before editing an "Engine File" (like `entrance.py`), PyOB shelters a copy of the current source in `~/Documents/PYOB_Backups/`.
+- **External Safety Pods:** Before editing an "Engine File", PyOB shelters a copy of the current source in `~/Documents/PYOB_Backups/`.
 - **Workspace Backup:** Every iteration starts with an in-memory snapshot of the entire project.
-- **Atomic Rollback:** If any verification layer (Linter, Mypy, or Runtime) fails 3 times, the entire workspace is restored to the backup.
+- **Atomic Rollback:** If any verification layer (Linter, Mypy, or Runtime) fails 3 times, the entire workspace is immediately restored to the pristine backup.
 
 ---
 
@@ -232,7 +220,7 @@ All project metadata is stored in the hidden `.pyob/` vault to prevent root dire
 PyOB is a containerized GitHub Action (`action.yml`). It uses a `Dockerfile` based on `python:3.12-slim` with `git`, `curl`, and `gh` pre-installed.
 
 ### Docker Environment
-The Docker container maps the user's repository to `/github/workspace`, allowing PyOB to operate on the files as if it were a local CLI tool.
+The Docker container maps the user's repository to `/github/workspace`, allowing PyOB to operate on the files identically to a local CLI tool without permission headaches.
 
 ---
 
@@ -244,7 +232,7 @@ The AI is strictly prohibited from using the `src.` prefix in imports.
 - **Incorrect:** `from src.pyob.core_utils import ...`
 
 ### Indentation Guard (Rule 6)
-Deletions must leave a placeholder comment (e.g., `# [Logic moved to new module]`) to maintain Python's indentation integrity.
+Deletions must leave a placeholder comment (e.g., `# [Logic moved to new module]`) to maintain Python's indentation integrity and AST structure.
 
 ---
 
@@ -275,3 +263,4 @@ Deletions must leave a placeholder comment (e.g., `# [Logic moved to new module]
 
 ---
 > **PyOB** — The engine that builds itself, with surgical precision. 🦅
+---
