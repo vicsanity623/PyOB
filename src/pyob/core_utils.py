@@ -73,7 +73,7 @@ IGNORE_FILES = {
     "evolved_core_brain.pkl",
     "Dockerfile",
     "build_pyinstaller_multiOS.py",
-    #"check.sh",
+    # "check.sh",
     "ci.sh",
     "HOWTO.md",
     "__init__.py",
