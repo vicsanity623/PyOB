@@ -1,0 +1,28 @@
+name: 'PyOB Autonomous Architect'
+description: 'Autonomous code review, surgical patching, and symbolic dependency tracking.'
+author: 'vicsanity623'
+branding:
+  icon: 'cpu'
+  color: 'green'
+inputs:
+  openrouter_key:
+    description: 'OpenRouter API Key (Optional but recommended)'
+    required: false
+  gemini_keys:
+    description: 'Comma-separated list of Gemini API keys'
+    required: true
+  target_dir:
+    description: 'The directory to analyze'
+    required: false
+    default: '.'
+  iterations:
+    description: 'Number of autonomous loops to run'
+    required: false
+    default: '1'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    PYOB_OPENROUTER_KEY: ${{ inputs.openrouter_key }}
+    PYOB_GEMINI_KEYS: ${{ inputs.gemini_keys }}

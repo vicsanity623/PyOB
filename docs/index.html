@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyOuroBoros (PyOB) // Technical HUD & API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    
+    <style>
+        :root { --accent: #38bdf8; --bg: #0a0f1e; --card: #111827; --emerald: #10b981; --amber: #f59e0b; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #94a3b8; }
+        .glass { background: rgba(10, 15, 30, 0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
+        .prose code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #38bdf8; background: #1e293b; padding: 0.2rem 0.4rem; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2); }
+        .prose pre { background: #010409 !important; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem !important; margin: 1.5rem 0 !important; }
+        .prose h1, .prose h2, .prose h3 { color: #f8fafc; font-weight: 800; letter-spacing: -0.025em; margin-top: 3.5rem; }
+        .prose h2 { font-size: 1.75rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.5rem; }
+        .prose h2 i { color: var(--accent); }
+        .sidebar-link { transition: 0.2s; border-left: 2px solid transparent; color: #64748b; font-size: 0.85rem; }
+        .sidebar-link:hover { color: #f8fafc; background: rgba(255,255,255,0.02); }
+        .sidebar-link.active { color: var(--accent); border-left: 2px solid var(--accent); background: rgba(56, 189, 248, 0.05); }
+        .feature-card { background: #111827; border: 1px solid #1f2937; position: relative; overflow: hidden; }
+        .feature-card::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.2; }
+        
+        .method-tag { font-family: 'JetBrains Mono'; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        .method-tag.get { color: var(--emerald); border-color: rgba(16, 185, 129, 0.3); }
+        .method-tag.post { color: var(--amber); border-color: rgba(245, 158, 11, 0.3); }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- SEARCH OVERLAY -->
+    <div id="search-overlay" class="fixed inset-0 z-[100] hidden bg-slate-950/95 backdrop-blur-xl p-4 lg:p-20 flex-col items-center">
+        <div id="search-closer" class="absolute inset-0 z-[-1]"></div>
+        <div class="w-full max-w-4xl">
+            <div class="glass rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-sky-500/20">
+                <div class="p-6 border-b border-slate-800 flex items-center gap-4">
+                    <i data-lucide="search" class="text-sky-500 w-6 h-6 shrink-0"></i>
+                    <input type="text" id="docs-search-input" placeholder="Search AST calls, methods, or modules (e.g. 'execute_targeted_iteration')..." 
+                           class="bg-transparent border-none text-white text-xl w-full focus:ring-0 outline-none">
+                    <div class="hidden lg:block text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg text-slate-500 font-bold uppercase tracking-widest">ESC</div>
+                </div>
+                <div id="search-results-list" class="max-h-[60vh] overflow-y-auto p-4 space-y-2 bg-slate-950/20">
+                    <div class="py-20 text-center">
+                        <p class="text-slate-500 font-medium">Deep Symbolic Search is active.</p>
+                        <p class="text-xs text-slate-600 mt-2">Index includes all 12 core modules and private mixins.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP STRUCTURE -->
+    <div class="max-w-[1800px] mx-auto flex">
+        
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="hidden lg:block fixed w-80 h-screen glass z-40 overflow-y-auto px-8 py-10 border-r border-slate-800">
+            <div class="flex items-center gap-3 mb-12">
+                <i data-lucide="infinity" class="text-sky-500 w-10 h-10"></i>
+                <div>
+                    <h1 class="text-2xl font-black text-white leading-none tracking-tighter">PyOB</h1>
+                    <p class="text-[10px] uppercase tracking-[0.3em] text-sky-500 font-bold mt-1">ENGINE MASTER</p>
+                </div>
+            </div>
+
+            <nav class="space-y-8">
+                <section>
+                    <h5 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Core Architecture</h5>
+                    <div class="space-y-1">
+                        <a href="#system-philosophy" class="sidebar-link block py-2 px-4 rounded-lg">System Philosophy</a>
+                        <a href="#symbolic-ledger" class="sidebar-link block py-2 px-4 rounded-lg">Symbolic Ledger (AST)</a>
+                        <a href="#verification-pipeline" class="sidebar-link block py-2 px-4 rounded-lg">Verification Logic</a>
+                    </div>
+                </section>
+                <section>
+                    <h5 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Module Reference</h5>
+                    <div class="grid grid-cols-1 gap-1">
+                        <a href="#mod-entrance" class="sidebar-link py-1 px-4">entrance.py</a>
+                        <a href="#mod-entrance-mixins" class="sidebar-link py-1 px-4">entrance_mixins.py</a>
+                        <a href="#mod-autoreviewer" class="sidebar-link py-1 px-4">autoreviewer.py</a>
+                        <a href="#mod-reviewer-mixins" class="sidebar-link py-1 px-4">reviewer_mixins.py</a>
+                        <a href="#mod-feature-mixins" class="sidebar-link py-1 px-4">feature_mixins.py</a>
+                        <a href="#mod-core-utils" class="sidebar-link py-1 px-4">core_utils.py</a>
+                        <a href="#mod-pyob-code-parser" class="sidebar-link py-1 px-4">pyob_code_parser.py</a>
+                        <a href="#mod-prompts-memory" class="sidebar-link py-1 px-4">prompts_and_memory.py</a>
+                        <a href="#mod-models" class="sidebar-link py-1 px-4">models.py</a>
+                        <a href="#mod-pyob-dashboard" class="sidebar-link py-1 px-4">pyob_dashboard.py</a>
+                        <a href="#mod-dashboard-html" class="sidebar-link py-1 px-4">dashboard_html.py</a>
+                        <a href="#mod-pyob-launcher" class="sidebar-link py-1 px-4">pyob_launcher.py</a>
+                    </div>
+                </section>
+            </nav>
+        </aside>
+
+        <!-- CONTENT AREA -->
+        <main class="flex-1 lg:ml-80 p-6 lg:p-16 relative">
+
+            <!-- SEARCH TRIGGER -->
+            <button id="searchTrigger" class="w-full mb-12 flex items-center justify-between p-4 glass rounded-2xl border border-slate-800 hover:border-sky-500/50 transition-all group">
+                <div class="flex items-center gap-4">
+                    <i data-lucide="search" class="text-slate-500 group-hover:text-sky-500 transition-colors"></i>
+                    <span class="text-slate-400 font-medium">Search Technical Documentation...</span>
+                </div>
+                <kbd class="hidden lg:block text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-500 font-bold tracking-widest">/</kbd>
+            </button>
+            
+            <section id="system-philosophy" class="mb-32">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="bg-sky-500/10 text-sky-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">v0.3.2</span>
+                </div>
+                <h1 class="text-6xl lg:text-8xl font-black text-white tracking-tighter mb-8">
+                    Deep Code <span class="text-sky-500">Evolution.</span>
+                </h1>
+                <p class="text-2xl text-slate-400 max-w-4xl leading-relaxed">
+                    PyOB is an autonomous engine that uses <span class="text-white font-semibold">Abstract Syntax Tree (AST)</span> analysis to map, edit, and verify codebases with surgical precision.
+                </p>
+            </section>
+
+            <article id="docs-content" class="prose max-w-none lg:max-w-5xl text-slate-400 leading-relaxed">
+                
+                <!-- SYMBOLIC LEDGER SECTION -->
+                <h2 id="symbolic-ledger"><i data-lucide="binary"></i> The Symbolic Ledger (AST)</h2>
+                <p>PyOB's core intelligence relies on its ability to see code as a tree rather than text. It utilizes the <code>ast</code> module to populate <code>SYMBOLS.json</code>.</p>
+                
+                <div class="p-6 glass rounded-2xl border-l-4 border-sky-500 my-8">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2"><i data-lucide="code-2" class="w-5 h-5"></i> update_ledger_for_file()</h4>
+                    <p class="text-sm mb-4">This method, located in <code>EntranceController</code>, parses Python files into <code>ast.FunctionDef</code> and <code>ast.ClassDef</code> nodes to track exactly where every symbol is defined.</p>
+                    <pre><code class="language-python"># Simplified AST walk logic from update_ledger_for_file
+tree = ast.parse(code)
+for n in ast.walk(tree):
+    if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+        self.ledger["definitions"][n.name] = rel_path
+    elif isinstance(n, ast.Assign):
+        # Tracking Uppercase Constants
+        for target in n.targets:
+            if isinstance(target, ast.Name) and target.id.isupper():
+                self.ledger["definitions"][target.id] = rel_path</code></pre>
+                </div>
+
+                <!-- MODULE REFERENCE -->
+                <h2 id="mod-entrance"><i data-lucide="log-in"></i> entrance.py / entrance_mixins.py</h2>
+                <p>The control hub. Responsible for the main loop, symbolic ripple detection, and external safety pods.</p>
+                
+                <div class="overflow-hidden glass rounded-xl border border-slate-800 my-6">
+                    <table class="m-0 border-none">
+                        <thead>
+                            <tr class="border-b border-slate-800">
+                                <th>Method Name</th>
+                                <th>Primary Logic</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>execute_targeted_iteration</code></td>
+                                <td>Core loop. Backs up workspace, triggers reviewer pipeline, refreshes metadata.</td>
+                            </tr>
+                            <tr>
+                                <td><code>detect_symbolic_ripples</code></td>
+                                <td>Diffs old/new code, finds changed symbols, and queues all dependent files.</td>
+                            </tr>
+                            <tr>
+                                <td><code>reboot_pyob</code></td>
+                                <td>Verifies syntax integrity before performing an <code>os.execv</code> hot-restart.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h2 id="mod-reviewer-mixins"><i data-lucide="shield-check"></i> autoreviewer.py / reviewer_mixins.py</h2>
+                <p>The verification heart. It enforces Rule 7 (no 'src.' prefixes) and manages the 5-layer pipeline.</p>
+                <pre><code class="language-python"># The Verification Gate sequence
+if not self.run_linter_fix_loop():
+    return False # Linter/Syntax Error
+if not self.run_and_verify_app():
+    return False # Runtime Crash Detected
+if not self.check_downstream_breakages():
+    return False # Downstream Mypy Breakage</code></pre>
+
+                <!-- 12 FILE REFERENCE -->
+                <h2 id="file-api"><i data-lucide="layers"></i> Engine Module Map</h2>
+                <div class="grid md:grid-cols-2 gap-4 my-10">
+                    <div id="mod-pyob-code-parser" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Logic</span>
+                        <h4 class="text-white font-bold text-sm">pyob_code_parser.py</h4>
+                        <p class="text-xs mt-2">Generates HTML dropdowns from AST trees for AI context injections.</p>
+                    </div>
+                    <div id="mod-prompts-memory" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Data</span>
+                        <h4 class="text-white font-bold text-sm">prompts_and_memory.py</h4>
+                        <p class="text-xs mt-2">Handles <code>PIR.md</code>, <code>ALF.md</code>, and <code>PF.md</code> template loading.</p>
+                    </div>
+                    <div id="mod-models" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Network</span>
+                        <h4 class="text-white font-bold text-sm">models.py</h4>
+                        <p class="text-xs mt-2">The "Heartbeat" router for Gemini, Llama-3 (GH), and Local Ollama.</p>
+                    </div>
+                    <div id="mod-feature-mixins" class="p-5 glass rounded-xl border border-slate-800">
+                        <span class="method-tag mb-3 inline-block">Logic</span>
+                        <h4 class="text-white font-bold text-sm">feature_mixins.py</h4>
+                        <p class="text-xs mt-2">Orchestrates multi-file creation and architectural feature implementation.</p>
+                    </div>
+                </div>
+
+                <h2 id="verification-pipeline"><i data-lucide="activity"></i> The Healing Logic</h2>
+                <p>When a crash occurs, PyOB uses <code>_fix_runtime_errors</code> to parse tracebacks and automatically generate patches.</p>
+                
+                <div class="p-6 rounded-xl bg-amber-500/5 border border-amber-500/20 my-10">
+                    <h5 class="text-amber-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Auto-Dependency Locking</h5>
+                    <p class="text-sm">If a <code>ModuleNotFoundError</code> is detected, PyOB automatically runs <code>pip install</code> and freezes the new state into <code>requirements.txt</code> without human intervention.</p>
+                </div>
+
+            </article>
+
+            <footer class="mt-32 pt-12 border-t border-slate-800 text-center pb-20">
+                <div class="flex justify-center gap-6 mb-8 text-slate-500">
+                    <i data-lucide="github" class="w-5 h-5 hover:text-white cursor-pointer transition-colors"></i>
+                    <i data-lucide="terminal" class="w-5 h-5 hover:text-white cursor-pointer transition-colors"></i>
+                </div>
+                <p class="text-slate-600 text-[10px] tracking-[0.4em] uppercase font-bold">Ouroboros Protocol // 2026</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // DEEP SYMBOLIC SEARCH ENGINE
+        const searchOverlay = document.getElementById('search-overlay');
+        const searchInput = document.getElementById('docs-search-input');
+        const searchResultsList = document.getElementById('search-results-list');
+        const searchTrigger = document.getElementById('searchTrigger');
+        const searchCloser = document.getElementById('search-closer');
+
+        // Extract technical fragments from document
+        const buildIndex = () => {
+            const content = document.getElementById('docs-content');
+            const elements = content.querySelectorAll('h2, h3, h4, p, li, pre code, td');
+            return Array.from(elements).map((el, index) => {
+                if (!el.id) el.id = `node-${index}`;
+                return {
+                    id: el.id,
+                    text: el.innerText.trim(),
+                    tagName: el.tagName.toLowerCase(),
+                    context: el.closest('section, article')?.querySelector('h1, h2')?.innerText || 'Core'
+                };
+            }).filter(item => item.text.length > 5);
+        };
+
+        const searchIndex = buildIndex();
+
+        const openSearch = () => {
+            searchOverlay.classList.remove('hidden');
+            searchInput.focus();
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeSearch = () => {
+            searchOverlay.classList.add('hidden');
+            searchInput.value = '';
+            document.body.style.overflow = ''; 
+        };
+
+        searchTrigger.addEventListener('click', openSearch);
+        searchCloser.addEventListener('click', closeSearch);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '/' && searchOverlay.classList.contains('hidden')) {
+                e.preventDefault();
+                openSearch();
+            }
+            if (e.key === 'Escape') closeSearch();
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (query.length < 2) return;
+
+            const matches = searchIndex.filter(item => item.text.toLowerCase().includes(query));
+            
+            if (matches.length === 0) {
+                searchResultsList.innerHTML = `<p class="text-slate-600 text-center py-10">No symbolic match found for "${query}"</p>`;
+                return;
+            }
+
+            searchResultsList.innerHTML = matches.slice(0, 10).map(item => `
+                <a href="#${item.id}" onclick="document.getElementById('search-overlay').classList.add('hidden'); document.body.style.overflow = '';" 
+                   class="block p-4 rounded-2xl hover:bg-sky-500/10 border border-transparent hover:border-sky-500/20 transition group">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[8px] font-black px-2 py-0.5 rounded bg-slate-800 text-sky-500 uppercase">${item.tagName}</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${item.context}</span>
+                    </div>
+                    <div class="text-slate-300 text-sm truncate">
+                        ${item.text.substring(0, 100)}...
+                    </div>
+                </a>
+            `).join('');
+        });
+
+        // Intersection Observer for Sidebar
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.5 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    document.querySelectorAll('.sidebar-link').forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`);
+                    });
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section, h2, h3').forEach(el => observer.observe(el));
+    </script>
+</body>
+</html>
