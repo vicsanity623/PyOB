@@ -453,7 +453,8 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
     def detect_symbolic_ripples(
         self, old: str, new: str, source_file: str
     ) -> list[str]:
-        diff = list(difflib.unified_diff(old.splitlines(), new.splitlines()))
+        """Detects files impacted by symbolic changes."""
+        diff: list[str] = list(difflib.unified_diff(old.splitlines(), new.splitlines()))
         changed_text = "\n".join(
             [line for line in diff if line.startswith("+") or line.startswith("-")]
         )
@@ -466,7 +467,10 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                         impacted_files.append(target_file)
         return list(set(impacted_files))
 
-    def update_analysis_for_single_file(self, target_abs_path: str, rel_path: str):
+    def update_analysis_for_single_file(
+        self, target_abs_path: str, rel_path: str
+    ) -> None:
+        """Updates the analysis markdown for a specific file."""
         if not os.path.exists(self.analysis_path):
             return
         with open(target_abs_path, "r", encoding="utf-8", errors="ignore") as f:
