@@ -152,7 +152,7 @@ class EntranceMixin:
 
         ObserverHandler.controller = self
 
-        def run_server():
+        def run_server() -> None:
             try:
                 server = HTTPServer(("localhost", 5000), ObserverHandler)
                 server.serve_forever()
