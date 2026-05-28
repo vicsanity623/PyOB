@@ -257,7 +257,7 @@ class CoreUtilsMixin:
     def _win32_input(self, start_time: float, timeout: int) -> str:
         import msvcrt  # type: ignore
 
-        input_str = ""
+        input_str: str = ""
         prev_line_len = 0
         while True:
             remaining = int(timeout - (time.time() - start_time))
