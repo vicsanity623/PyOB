@@ -110,26 +110,22 @@ class EntranceMixin:
         # 2. Initialize and Start the Live Server
 
         # Dynamically add do_POST method for manual target handling
-        def _dynamic_do_POST_method(handler_instance: ObserverHandler) -> None:
-            if handler_instance.path == "/set_target":
+        def _dynamic_do_POST_method(self: ObserverHandler) -> None:
+            if self.path == "/set_target":
                 try:
-                    content_length = int(
-                        handler_instance.headers.get("Content-Length", 0)
-                    )
+                    content_length = int(self.headers.get("Content-Length", 0))
                 except (ValueError, TypeError):
-                    content_length = 0  # Default to 0 if header is malformed
+                    content_length = 0
 
                 if content_length > 0:
-                    post_data = handler_instance.rfile.read(content_length).decode(
-                        "utf-8"
-                    )
+                    post_data = self.rfile.read(content_length).decode("utf-8")
                     parsed_data = urllib.parse.parse_qs(post_data)
                     file_path = parsed_data.get("file_path", [""])[0]
                 else:
-                    file_path = ""  # No content, no file_path
+                    file_path = ""
 
-                if file_path and handler_instance.controller:
-                    handler_instance.controller.set_manual_target_file(file_path)
+                if file_path and hasattr(self, "controller") and self.controller:
+                    self.controller.set_manual_target_file(file_path)
                     message = f"Manual target set to: {file_path}"
                     status_code = 200
                 else:
@@ -138,14 +134,12 @@ class EntranceMixin:
                     )
                     status_code = 400
 
-                handler_instance.send_response(status_code)
-                handler_instance.send_header("Content-type", "application/json")
-                handler_instance.end_headers()
-                handler_instance.wfile.write(
-                    json.dumps({"message": message}).encode("utf-8")
-                )
+                self.send_response(status_code)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"message": message}).encode("utf-8"))
             else:
-                handler_instance.send_error(404)
+                self.send_error(404)
 
         # Fix: Use setattr to bypass Mypy [method-assign] error
         setattr(ObserverHandler, "do_POST", _dynamic_do_POST_method)
