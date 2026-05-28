@@ -110,7 +110,7 @@ class EntranceMixin:
         # 2. Initialize and Start the Live Server
 
         # Dynamically add do_POST method for manual target handling
-        def _dynamic_do_POST_method(handler_instance: ObserverHandler):
+        def _dynamic_do_POST_method(handler_instance: ObserverHandler) -> None:
             if handler_instance.path == "/set_target":
                 try:
                     content_length = int(
@@ -152,7 +152,7 @@ class EntranceMixin:
 
         ObserverHandler.controller = self
 
-        def run_server():
+        def run_server() -> None:
             try:
                 server = HTTPServer(("localhost", 5000), ObserverHandler)
                 server.serve_forever()

@@ -274,8 +274,15 @@ class ApplyXMLMixin:
                     match = False
                     break
             if match:
+                # Apply indentation fix to replacement lines
+                fixed_replace = self._fix_replace_indentation(
+                    "\n".join(code_lines[i : i + len(search_lines_stripped)]),
+                    "\n".join(replace_lines),
+                )
                 new_code_lines = (
-                    code_lines[:i] + replace_lines + code_lines[i + len(search_lines) :]
+                    code_lines[:i]
+                    + fixed_replace.splitlines()
+                    + code_lines[i + len(search_lines_stripped) :]
                 )
                 new_code = "\n".join(new_code_lines)
                 if not new_code.endswith("\n") and source.endswith("\n"):

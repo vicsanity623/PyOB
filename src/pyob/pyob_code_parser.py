@@ -79,7 +79,9 @@ class CodeParser:
         return self._format_dropdowns(imports, classes, functions, consts)
 
     def _parse_javascript(self, code: str) -> str:
-        imports = re.findall(r"(?:import|from|require)\s+['\"].*?['\"]", code)
+        imports: list[str] = re.findall(
+            r"(?:import|from|require)\s+['\"].*?['\"]", code
+        )
         classes = re.findall(r"(?:class|interface)\s+([a-zA-Z0-9_$]+)", code)
         types = re.findall(r"type\s+([a-zA-Z0-9_$]+)\s*=", code)
         classes.extend([f"type {t}" for t in types])
@@ -113,7 +115,7 @@ class CodeParser:
         )
 
     def _parse_html(self, code: str) -> str:
-        scripts = re.findall(r"<script.*?src=['\"](.*?)['\"]", code)
+        scripts: list[str] = re.findall(r"<script.*?src=['\"](.*?)['\"]", code)
         styles = re.findall(r"<link.*?href=['\"](.*?)['\"]", code)
         ids = re.findall(r"id=['\"](.*?)['\"]", code)
         return self._format_dropdowns(

@@ -3,6 +3,30 @@ Centralized storage for PyOB system prompts.
 These templates are used to generate the `.pyob/*.md` files.
 """
 
+from typing import Dict, List
+
+
+class PromptValidator:
+    @staticmethod
+    def validate_prompts(prompts: Dict[str, str]) -> None:
+        required_keys: List[str] = [
+            "UM.md",
+            "RM.md",
+            "PP.md",
+            "ALF.md",
+            "FRE.md",
+            "PF.md",
+            "IF.md",
+            "PCF.md",
+            "PIR.md",
+        ]
+        for key in required_keys:
+            if key not in prompts:
+                raise ValueError(f"Missing required prompt key: {key}")
+            if not prompts[key].strip():
+                raise ValueError(f"Prompt key {key} is empty")
+
+
 SYSTEM_PROMPTS = {
     "UM.md": "You are the PyOB Memory Manager. Your job is to update MEMORY.md.\n\n### Current Memory:\n{current_memory}\n\n### Recent Actions:\n{session_summary}\n\n### INSTRUCTIONS:\n1. Update the memory with the Recent Actions.\n2. TRANSACTIONAL RECORDING: Only record changes as 'Implemented' if the actions specifically state 'SUCCESSFUL CHANGE'. If you see 'CRITICAL: FAILED' or 'ROLLED BACK', record this as a 'Failed Attempt' with the reason, so the engine knows to try a different approach next time.\n3. BREVITY: Keep the ENTIRE document under 200 words. Be ruthless. Delete old, irrelevant details.\n4. FORMAT: Keep lists strictly to bullet points. No long paragraphs.\n5. Respond EXCLUSIVELY with the raw markdown for MEMORY.md. Do not use ```markdown fences or <THOUGHT> blocks.",
     "RM.md": "You are the PYOB Memory Manager. The current memory and context are becoming too bloated.\n\n### Current Logic Memory:\n{current_memory}\n\n### Recent History:\n{history}\n\n### High-Level Analysis:\n{analysis}\n\n### INSTRUCTIONS:\n1. AGGRESSIVELY COMPRESS this memory. \n2. Maintain a dense rolling summary combining the history, analysis, and prior memory.\n3. Delete duplicate information, repetitive logs, and obvious statements.\n4. Keep ONLY the core architectural rules, crucial file dependencies, and key facts/decisions.\n5. The final output MUST BE UNDER 150 WORDS.\n6. Respond EXCLUSIVELY with the raw markdown for MEMORY.md. No fences, no thoughts.",
