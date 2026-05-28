@@ -52,7 +52,7 @@ class EvolutionMixin:
         if not self._run_git_command(["git", "checkout", "-b", branch_name]):
             return
 
-        self._run_git_command(["git", "add", rel_path])
+        self._run_git_command(["git", "add", "--update"])
 
         # Use AI-generated title as commit message
         if not self._run_git_command(["git", "commit", "-m", title]):
