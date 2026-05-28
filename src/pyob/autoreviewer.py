@@ -4,6 +4,7 @@ import random
 import subprocess
 import sys
 import time
+from typing import Any
 
 from .core_utils import (
     ANALYSIS_FILE,
@@ -57,6 +58,7 @@ class AutoReviewer(
         self.history_path = os.path.join(self.pyob_dir, HISTORY_FILE)
         self.symbols_path = os.path.join(self.pyob_dir, SYMBOLS_FILE)
         self.memory = self.load_memory()
+        self.ledger: dict[str, Any] = {}
         self.session_context: list[str] = []
         self.manual_target_file: str | None = None
         self._ensure_prompt_files()
