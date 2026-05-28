@@ -285,7 +285,7 @@ class CoreUtilsMixin:
         import termios
         import tty
 
-        input_str = ""
+        input_str: str = ""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -396,7 +396,7 @@ class CoreUtilsMixin:
                         pass
         return state
 
-    def restore_workspace(self, state: dict[str, str]):
+    def restore_workspace(self, state: dict[str, str]) -> None:
         for path, content in state.items():
             try:
                 with open(path, "w", encoding="utf-8") as f:
