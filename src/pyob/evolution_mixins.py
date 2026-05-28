@@ -62,6 +62,7 @@ class EvolutionMixin:
         if shutil.which("gh"):
             logger.info("Pushing to GitHub and opening Pull Request...")
             if self._run_git_command(["git", "push", "origin", branch_name]):
+                base_branch = getattr(self, "last_branch_name", "main")
                 self._run_git_command(
                     [
                         "gh",
@@ -72,17 +73,16 @@ class EvolutionMixin:
                         "--body",
                         body,
                         "--base",
-                        "main",
+                        base_branch,
                     ]
                 )
-                # --- THE WRAP-UP UPDATE ---
+                self.last_branch_name = branch_name
                 # Increment the session counter only after successful PR creation
                 if hasattr(self, "session_pr_count"):
                     self.session_pr_count += 1
                     logger.info(
                         f"Session Progress: {self.session_pr_count}/8 PRs completed."
                     )
-                # --------------------------
         else:
             logger.warning("GitHub CLI (gh) not found. Committed locally only.")
 
