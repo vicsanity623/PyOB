@@ -124,6 +124,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         self.code_parser = CodeParser()
         self.ledger = self.load_ledger()
         from pyob.stats_updater import StatsUpdater
+
         self.stats = StatsUpdater(self.pyob_dir)
         self.cascade_queue: list[str] = []
         self.cascade_diffs: dict[str, str] = {}
