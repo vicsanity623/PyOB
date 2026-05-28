@@ -363,9 +363,6 @@ class CoreUtilsMixin:
         )
 
     def backup_workspace(self) -> dict[str, str]:
-        if not hasattr(self, "_workspace_cache"):
-            self._workspace_cache: dict[str, tuple[float, str]] = {}
-
         state: dict[str, str] = {}
         for root, dirs, files in os.walk(self.target_dir):
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
