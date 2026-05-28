@@ -10,7 +10,7 @@ import textwrap
 import time
 from typing import Callable, Optional
 
-from .models import (
+from pyob.models import (
     OPENROUTER_KEY,
     get_valid_llm_response_engine,
     raw_gemini_keys,
