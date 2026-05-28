@@ -12,7 +12,7 @@ class CascadeQueueHandler:
     def __init__(self, controller: CascadeControllerProtocol):
         self.controller = controller
 
-    def handle_add_to_cascade_queue(self, item: str):
+    def handle_add_to_cascade_queue(self, item: str) -> bytes:
         try:
             self.controller.add_to_cascade_queue(item)
             return json.dumps(
@@ -27,7 +27,7 @@ class CascadeQueueHandler:
         except Exception as e:
             return json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
 
-    def handle_remove_from_cascade_queue(self, item_id: str):
+    def handle_remove_from_cascade_queue(self, item_id: str) -> bytes:
         try:
             self.controller.remove_cascade_queue_item(item_id)
             return json.dumps(
@@ -42,7 +42,7 @@ class CascadeQueueHandler:
         except Exception as e:
             return json.dumps({"error": f"Internal server error: {str(e)}"}).encode()
 
-    def handle_move_cascade_queue_item(self, item_id: str, direction: str):
+    def handle_move_cascade_queue_item(self, item_id: str, direction: str) -> bytes:
         try:
             self.controller.move_cascade_queue_item(item_id, direction)
             return json.dumps(
