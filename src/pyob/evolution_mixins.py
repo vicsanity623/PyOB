@@ -19,10 +19,10 @@ class EvolutionMixin:
     llm_engine: object
     code_parser: object
     ledger: dict[str, Any]
-    key_cooldowns: dict
+    key_cooldowns: dict[str, float]
     manual_target_file: Optional[str]
 
-    def handle_git_librarian(self, rel_path: str, iteration: int):
+    def handle_git_librarian(self, rel_path: str, iteration: int) -> None:
         """Creates a branch, generates an AI summary, and opens a professional PR."""
         if not os.path.exists(os.path.join(self.target_dir, ".git")):
             return
