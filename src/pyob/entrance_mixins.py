@@ -148,7 +148,7 @@ class EntranceMixin:
                 handler_instance.send_error(404)
 
         # Fix: Use setattr to bypass Mypy [method-assign] error
-        setattr(ObserverHandler, "do_POST", _dynamic_do_POST_method)
+        setattr(ObserverHandler, "do_POST", _dynamic_do_POST_method)  # type: ignore
 
         ObserverHandler.controller = self
 
