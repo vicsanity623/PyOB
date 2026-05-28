@@ -61,7 +61,7 @@ class FeatureOperationsMixin:
                 return
 
         prompt = self.build_patch_prompt(
-            lang_name, lang_tag, content, ruff_out, mypy_out, custom_issues
+            lang_name, lang_tag, content, ruff_out, mypy_out, custom_issues, filepath
         )
         new_code, explanation, llm_response = self.get_valid_edit(
             prompt, content, require_edit=False, target_filepath=filepath
@@ -206,6 +206,22 @@ class FeatureOperationsMixin:
         memory_section = self._get_rich_context(
             query_text=feature_content + "\n" + source_code
         )
+        referenced_symbols = []
+        if hasattr(self, "ledger"):
+            defs_here = [
+                k
+                for k, v in self.ledger.get("definitions", {}).items()
+                if v == rel_path
+            ]
+            for ref_file, refs in self.ledger.get("references", {}).items():
+                if ref_file != rel_path:
+                    for sym in defs_here:
+                        if sym in refs and sym not in referenced_symbols:
+                            referenced_symbols.append(sym)
+        symbol_safety_list = (
+            ", ".join(referenced_symbols) if referenced_symbols else "None"
+        )
+
         prompt = self.load_prompt(
             "IF.md",
             memory_section=memory_section,
@@ -214,6 +230,7 @@ class FeatureOperationsMixin:
             lang_tag=lang_tag,
             source_code=source_code,
             rel_path=rel_path,
+            symbol_safety_list=symbol_safety_list,
         )
 
         new_code, _, _ = self.get_valid_edit(
