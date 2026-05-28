@@ -224,7 +224,9 @@ class AutoReviewer(
                     for sym in defs_here:
                         if sym in refs and sym not in referenced_symbols:
                             referenced_symbols.append(sym)
-        symbol_safety_list = ", ".join(referenced_symbols) if referenced_symbols else "None"
+        symbol_safety_list = (
+            ", ".join(referenced_symbols) if referenced_symbols else "None"
+        )
 
         return str(
             self.load_prompt(
