@@ -187,6 +187,7 @@ class AutoReviewer(
         ruff_out: str,
         mypy_out: str,
         custom_issues: list[str],
+        filepath: str = "",
     ) -> str:
         memory_section = self._get_rich_context(query_text=content)
         ruff_section = f"### Ruff Errors:\n{ruff_out}\n\n" if ruff_out else ""
@@ -210,6 +211,21 @@ class AutoReviewer(
 
         combined_issues = strict_typing_directives + custom_issues_section
 
+        rel_path = os.path.relpath(filepath, self.target_dir) if filepath else ""
+        referenced_symbols = []
+        if rel_path and hasattr(self, "ledger"):
+            defs_here = [
+                k
+                for k, v in self.ledger.get("definitions", {}).items()
+                if v == rel_path
+            ]
+            for ref_file, refs in self.ledger.get("references", {}).items():
+                if ref_file != rel_path:
+                    for sym in defs_here:
+                        if sym in refs and sym not in referenced_symbols:
+                            referenced_symbols.append(sym)
+        symbol_safety_list = ", ".join(referenced_symbols) if referenced_symbols else "None"
+
         return str(
             self.load_prompt(
                 "PP.md",
@@ -220,6 +236,7 @@ class AutoReviewer(
                 ruff_section=ruff_section,
                 mypy_section=mypy_section,
                 custom_issues_section=combined_issues,  # Pass the combined string here
+                symbol_safety_list=symbol_safety_list,
             )
         )
 
