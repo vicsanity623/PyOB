@@ -123,6 +123,8 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         self.llm_engine = AutoReviewer(self.target_dir)
         self.code_parser = CodeParser()
         self.ledger = self.load_ledger()
+        from pyob.stats_updater import StatsUpdater
+        self.stats = StatsUpdater(self.pyob_dir)
         self.cascade_queue: list[str] = []
         self.cascade_diffs: dict[str, str] = {}
         self.self_evolved_flag: bool = False
@@ -307,6 +309,12 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         )
         iteration = 1
         while True:
+            if self.stats.is_in_failure_spiral():
+                logger.error(
+                    f"HALT: 3 consecutive failures. Manual review required. "
+                    f"{self.stats.get_summary()}"
+                )
+                break
             self.current_iteration = iteration
             self.self_evolved_flag = False
 
