@@ -128,8 +128,8 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
         self.self_evolved_flag: bool = False
         self.manual_target_file: Optional[str] = None
         self.dashboard_process: Optional[subprocess.Popen] = None
-        self.session_pr_count = 0
-        self.current_iteration = 1
+        self.session_pr_count: int = 0
+        self.current_iteration: int = 1
 
         if not self.skip_dashboard:
             logger.info(
