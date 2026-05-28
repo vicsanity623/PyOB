@@ -1,14 +1,32 @@
 import json
 import os
 from http.server import BaseHTTPRequestHandler
-from typing import Any
+from typing import Protocol, runtime_checkable
 
 from .dashboard_html import OBSERVER_HTML
 
 
+@runtime_checkable
+class ControllerProtocol(Protocol):
+    current_iteration: int
+    cascade_queue: list[str]
+    ledger: dict[str, list[str]]
+    analysis_path: str
+    history_path: str
+    target_dir: str
+
+    def _read_file(self, path: str) -> str: ...
+    def get_pending_patches(self) -> list[dict[str, str]]: ...
+    def set_manual_target_file(self, path: str) -> None: ...
+    def process_patch_review(self, pid: str, act: str) -> None: ...
+    def update_memory(self, content: str) -> None: ...
+    def move_cascade_queue_item(self, iid: str, dir: str) -> None: ...
+    def remove_cascade_queue_item(self, iid: str) -> None: ...
+    def add_to_cascade_queue(self, item: str) -> None: ...
+
+
 class ObserverHandler(BaseHTTPRequestHandler):
-    # The 'controller' type is 'Any' to avoid circular dependencies with the main application controller.
-    controller: Any = None
+    controller: ControllerProtocol | None = None
 
     def _send_json_response(
         self, status_code: int, payload: dict, allow_cors: bool = True
