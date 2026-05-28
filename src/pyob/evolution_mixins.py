@@ -21,6 +21,7 @@ class EvolutionMixin:
     ledger: dict[str, Any]
     key_cooldowns: dict[str, float]
     manual_target_file: Optional[str]
+    session_pr_count: int = 0
 
     def handle_git_librarian(self, rel_path: str, iteration: int) -> None:
         """Creates a branch, generates an AI summary, and opens a professional PR."""
@@ -283,7 +284,7 @@ class EvolutionMixin:
 
         return str(self._extract_path_from_llm_response(response))
 
-    def build_initial_analysis(self):
+    def build_initial_analysis(self) -> None:
         """Bootstraps ANALYSIS.md and SYMBOLS.json."""
         logger.info("ANALYSIS.md not found. Bootstrapping Deep Symbolic Scan...")
         all_files = sorted(self.llm_engine.scan_directory())
@@ -328,7 +329,7 @@ class EvolutionMixin:
             f.write(content)
         self.save_ledger()
 
-    def wrap_up_evolution_session(self):
+    def wrap_up_evolution_session(self) -> None:
         """Generates a master summary of the entire session and opens a final PR."""
         logger.info("🎬 INITIATING WRAP-UP PHASE: Generating session summary...")
 
