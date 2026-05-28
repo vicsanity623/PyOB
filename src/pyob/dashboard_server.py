@@ -49,7 +49,7 @@ def analysis() -> Union[Response, Tuple[Response, int]]:
 
 
 @app.route("/history")
-def history():
+def history() -> Union[Response, Tuple[Response, int]]:
     try:
         history_content = read_file("HISTORY.md")
         return jsonify({"success": True, "data": history_content})
