@@ -1,71 +1,54 @@
 import json
-
-from pyob.dashboard_server import fetch_api
+import os
+import time
 
 
 class StatsUpdater:
-    def update_stats(self):
-        try:
-            response = fetch_api("/api/status")
-            data = response.json()
-            return data
-        except Exception as e:
-            print(f"Error updating stats: {e}")
-            return None
+    def __init__(self, pyob_dir: str):
+        self.stats_path = os.path.join(pyob_dir, "SESSION_STATS.json")
+        self._stats: dict = self._load()
 
-    def update_pending_patches(self):
-        try:
-            response = fetch_api("/api/pending_patches")
-            data = response.json()
-            return data
-        except Exception as e:
-            print(f"Failed to fetch pending patches: {e}")
-            return None
+    def _load(self) -> dict:
+        if os.path.exists(self.stats_path):
+            try:
+                with open(self.stats_path, "r") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {
+            "session_pr_count": 0,
+            "session_failures": 0,
+            "consecutive_failures": 0,
+            "last_success_time": None,
+            "cascade_depth_max": 0,
+        }
 
-    def review_patch(self, patch_id, action):
-        try:
-            fetch_api(
-                "/api/review_patch",
-                method="POST",
-                data=json.dumps({"patch_id": patch_id, "action": action}),
-            )
-        except Exception as e:
-            print(f"Failed to {action} patch {patch_id}: {e}")
+    def _save(self) -> None:
+        with open(self.stats_path, "w") as f:
+            json.dump(self._stats, f, indent=2)
 
-    def save_memory(self, memory_content):
-        try:
-            fetch_api(
-                "/api/update_memory",
-                method="POST",
-                data=json.dumps({"content": memory_content}),
-            )
-        except Exception as e:
-            print(f"Failed to save Logic Memory: {e}")
+    def record_success(self, cascade_depth: int = 0) -> None:
+        self._stats["session_pr_count"] += 1
+        self._stats["consecutive_failures"] = 0
+        self._stats["last_success_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        self._stats["cascade_depth_max"] = max(
+            self._stats["cascade_depth_max"], cascade_depth
+        )
+        self._save()
 
-    def add_cascade_item(self, item):
-        try:
-            fetch_api(
-                "/api/cascade_queue/add", method="POST", data=json.dumps({"item": item})
-            )
-        except Exception as e:
-            print(f"Failed to add item to cascade queue: {e}")
+    def record_failure(self) -> None:
+        self._stats["session_failures"] += 1
+        self._stats["consecutive_failures"] += 1
+        self._save()
 
-    def move_queue_item(self, item_id, direction):
-        try:
-            fetch_api(
-                "/api/cascade_queue/move",
-                method="POST",
-                data=json.dumps({"item_id": item_id, "direction": direction}),
-            )
-        except Exception as e:
-            print(f"Failed to move item {item_id} {direction}: {e}")
+    def is_in_failure_spiral(self) -> bool:
+        return self._stats["consecutive_failures"] >= 3
 
-    def remove_queue_item(self, item_id):
-        try:
-            fetch_api(
-                "/api/cascade_queue/remove",
-                method="POST",
-                data=json.dumps({"item_id": item_id}),
-            )
-        except Exception as e:
-            print(f"Failed to remove item {item_id}: {e}")
+    def get_summary(self) -> str:
+        s = self._stats
+        return (
+            f"PRs: {s['session_pr_count']} | "
+            f"Failures: {s['session_failures']} | "
+            f"Consecutive: {s['consecutive_failures']} | "
+            f"Max Cascade Depth: {s['cascade_depth_max']}"
+        )
