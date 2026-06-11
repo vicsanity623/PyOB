@@ -34,9 +34,9 @@ def load_config():
             with open(CONFIG_FILE, "r") as f:
                 config_data = json.load(f)
                 if isinstance(config_data, dict):
-                    # Migration: If it's an old config, ensure new keys exist
                     if "openrouter_key" not in config_data:
                         config_data["openrouter_key"] = ""
+                    if "openrouter_model" not in config_data:
                         config_data["openrouter_model"] = (
                             "deepseek/deepseek-v4-flash:free"
                         )
@@ -85,7 +85,10 @@ def ensure_terminal():
         script_path = shlex.quote(sys.argv[0])
         args = " ".join(shlex.quote(arg) for arg in sys.argv[1:])
         full_command = f"{sys.executable} {script_path} {args}".strip()
-        cmd = f'tell application "Terminal" to do script "{full_command}"'
+        
+        escaped_command = full_command.replace('"', '\\"')
+        cmd = f'tell application "Terminal" to do script "{escaped_command}"'
+        
         subprocess.run(["osascript", "-e", cmd])
         sys.exit(0)
 
@@ -146,7 +149,7 @@ def main():
     if not target_dir:
         target_dir = "."
 
-    target_dir = os.path.abspath(target_dir)
+    target_dir = os.path.abspath(os.path.expanduser(target_dir))
 
     if not os.path.isdir(target_dir):
         print(f"Error: Directory does not exist → {target_dir}")
@@ -154,34 +157,33 @@ def main():
             input("\nPress Enter to exit...")
         sys.exit(1)
 
-    # --- NEW: CLOUD GIT CONFIGURATION FIX ---
     if os.environ.get("GITHUB_ACTIONS") == "true":
-        # 1. Fix the "dubious ownership" block for Docker volumes
-        subprocess.run(
-            ["git", "config", "--global", "--add", "safe.directory", "*"],
-            capture_output=True,
-        )
+        try:
+            subprocess.run(
+                ["git", "config", "--global", "--add", "safe.directory", "*"],
+                capture_output=True,
+            )
 
-        # 2. Auto-set Bot Identity (Prevents "Author unknown" errors for Marketplace users)
-        check_name = subprocess.run(
-            ["git", "config", "user.name"], capture_output=True, text=True
-        )
-        if not check_name.stdout.strip():
-            subprocess.run(
-                ["git", "config", "--global", "user.name", "pyob-bot"],
-                capture_output=True,
+            check_name = subprocess.run(
+                ["git", "config", "user.name"], capture_output=True, text=True
             )
-            subprocess.run(
-                [
-                    "git",
-                    "config",
-                    "--global",
-                    "user.email",
-                    "pyob-bot@users.noreply.github.com",
-                ],
-                capture_output=True,
-            )
-    # ----------------------------------------
+            if not check_name.stdout.strip():
+                subprocess.run(
+                    ["git", "config", "--global", "user.name", "pyob-bot"],
+                    capture_output=True,
+                )
+                subprocess.run(
+                    [
+                        "git",
+                        "config",
+                        "--global",
+                        "user.email",
+                        "pyob-bot@users.noreply.github.com",
+                    ],
+                    capture_output=True,
+                )
+        except (FileNotFoundError, Exception) as e:
+            print(f"Warning: Could not configure Git settings. git binary may be missing: {e}")
 
     print(f"\nStarting PYOB on: {target_dir}")
     or_status = (
