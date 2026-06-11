@@ -30,8 +30,14 @@ class GetValidEditMixin:
         max_total_attempts = 15
         while True:
             if attempts >= max_total_attempts:
-                logger.error(f"Max validation attempts ({max_total_attempts}) reached for {display_name}. Aborting to prevent infinite loop.")
-                return source_code, "Aborted: Maximum attempts reached without a valid patch.", ""
+                logger.error(
+                    f"Max validation attempts ({max_total_attempts}) reached for {display_name}. Aborting to prevent infinite loop."
+                )
+                return (
+                    source_code,
+                    "Aborted: Maximum attempts reached without a valid patch.",
+                    "",
+                )
 
             # 2. Fetch from AI (Handles keys, retries, and API limits)
             response_text, attempts = self._fetch_llm_with_retries(
@@ -170,7 +176,9 @@ class GetValidEditMixin:
                     continue
 
             if "ERROR_CODE_413" in response_str or "ERROR_CODE_400" in response_str:
-                logger.error(f"Fatal client error returned from LLM ({response_str[:40]}). Aborting current edit target to prevent infinite loop.")
+                logger.error(
+                    f"Fatal client error returned from LLM ({response_str[:40]}). Aborting current edit target to prevent infinite loop."
+                )
                 return response_str, attempts
 
             if response_str.startswith("ERROR_CODE_") or not response_str.strip():
