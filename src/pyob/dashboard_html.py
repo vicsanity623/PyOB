@@ -130,7 +130,7 @@ OBSERVER_HTML = """
                 document.getElementById('ledger').innerText = (data.ledger_stats?.definitions || 0) + " SYM";
                 document.getElementById('queue-count').innerText = data.cascade_queue?.length || "0";
                 const pill = document.getElementById('status-pill');
-                const isEvolving = data.cascade_queue?.length > 0 || data.patches_count > 0;
+                const isEvolving = (data.cascade_queue?.length || 0) > 0 || (data.patches_count || 0) > 0;
                 pill.innerText = isEvolving ? "EVOLVING" : "STABLE";
                 pill.className = isEvolving ? "status-pill evolving" : "status-pill";
                 document.getElementById('memory').value = data.memory || "Brain empty.";
@@ -163,8 +163,13 @@ OBSERVER_HTML = """
                         const statusColor = issue.status === 'acknowledged' ? 'var(--dim)' : 'var(--err)';
                         const statusText = issue.status === 'acknowledged' ? 'ACKNOWLEDGED' : 'PENDING';
 
-                        issueElement.innerHTML = `
-                            <span style="flex-grow: 1;">${issue.description}</span>
+                        // Safely create the description element using textContent to prevent XSS
+                        const descSpan = document.createElement('span');
+                        descSpan.style.flexGrow = '1';
+                        descSpan.textContent = issue.description;
+                        issueElement.appendChild(descSpan);
+
+                        issueElement.insertAdjacentHTML('beforeend', `
                             <span style="font-size: 0.7em; font-weight: 600; color: ${statusColor}; margin-left: 10px;">${statusText}</span>
                             <button onclick="acknowledgeIssue('${issue.id}')"
                                     style="width: auto; padding: 5px 10px; font-size: 0.7em; border-radius: 3px; margin-left: 10px;
@@ -173,7 +178,7 @@ OBSERVER_HTML = """
                                     ${issue.status === 'acknowledged' ? 'disabled' : ''}>
                                 ${issue.status === 'acknowledged' ? 'ACKNOWLEDGED' : 'ACKNOWLEDGE'}
                             </button>
-                        `;
+                        `);
                         analysisContainer.appendChild(issueElement);
                     });
                 } else {
@@ -272,12 +277,15 @@ OBSERVER_HTML = """
                         patchElement.style.marginBottom = '10px';
                         patchElement.innerHTML = `
                             <span style="color: var(--accent); font-weight: 700;">Patch ID: ${patch.id}</span><br>
-                            <span class="patch-file" style="font-size: 0.8em; color: var(--dim);">File: ${patch.file || 'N/A'}</span><br>
-                            <span class="patch-description" style="font-size: 0.8em; color: var(--dim);">Description: ${patch.description || 'No description'}</span><br>
-<button onclick="viewPatchDiff('${patch.id}')" style="width: 32%; margin-right: 2%; background: #007bff; color: #fff;">VIEW DIFF</button>
-<button onclick="reviewPatch('${patch.id}', 'approved')" style="width: 32%; margin-right: 2%; background: #00cc00; color: #000;">APPROVE</button>
-<button onclick="reviewPatch('${patch.id}', 'reject')" style="width: 32%; background: #cc0000; color: #fff;">REJECT</button>
+                            <span class="patch-file" style="font-size: 0.8em; color: var(--dim);">File: <span class="file-text"></span></span><br>
+                            <span class="patch-description" style="font-size: 0.8em; color: var(--dim);">Description: <span class="desc-text"></span></span><br>
+                            <button onclick="viewPatchDiff('${patch.id}')" style="width: 32%; margin-right: 2%; background: #007bff; color: #fff;">VIEW DIFF</button>
+                            <button onclick="reviewPatch('${patch.id}', 'approved')" style="width: 32%; margin-right: 2%; background: #00cc00; color: #000;">APPROVE</button>
+                            <button onclick="reviewPatch('${patch.id}', 'reject')" style="width: 32%; background: #cc0000; color: #fff;">REJECT</button>
                         `;
+                        // Safe text assignments to prevent script injections
+                        patchElement.querySelector('.file-text').textContent = patch.file || 'N/A';
+                        patchElement.querySelector('.desc-text').textContent = patch.description || 'No description';
                         patchesDiv.appendChild(patchElement);
                     });
                 } else {
@@ -291,19 +299,11 @@ OBSERVER_HTML = """
 
         async function reviewPatch(patchId, action) {
             try {
-                if (action === 'approved') {
-                    await fetch('/api/approve_patch', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ patch_id: patchId })
-                    });
-                } else {
-                    await fetch('/api/review_patch', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ patch_id: patchId, action: action })
-                    });
-                }
+                await fetch('/api/review_patch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patch_id: patchId, action: action })
+                });
                 await updateStats();
             } catch (e) {
                 console.error(`Failed to ${action} patch ${patchId}:`, e);
