@@ -1,6 +1,7 @@
 import os
 
 from .autoreviewer import AutoReviewer
+from .core_utils import logger
 from .xml_mixin import ApplyXMLMixin
 
 
