@@ -35,12 +35,10 @@ class StatsUpdater:
 
         temp_path = self.stats_path + ".tmp"
         try:
-
             with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(self._stats, f, indent=2)
             os.replace(temp_path, self.stats_path)
         except Exception:
-
             with open(self.stats_path, "w", encoding="utf-8") as f:
                 json.dump(self._stats, f, indent=2)
             if os.path.exists(temp_path):
