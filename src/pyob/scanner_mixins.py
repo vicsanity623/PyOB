@@ -4,16 +4,7 @@ from .core_utils import IGNORE_DIRS, IGNORE_FILES, SUPPORTED_EXTENSIONS
 
 
 class ScannerMixin:
-    # Type hint so Mypy knows this mixin expects a target_dir attribute
-    target_dir: str
 
-    import os
-
-from .core_utils import IGNORE_DIRS, IGNORE_FILES, SUPPORTED_EXTENSIONS
-
-
-class ScannerMixin:
-    # Type hint so Mypy knows this mixin expects a target_dir attribute
     target_dir: str
 
     def scan_directory(self) -> list[str]:
