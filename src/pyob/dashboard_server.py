@@ -125,7 +125,7 @@ def handle_proposal_decision(session_id):
                 )
                 decisions = {}
 
-        ifif request.method == "POST":
+        if request.method == "POST":
             data = request.get_json(silent=True)
             if not isinstance(data, dict):
                 return jsonify(
