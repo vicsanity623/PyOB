@@ -174,7 +174,9 @@ class EntranceMixin:
                 continue
 
         if server is None:
-            logger.error("Dashboard failed to start: No available ports in range 5000-5010")
+            logger.error(
+                "Dashboard failed to start: No available ports in range 5000-5010"
+            )
             return
 
         def run_server(srv: HTTPServer) -> None:
