@@ -329,15 +329,15 @@ class CoreUtilsMixin:
         import shlex
 
         default_editor = "notepad" if sys.platform == "win32" else "nano"
-        editor_str = os.environ.get("EDITOR", default_editor)
-        editor_args = shlex.split(editor_str)
+        editor = os.environ.get("EDITOR", default_editor)
+        editor_args = shlex.split(editor)
 
         with tempfile.NamedTemporaryFile(
             mode="w+", delete=False, encoding="utf-8", suffix=file_suffix
         ) as tmp_file:
             tmp_file.write(initial_content)
             tmp_file_path = tmp_file.name
-        logger.info(f"{log_message}: {editor_str} {tmp_file_path}")
+        logger.info(f"{log_message}: {editor} {tmp_file_path}")
         try:
             subprocess.run(editor_args + [tmp_file_path], check=True)
             with open(tmp_file_path, "r", encoding="utf-8") as f:
@@ -348,11 +348,6 @@ class CoreUtilsMixin:
             return initial_content
         except subprocess.CalledProcessError:
             logger.error(f"Editor '{editor}' exited with an error. {error_message}")
-            return initial_content
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occurred with editor: {e}. {error_message}"
-            )
             return initial_content
         finally:
             if os.path.exists(tmp_file_path):
