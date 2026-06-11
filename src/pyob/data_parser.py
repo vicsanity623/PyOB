@@ -16,7 +16,9 @@ class DataParser:
                 continue
 
             ## This regex captures the label (allowing hyphens) and the number (allowing negative values), then ignores optional units
-            match = re.search(r"([\w-]+)\s*:\s*(-?\d+(?:\.\d+)?)(?:px|em|rem|%|s)?", line)
+            match = re.search(
+                r"([\w-]+)\s*:\s*(-?\d+(?:\.\d+)?)(?:px|em|rem|%|s)?", line
+            )
             if match:
                 key = match.group(1)
                 value_str = match.group(2)
