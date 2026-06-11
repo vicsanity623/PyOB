@@ -369,11 +369,6 @@ def stream_single_llm(
         return f"ERROR_CODE_EXCEPTION: {e}"
     finally:
         first_chunk_received[0] = True
-        if is_cloud:
-            time.sleep(30)
-        return f"ERROR_CODE_EXCEPTION: {e}"
-
-    first_chunk_received[0] = True
     if response_text and not response_text.startswith("ERROR_CODE_"):
         # Strip DeepSeek / "thinking" model chain-of-thought preamble.
         # These models sometimes bleed raw reasoning text before the actual XML
