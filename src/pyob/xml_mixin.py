@@ -44,7 +44,35 @@ class ApplyXMLMixin:
             if not found:
                 missing_imports.append(import_text)
         if missing_imports:
-            return "\n".join(missing_imports) + "\n\n" + new_code
+            lines = new_code.splitlines()
+            insert_idx = 0
+            in_docstring = False
+            docstring_char = None
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("#!"):
+                    insert_idx = i + 1
+                    continue
+                if stripped.startswith("from __future__"):
+                    insert_idx = i + 1
+                    continue
+                if (stripped.startswith('"""') or stripped.startswith("'''")) and not in_docstring:
+                    if (stripped.endswith('"""') or stripped.endswith("'''")) and len(stripped) > 3:
+                        insert_idx = i + 1
+                        continue
+                    in_docstring = True
+                    docstring_char = stripped[:3]
+                    continue
+                if in_docstring:
+                    if stripped.endswith(docstring_char):
+                        in_docstring = False
+                        insert_idx = i + 1
+                    continue
+                break
+            new_lines = lines[:insert_idx] + missing_imports + [""] + lines[insert_idx:]
+            return "\n".join(new_lines)
         return new_code
 
     def apply_xml_edits(
@@ -122,14 +150,22 @@ class ApplyXMLMixin:
                 replace_base_indent = line[: len(line) - len(line.lstrip(" \t"))]
                 break
 
+        search_indent_len = len(search_indent)
+        replace_base_len = len(replace_base_indent)
+
         fixed_replace_lines = []
         for line in replace_lines:
             if line.strip():
+                line_indent = line[:len(line) - len(line.lstrip(" \t"))]
                 if line.startswith(replace_base_indent):
-                    clean_line = line[len(replace_base_indent) :]
+                    relative_indent = line_indent[replace_base_len:]
+                    clean_line = line[replace_base_len:]
+                    fixed_replace_lines.append(search_indent + relative_indent + clean_line)
                 else:
+                    diff = len(line_indent) - replace_base_len
+                    new_indent_len = max(0, search_indent_len + diff)
                     clean_line = line.lstrip(" \t")
-                fixed_replace_lines.append(search_indent + clean_line)
+                    fixed_replace_lines.append(" " * new_indent_len + clean_line)
             else:
                 fixed_replace_lines.append("")
         return "\n".join(fixed_replace_lines)
@@ -179,7 +215,7 @@ class ApplyXMLMixin:
             return "".join(t.split())
 
         clean_search = super_clean(search)
-        if not clean_search:
+        if len(clean_search) < 20:  # Prevent matching tiny blocks falsely
             return source, False
 
         search_lines = search.splitlines()
