@@ -233,9 +233,9 @@ class ValidationMixin:
             else:
                 # If the app closed on its own before 10 seconds, any non-zero exit code
                 # or crash keyword indicates an active crash.
-                has_crash = any(kw in stderr or kw in stdout for kw in error_keywords) or (
-                    process.returncode != 0
-                )
+                has_crash = any(
+                    kw in stderr or kw in stdout for kw in error_keywords
+                ) or (process.returncode != 0)
 
             if not has_crash:
                 logger.info("App ran successfully for 10 seconds.")
