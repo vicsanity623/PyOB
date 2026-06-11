@@ -62,7 +62,9 @@ class AutoReviewer(
         self._ensure_prompt_files()
         if AutoReviewer._shared_cooldowns is None:
             AutoReviewer._shared_cooldowns = {
-                key: 0.0 for key in GEMINI_API_KEYS if isinstance(key, str) and key.strip()
+                key: 0.0
+                for key in GEMINI_API_KEYS
+                if isinstance(key, str) and key.strip()
             }
 
         self.key_cooldowns = AutoReviewer._shared_cooldowns
