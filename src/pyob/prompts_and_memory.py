@@ -161,7 +161,7 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         clean_memory = re.sub(
             r"^```[a-zA-Z]*\r?\n", "", raw_response, flags=re.MULTILINE
         )
-        clean_memory = re.sub(r"\r?\n```\s*$", "", clean_memory, flags=re.MULTILINE)
+        clean_memory = re.sub(r"\r?\n```\s*$", "", clean_memory, flags=re.MULTILINE
         )
         if clean_memory:
             with open(self.memory_path, "w", encoding="utf-8") as f:
