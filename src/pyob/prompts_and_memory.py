@@ -22,6 +22,7 @@ class SearchAndFilterMixin:
             self.filter_date = ""
         self.filter_date = filter_date
 
+
 class PromptsAndMemoryMixin(SearchAndFilterMixin):
     target_dir: str
     history_path: str
@@ -77,7 +78,11 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
             return "No prior history."
         with open(self.history_path, "r", encoding="utf-8") as f:
             full_history = f.read()
-        entries = [e.strip() for e in re.split(r"## \d{4}-\d{2}-\d{2}", full_history) if e.strip()]
+        entries = [
+            e.strip()
+            for e in re.split(r"## \d{4}-\d{2}-\d{2}", full_history)
+            if e.strip()
+        ]
         recent_entries = entries[-3:]
         summary = "### Significant Recent Architecture Changes:\n"
         for entry in recent_entries:
@@ -161,8 +166,7 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         clean_memory = re.sub(
             r"^```[a-zA-Z]*\r?\n", "", raw_response, flags=re.MULTILINE
         )
-        clean_memory = re.sub(r"\r?\n```\s*$", "", clean_memory, flags=re.MULTILINE
-        )
+        clean_memory = re.sub(r"\r?\n```\s*$", "", clean_memory, flags=re.MULTILINE)
         if clean_memory:
             with open(self.memory_path, "w", encoding="utf-8") as f:
                 f.write(clean_memory)
