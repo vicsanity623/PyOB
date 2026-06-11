@@ -6,18 +6,21 @@ from pyob.prompts import SYSTEM_PROMPTS
 
 
 class SearchAndFilterMixin:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.search_query = ""
         self.filter_date = ""
 
     def handle_search(self, search_query):
+
+        if not hasattr(self, "search_query"):
+            self.search_query = ""
         self.search_query = search_query
-        # Call the data_parser to filter the memory entries based on the search query
 
     def handle_filter(self, filter_date):
+        if not hasattr(self, "filter_date"):
+            self.filter_date = ""
         self.filter_date = filter_date
-        # Call the data_parser to filter the memory entries based on the filter date
-
 
 class PromptsAndMemoryMixin(SearchAndFilterMixin):
     target_dir: str
@@ -30,7 +33,14 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         data_dir = os.path.join(self.target_dir, ".pyob")
         os.makedirs(data_dir, exist_ok=True)
         for filename, content in SYSTEM_PROMPTS.items():
-            filepath = os.path.join(data_dir, filename)  # Use data_dir here
+            filepath = os.path.join(data_dir, filename)
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        if f.read() == content:
+                            continue
+                except Exception:
+                    pass
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(content)
 
@@ -67,20 +77,19 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
             return "No prior history."
         with open(self.history_path, "r", encoding="utf-8") as f:
             full_history = f.read()
-        entries = re.split(r"## \d{4}-\d{2}-\d{2}", full_history)
+        entries = [e.strip() for e in re.split(r"## \d{4}-\d{2}-\d{2}", full_history) if e.strip()]
         recent_entries = entries[-3:]
         summary = "### Significant Recent Architecture Changes:\n"
         for entry in recent_entries:
-            lines = entry.strip().split("\n")
-            if lines:
+            lines = entry.split("\n")
+            if lines and lines[0].strip():
                 summary += f"- {lines[0].strip()}\n"
         return summary
 
     def _get_rich_context(self, query_text: str = "") -> str:
         context = ""
-        analysis_path = os.path.join(self.target_dir, "ANALYSIS.md")
-        if os.path.exists(analysis_path):
-            with open(analysis_path, "r", encoding="utf-8") as f:
+        if os.path.exists(self.analysis_path):
+            with open(self.analysis_path, "r", encoding="utf-8") as f:
                 content = f.read()
                 header_parts = content.split("## File Directory")
                 header = header_parts[0].strip() if header_parts else ""
@@ -148,10 +157,12 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         llm_response = self.get_valid_llm_response(
             prompt, validator, context="Memory Update"
         )
+        raw_response = llm_response.strip()
         clean_memory = re.sub(
-            r"^```[a-zA-Z]*\n", "", llm_response.strip(), flags=re.MULTILINE
+            r"^```[a-zA-Z]*\r?\n", "", raw_response, flags=re.MULTILINE
         )
-        clean_memory = re.sub(r"\n```$", "", clean_memory, flags=re.MULTILINE)
+        clean_memory = re.sub(r"\r?\n```\s*$", "", clean_memory, flags=re.MULTILINE)
+        )
         if clean_memory:
             with open(self.memory_path, "w", encoding="utf-8") as f:
                 f.write(clean_memory)
@@ -189,10 +200,11 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         llm_response = self.get_valid_llm_response(
             prompt, validator, context="Memory Refactor"
         )
+        raw_response = llm_response.strip()
         clean_memory = re.sub(
-            r"^```[a-zA-Z]*\n", "", llm_response.strip(), flags=re.MULTILINE
+            r"^```[a-zA-Z]*\r?\n", "", raw_response, flags=re.MULTILINE
         )
-        clean_memory = re.sub(r"\n```$", "", clean_memory, flags=re.MULTILINE)
+        clean_memory = re.sub(r"\r?\n```\s*$", "", clean_memory, flags=re.MULTILINE)
         if clean_memory and len(clean_memory) > 50:
             with open(self.memory_path, "w", encoding="utf-8") as f:
                 f.write(clean_memory)
