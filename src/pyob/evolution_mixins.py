@@ -130,7 +130,7 @@ class EvolutionMixin:
             stdout, stderr = "", ""
             process: Optional[subprocess.Popen[str]] = None
             timeout_val = 5 if is_html else 10
-            
+
             try:
                 process = subprocess.Popen(
                     cmd,
@@ -146,9 +146,17 @@ class EvolutionMixin:
                     # Capture the standard output/error buffers and safely resolve to string
                     raw_stdout = e.stdout or ""
                     raw_stderr = e.stderr or ""
-                    stdout = raw_stdout.decode("utf-8", errors="ignore") if isinstance(raw_stdout, bytes) else raw_stdout
-                    stderr = raw_stderr.decode("utf-8", errors="ignore") if isinstance(raw_stderr, bytes) else raw_stderr
-                    
+                    stdout = (
+                        raw_stdout.decode("utf-8", errors="ignore")
+                        if isinstance(raw_stdout, bytes)
+                        else raw_stdout
+                    )
+                    stderr = (
+                        raw_stderr.decode("utf-8", errors="ignore")
+                        if isinstance(raw_stderr, bytes)
+                        else raw_stderr
+                    )
+
                     # Clean up the process so we don't leak background tasks/ports
                     process.terminate()
                     try:
@@ -156,7 +164,7 @@ class EvolutionMixin:
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait()
-                    
+
                     # For long-running servers, a timeout with no error keywords is a SUCCESS
                     has_error = any(
                         kw in stderr or kw in stdout
@@ -169,7 +177,9 @@ class EvolutionMixin:
                         ]
                     )
                     if not has_error:
-                        logger.info(f"App ran successfully for {timeout_val}s (timeout reached without errors).")
+                        logger.info(
+                            f"App ran successfully for {timeout_val}s (timeout reached without errors)."
+                        )
                         return True
             except Exception as e:
                 logger.error(f"Execution failed: {e}")
@@ -245,7 +255,9 @@ class EvolutionMixin:
             real_files = []
             for root, dirs, files in os.walk(self.target_dir):
                 # Prune ignored and hidden directories in-place to prevent traversing them
-                dirs[:] = [d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")]
+                dirs[:] = [
+                    d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")
+                ]
                 for fname in files:
                     rel_path = os.path.relpath(
                         os.path.join(root, fname), self.target_dir
