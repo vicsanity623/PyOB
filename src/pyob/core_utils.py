@@ -325,8 +325,8 @@ class CoreUtilsMixin:
         log_message: str = "Opening editor",
         error_message: str = "Using original content.",
     ) -> str:
-        import tempfile
         import shlex
+        import tempfile
 
         default_editor = "notepad" if sys.platform == "win32" else "nano"
         editor = os.environ.get("EDITOR", default_editor)
