@@ -455,8 +455,18 @@ def get_valid_llm_response_engine(
         available_gemini_keys = [k for k in gemini_keys if now > key_cooldowns[k]]
         response_text = None
 
-        # 2. DECISION LOGIC: Prioritize OpenRouter > Gemini > GitHub > Ollama
-        if available_or_models:
+        # 2. DECISION LOGIC: Prioritize Gemini > OpenRouter > GitHub > Ollama
+        if available_gemini_keys:
+            key = available_gemini_keys[attempts % len(available_gemini_keys)]
+            provider = "gemini"
+            logger.info(
+                f"Attempting Gemini Key {attempts % len(available_gemini_keys) + 1}/{len(available_gemini_keys)}"
+            )
+            response_text = stream_single_llm(
+                prompt, provider=provider, key=key, context=context
+            )
+
+        elif available_or_models:
             current_or_model = available_or_models[attempts % len(available_or_models)]
             logger.info(f"Attempting OpenRouter ({current_or_model})...")
             key = OPENROUTER_KEY
@@ -467,16 +477,6 @@ def get_valid_llm_response_engine(
                 key=key,
                 context=context,
                 or_model=current_or_model,
-            )
-
-        elif available_gemini_keys:
-            key = available_gemini_keys[attempts % len(available_gemini_keys)]
-            provider = "gemini"
-            logger.info(
-                f"Attempting Gemini Key {attempts % len(available_gemini_keys) + 1}/{len(available_gemini_keys)}"
-            )
-            response_text = stream_single_llm(
-                prompt, provider=provider, key=key, context=context
             )
 
         elif is_cloud:
