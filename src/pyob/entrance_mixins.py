@@ -117,6 +117,12 @@ class EntranceMixin:
                 except (ValueError, TypeError):
                     content_length = 0
 
+                # Set a strict threshold (e.g., 4KB) to protect against memory exhaustion
+                MAX_PAYLOAD_SIZE = 4096
+                if content_length > MAX_PAYLOAD_SIZE:
+                    self.send_error(413, "Request Entity Too Large")
+                    return
+
                 if content_length > 0:
                     post_data = self.rfile.read(content_length).decode("utf-8")
                     parsed_data = urllib.parse.parse_qs(post_data)
@@ -141,23 +147,48 @@ class EntranceMixin:
             else:
                 self.send_error(404)
 
-        # Fix: Use setattr to bypass Mypy [method-assign] error
-        setattr(ObserverHandler, "do_POST", _dynamic_do_POST_method)
+        # Capture existing do_POST if it exists to avoid breaking other APIs
+        original_do_POST = getattr(ObserverHandler, "do_POST", None)
+
+        def _dynamic_do_POST_wrapper(self: ObserverHandler) -> None:
+            if self.path == "/set_target":
+                _dynamic_do_POST_method(self)
+            elif original_do_POST is not None:
+                original_do_POST(self)
+            else:
+                self.send_error(404)
+
+        setattr(ObserverHandler, "do_POST", _dynamic_do_POST_wrapper)
 
         ObserverHandler.controller = self
 
-        def run_server() -> None:
+        # Dynamically allocate an open port starting from 5000 on the main thread
+        server = None
+        active_port = 5000
+        for port in range(5000, 5011):
             try:
-                server = HTTPServer(("localhost", 5000), ObserverHandler)
-                server.serve_forever()
-            except Exception as e:
-                logger.error(f"Dashboard failed to start: {e}")
+                server = HTTPServer(("localhost", port), ObserverHandler)
+                active_port = port
+                break
+            except OSError:
+                continue
 
-        threading.Thread(target=run_server, daemon=True).start()
+        if server is None:
+            logger.error("Dashboard failed to start: No available ports in range 5000-5010")
+            return
+
+        def run_server(srv: HTTPServer) -> None:
+            try:
+                srv.serve_forever()
+            except Exception as e:
+                logger.error(f"Dashboard failed during execution: {e}")
+
+        # Start the pre-bound server asynchronously on the worker thread
+        threading.Thread(target=run_server, args=(server,), daemon=True).start()
 
         print("\n" + "=" * 60)
         print("PyOuroBoros (PyOB) OBSERVER IS LIVE")
-        print("URL: http://localhost:5000")
+        print(f"URL: http://localhost:{active_port}")
         print(f"FILE: {obs_path}")
         print("=" * 60 + "\n")
 
