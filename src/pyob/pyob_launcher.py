@@ -85,10 +85,10 @@ def ensure_terminal():
         script_path = shlex.quote(sys.argv[0])
         args = " ".join(shlex.quote(arg) for arg in sys.argv[1:])
         full_command = f"{sys.executable} {script_path} {args}".strip()
-        
+
         escaped_command = full_command.replace('"', '\\"')
         cmd = f'tell application "Terminal" to do script "{escaped_command}"'
-        
+
         subprocess.run(["osascript", "-e", cmd])
         sys.exit(0)
 
@@ -183,7 +183,9 @@ def main():
                     capture_output=True,
                 )
         except (FileNotFoundError, Exception) as e:
-            print(f"Warning: Could not configure Git settings. git binary may be missing: {e}")
+            print(
+                f"Warning: Could not configure Git settings. git binary may be missing: {e}"
+            )
 
     print(f"\nStarting PYOB on: {target_dir}")
     or_status = (
