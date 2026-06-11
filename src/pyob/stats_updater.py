@@ -9,23 +9,45 @@ class StatsUpdater:
         self._stats: dict = self._load()
 
     def _load(self) -> dict:
-        if os.path.exists(self.stats_path):
-            try:
-                with open(self.stats_path, "r") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {
+        defaults = {
             "session_pr_count": 0,
             "session_failures": 0,
             "consecutive_failures": 0,
             "last_success_time": None,
             "cascade_depth_max": 0,
         }
+        if os.path.exists(self.stats_path):
+            try:
+                with open(self.stats_path, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        # Merge defaults with loaded data to safely handle missing keys
+                        return {**defaults, **loaded}
+            except Exception:
+                pass
+        return defaults
 
     def _save(self) -> None:
-        with open(self.stats_path, "w") as f:
-            json.dump(self._stats, f, indent=2)
+
+        dir_name = os.path.dirname(self.stats_path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+
+        temp_path = self.stats_path + ".tmp"
+        try:
+
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(self._stats, f, indent=2)
+            os.replace(temp_path, self.stats_path)
+        except Exception:
+
+            with open(self.stats_path, "w", encoding="utf-8") as f:
+                json.dump(self._stats, f, indent=2)
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
 
     def record_success(self, cascade_depth: int = 0) -> None:
         self._stats["session_pr_count"] += 1
