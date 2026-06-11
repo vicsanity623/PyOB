@@ -2,7 +2,6 @@ import os
 
 from .autoreviewer import AutoReviewer
 from .core_utils import logger
-from .xml_mixin import ApplyXMLMixin
 
 
 class TargetedReviewer(AutoReviewer):
@@ -26,10 +25,12 @@ class TargetedReviewer(AutoReviewer):
 
     def scan_directory(self) -> list[str]:
         """Returns only the specific targeted file for the pipeline to process."""
-        full_target_path = os.path.normpath(os.path.join(self.target_dir, self.forced_target_file))
+        full_target_path = os.path.normpath(
+            os.path.join(self.target_dir, self.forced_target_file)
+        )
         if os.path.exists(full_target_path):
             return [full_target_path]
-        
+
         # Log a warning to prevent silent target-miss failures
         logger.warning(f"Targeted file not found on disk: {full_target_path}")
         return []
