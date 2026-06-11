@@ -22,7 +22,7 @@ class CodeParser:
     def _parse_python(self, code: str) -> str:
         try:
             tree = ast.parse(code)
-            
+
             class PythonStructureVisitor(ast.NodeVisitor):
                 def __init__(self):
                     self.imports = []
@@ -67,10 +67,12 @@ class CodeParser:
                         args.append(f"*{node.args.vararg.arg}")
                     if node.args.kwarg:
                         args.append(f"**{node.args.kwarg.arg}")
-                    
+
                     args_str = ", ".join(args)
                     if self.current_class:
-                        self.functions.append(f"def {self.current_class}.{node.name}({args_str})")
+                        self.functions.append(
+                            f"def {self.current_class}.{node.name}({args_str})"
+                        )
                     else:
                         self.functions.append(f"def {node.name}({args_str})")
 
@@ -81,7 +83,9 @@ class CodeParser:
 
             visitor = PythonStructureVisitor()
             visitor.visit(tree)
-            return self._format_dropdowns(visitor.imports, visitor.classes, visitor.functions, visitor.consts)
+            return self._format_dropdowns(
+                visitor.imports, visitor.classes, visitor.functions, visitor.consts
+            )
 
         except SyntaxError as e:
             logger.warning(
@@ -149,7 +153,9 @@ class CodeParser:
         )
 
     def _parse_html(self, code: str) -> str:
-        scripts: list[str] = re.findall(r"<script[\s\S]*?src=['\"](.*?)['\"]", code, re.IGNORECASE)
+        scripts: list[str] = re.findall(
+            r"<script[\s\S]*?src=['\"](.*?)['\"]", code, re.IGNORECASE
+        )
         styles = re.findall(r"<link[\s\S]*?href=['\"](.*?)['\"]", code, re.IGNORECASE)
         ids = re.findall(r"id=['\"](.*?)['\"]", code, re.IGNORECASE)
         return self._format_dropdowns(
