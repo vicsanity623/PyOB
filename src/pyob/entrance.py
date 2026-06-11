@@ -200,7 +200,12 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             text=True,
         )
 
-        commits_behind = int(result.stdout.strip() or 0)
+        commits_behind = 0
+        if result.returncode == 0:
+            try:
+                commits_behind = int(result.stdout.strip() or 0)
+            except ValueError:
+                pass
 
         if commits_behind > 0:
             logger.warning(
@@ -485,7 +490,7 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
             analysis_text = f.read()
         pattern = rf"### `{re.escape(rel_path)}`.*?(?=### `|---\n\Z)"
         updated_text, num_subs = re.subn(
-            pattern, new_block, analysis_text, flags=re.DOTALL
+            pattern, lambda m: new_block, analysis_text, flags=re.DOTALL
         )
 
         if num_subs == 0:
@@ -520,6 +525,9 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                         for target in n.targets:
                             if isinstance(target, ast.Name) and target.id.isupper():
                                 self.ledger["definitions"][target.id] = rel_path
+                    elif isinstance(n, ast.AnnAssign):
+                        if isinstance(n.target, ast.Name) and n.target.id.isupper():
+                            self.ledger["definitions"][n.target.id] = rel_path
                     # AST-based call graph detection
                     elif isinstance(n, ast.Call):
                         if isinstance(n.func, ast.Name):
