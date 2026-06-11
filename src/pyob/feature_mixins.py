@@ -42,7 +42,9 @@ class FeatureOperationsMixin:
                 lines = f.readlines()
                 content = "".join(lines)
         except UnicodeDecodeError as e:
-            logger.warning(f"Skipping analysis of {filepath} due to decoding error: {e}")
+            logger.warning(
+                f"Skipping analysis of {filepath} due to decoding error: {e}"
+            )
             return
         lang_name, lang_tag = self.get_language_info(filepath)
         filename = os.path.basename(filepath)
@@ -190,10 +192,12 @@ class FeatureOperationsMixin:
                             ["git", "add", new_path_abs],
                             cwd=self.target_dir,
                             capture_output=True,
-                            check=True
+                            check=True,
                         )
                     except (subprocess.SubprocessError, FileNotFoundError) as git_err:
-                        logger.warning(f"Failed to stage {new_path_abs} using git: {git_err}")
+                        logger.warning(
+                            f"Failed to stage {new_path_abs} using git: {git_err}"
+                        )
 
                     created_files.append(new_path_abs)
                 except OSError as e:
