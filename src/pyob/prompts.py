@@ -25,7 +25,9 @@ class PromptValidator:
                 raise ValueError(f"Missing required prompt key: {key}")
             val = prompts[key]
             if not isinstance(val, str):
-                raise TypeError(f"Prompt value for key '{key}' must be a string, got {type(val).__name__}")
+                raise TypeError(
+                    f"Prompt value for key '{key}' must be a string, got {type(val).__name__}"
+                )
             if not val.strip():
                 raise ValueError(f"Prompt key {key} is empty")
 
