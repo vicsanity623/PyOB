@@ -70,7 +70,7 @@ class ApplyXMLMixin:
                     docstring_char = stripped[:3]
                     continue
                 if in_docstring:
-                    if stripped.endswith(docstring_char):
+                    if docstring_char is not None and stripped.endswith(docstring_char):
                         in_docstring = False
                         insert_idx = i + 1
                     continue
