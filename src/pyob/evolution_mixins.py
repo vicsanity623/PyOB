@@ -130,7 +130,7 @@ class EvolutionMixin:
             stdout, stderr = "", ""
             process: Optional[subprocess.Popen[str]] = None
             timeout_val = 5 if is_html else 10
-            
+
             try:
                 process = subprocess.Popen(
                     cmd,
@@ -146,7 +146,7 @@ class EvolutionMixin:
                     # Capture the standard output/error buffers accumulated before timeout
                     stdout = e.stdout or ""
                     stderr = e.stderr or ""
-                    
+
                     # Clean up the process to release ports and prevent socket leaks
                     process.terminate()
                     try:
@@ -154,7 +154,7 @@ class EvolutionMixin:
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait()
-                    
+
                     # For long-running servers, a timeout with no error keywords is a SUCCESS
                     has_error = any(
                         kw in stderr or kw in stdout
@@ -167,7 +167,9 @@ class EvolutionMixin:
                         ]
                     )
                     if not has_error:
-                        logger.info(f"App ran successfully for {timeout_val}s (timeout reached without errors).")
+                        logger.info(
+                            f"App ran successfully for {timeout_val}s (timeout reached without errors)."
+                        )
                         return True
             except Exception as e:
                 logger.error(f"Execution failed: {e}")
@@ -243,7 +245,9 @@ class EvolutionMixin:
             real_files = []
             for root, dirs, files in os.walk(self.target_dir):
                 # Prune ignored and hidden directories in-place to prevent traversing them
-                dirs[:] = [d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")]
+                dirs[:] = [
+                    d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")
+                ]
                 for fname in files:
                     rel_path = os.path.relpath(
                         os.path.join(root, fname), self.target_dir
