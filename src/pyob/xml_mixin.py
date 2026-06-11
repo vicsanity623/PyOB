@@ -58,8 +58,12 @@ class ApplyXMLMixin:
                 if stripped.startswith("from __future__"):
                     insert_idx = i + 1
                     continue
-                if (stripped.startswith('"""') or stripped.startswith("'''")) and not in_docstring:
-                    if (stripped.endswith('"""') or stripped.endswith("'''")) and len(stripped) > 3:
+                if (
+                    stripped.startswith('"""') or stripped.startswith("'''")
+                ) and not in_docstring:
+                    if (stripped.endswith('"""') or stripped.endswith("'''")) and len(
+                        stripped
+                    ) > 3:
                         insert_idx = i + 1
                         continue
                     in_docstring = True
@@ -156,11 +160,13 @@ class ApplyXMLMixin:
         fixed_replace_lines = []
         for line in replace_lines:
             if line.strip():
-                line_indent = line[:len(line) - len(line.lstrip(" \t"))]
+                line_indent = line[: len(line) - len(line.lstrip(" \t"))]
                 if line.startswith(replace_base_indent):
                     relative_indent = line_indent[replace_base_len:]
                     clean_line = line[replace_base_len:]
-                    fixed_replace_lines.append(search_indent + relative_indent + clean_line)
+                    fixed_replace_lines.append(
+                        search_indent + relative_indent + clean_line
+                    )
                 else:
                     diff = len(line_indent) - replace_base_len
                     new_indent_len = max(0, search_indent_len + diff)
