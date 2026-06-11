@@ -117,7 +117,13 @@ class CyberpunkFormatter(logging.Formatter):
         prefix = f"{time.strftime('%H:%M:%S')} | "
         available_width = max(cols - len(prefix) - 1, 20)
         message = record.getMessage()
-        wrapped_lines = textwrap.wrap(message, width=available_width)
+
+        wrapped_lines = []
+        for line in message.splitlines():
+            if not line.strip():
+                wrapped_lines.append("")
+            else:
+                wrapped_lines.extend(textwrap.wrap(line, width=available_width))
 
         formatted_msg = ""
         for i, line in enumerate(wrapped_lines):
@@ -320,16 +326,20 @@ class CoreUtilsMixin:
         error_message: str = "Using original content.",
     ) -> str:
         import tempfile
+        import shlex
 
-        editor = os.environ.get("EDITOR", "nano")
+        default_editor = "notepad" if sys.platform == "win32" else "nano"
+        editor_str = os.environ.get("EDITOR", default_editor)
+        editor_args = shlex.split(editor_str)
+
         with tempfile.NamedTemporaryFile(
             mode="w+", delete=False, encoding="utf-8", suffix=file_suffix
         ) as tmp_file:
             tmp_file.write(initial_content)
             tmp_file_path = tmp_file.name
-        logger.info(f"{log_message}: {editor} {tmp_file_path}")
+        logger.info(f"{log_message}: {editor_str} {tmp_file_path}")
         try:
-            subprocess.run([editor, tmp_file_path], check=True)
+            subprocess.run(editor_args + [tmp_file_path], check=True)
             with open(tmp_file_path, "r", encoding="utf-8") as f:
                 edited_content = f.read()
             return edited_content
@@ -366,8 +376,8 @@ class CoreUtilsMixin:
         )
 
     def backup_workspace(self) -> dict[str, str]:
-        if not hasattr(self, "_workspace_cache"):
-            self._workspace_cache: dict[str, tuple[float, str]] = {}
+        if "_workspace_cache" not in self.__dict__:
+            self._workspace_cache = {}
 
         state: dict[str, str] = {}
         for root, dirs, files in os.walk(self.target_dir):
