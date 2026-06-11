@@ -212,12 +212,18 @@ def stream_ollama(prompt: str, on_chunk: Callable[[], None]) -> str:
                 content = chunk.get("message", {}).get("content", "")
             except AttributeError:
                 content = getattr(getattr(chunk, "message", None), "content", "")
-            
+
             if content:
                 on_chunk()
                 print(content, end="", flush=True)
                 response_text += content
-    except (RuntimeError, ConnectionError, OSError, AttributeError, requests.RequestException) as e:
+    except (
+        RuntimeError,
+        ConnectionError,
+        OSError,
+        AttributeError,
+        requests.RequestException,
+    ) as e:
         logger.error(f"Ollama Error: {e}")
         time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {e}"
