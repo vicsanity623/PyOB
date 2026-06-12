@@ -31,7 +31,7 @@ class CodeParser:
                     self.consts = []
                     self.current_class = None
 
-                def visit_Import(self, node):
+                def visit_Import(self, node: ast.Import) -> None:
                     try:
                         self.imports.append(ast.unparse(node))
                     except Exception:
