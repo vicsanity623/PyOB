@@ -271,7 +271,7 @@ class ApplyXMLMixin:
         self, source: str, clean_search: str, replace: str
     ) -> tuple[str, bool]:
         try:
-            search_lines_cleaned = [
+            search_lines_cleaned: list[str] = [
                 line.strip() for line in clean_search.split("\n") if line.strip()
             ]
             if not search_lines_cleaned:
