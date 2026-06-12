@@ -10,13 +10,14 @@ class TargetedReviewer(AutoReviewer):
     Automatically handles both absolute and relative path inputs for cross-platform stability.
     """
 
-    def __init__(self, target_dir: str, target_file: str):
+    def __init__(self, target_dir: str, target_file: str) -> None:
         # Normalize the directory path
-        normalized_dir = os.path.normpath(target_dir)
+        normalized_dir: str = os.path.normpath(target_dir)
         super().__init__(normalized_dir)
 
         # Normalize the target file path to avoid cross-platform slash issues
-        normalized_file = os.path.normpath(target_file)
+        normalized_file: str = os.path.normpath(target_file)
+        self.forced_target_file: str
 
         if os.path.isabs(normalized_file):
             self.forced_target_file = os.path.relpath(normalized_file, self.target_dir)
