@@ -37,13 +37,13 @@ class CodeParser:
                     except Exception:
                         pass
 
-                def visit_ImportFrom(self, node):
+                def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
                     try:
                         self.imports.append(ast.unparse(node))
                     except Exception:
                         pass
 
-                def visit_ClassDef(self, node):
+                def visit_ClassDef(self, node: ast.ClassDef) -> None:
                     self.classes.append(f"class {node.name}")
                     old_class = self.current_class
                     self.current_class = node.name
@@ -51,13 +51,15 @@ class CodeParser:
                         self.visit(child)
                     self.current_class = old_class
 
-                def visit_FunctionDef(self, node):
+                def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
                     self.handle_function(node)
 
-                def visit_AsyncFunctionDef(self, node):
+                def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
                     self.handle_function(node)
 
-                def handle_function(self, node):
+                def handle_function(
+                    self, node: ast.FunctionDef | ast.AsyncFunctionDef
+                ) -> None:
                     args = []
                     for arg in node.args.args:
                         if self.current_class and arg.arg == "self":

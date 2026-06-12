@@ -535,11 +535,12 @@ class EntranceController(EntranceMixin, CoreUtilsMixin, EvolutionMixin):
                         elif isinstance(n.func, ast.Attribute):
                             potential_refs.add(n.func.attr)
                     elif isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load):
-                        potential_refs.add(n.id)
+                        if n.id not in ["self", "None", "True", "False"]:
+                            potential_refs.add(n.id)
             except Exception as e:
                 logger.warning(f"Failed to parse Python AST for {rel_path}: {e}")
                 potential_refs.update(
-                    re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{3,}\b", code)
+                    re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]{4,}\b", code)
                 )
         elif ext in [".js", ".ts"]:
             defs = re.findall(
