@@ -166,7 +166,7 @@ class ApplyXMLMixin:
                 line_indent = line[: len(line) - len(line.lstrip(" \t"))]
                 if line.startswith(replace_base_indent):
                     relative_indent = line_indent[replace_base_len:]
-                    clean_line = line[replace_base_len:]
+                    clean_line = line.lstrip(" \t")
                     fixed_replace_lines.append(
                         search_indent + relative_indent + clean_line
                     )
