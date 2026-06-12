@@ -1,3 +1,4 @@
+import errno
 import json
 import logging
 import os
@@ -49,7 +50,7 @@ def analysis() -> Union[Response, Tuple[Response, int]]:
 
 
 @app.route("/history")
-def history():
+def history() -> Union[Response, Tuple[Response, int]]:
     try:
         history_content = read_file("HISTORY.md")
         return jsonify({"success": True, "data": history_content})
@@ -125,7 +126,14 @@ def handle_proposal_decision(session_id):
                 decisions = {}
 
         if request.method == "POST":
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                return jsonify(
+                    {
+                        "success": False,
+                        "message": "Invalid or missing JSON payload.",
+                    }
+                ), 400
             action = data.get("action")
             if not action or action not in ["PROCEED", "SKIP", "DELETE"]:
                 return jsonify(
@@ -268,7 +276,7 @@ def run_server() -> None:
             # If app.run succeeds, it's a blocking call, so this line won't be reached until server stops
             return  # Server started successfully, exit the function
         except OSError as e:
-            if "Address already in use" in str(e):
+            if e.errno == errno.EADDRINUSE or "Address already in use" in str(e):
                 logger.warning(
                     f"Flask failed to bind to port {port_to_try} (Address already in use). Trying next port..."
                 )

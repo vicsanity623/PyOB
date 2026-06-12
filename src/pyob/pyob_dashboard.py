@@ -10,6 +10,13 @@ class ObserverHandler(BaseHTTPRequestHandler):
     # The 'controller' type is 'Any' to avoid circular dependencies with the main application controller.
     controller: Any = None
 
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def _send_json_response(
         self, status_code: int, payload: dict, allow_cors: bool = True
     ):
@@ -36,20 +43,42 @@ class ObserverHandler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
+
+            def _safe_read(path, fallback=""):
+                try:
+                    if path and os.path.exists(path):
+                        return self.controller._read_file(path)
+                except Exception:
+                    pass
+                return fallback
+
             status = {
                 "iteration": getattr(self.controller, "current_iteration", 1),
                 "cascade_queue": getattr(self.controller, "cascade_queue", []),
                 "ledger_stats": {
-                    "definitions": len(self.controller.ledger["definitions"]),
-                    "references": len(self.controller.ledger["references"]),
+                    "definitions": len(
+                        getattr(self.controller, "ledger", {}).get("definitions", {})
+                    ),
+                    "references": len(
+                        getattr(self.controller, "ledger", {}).get("references", {})
+                    ),
                 },
-                "analysis": self.controller._read_file(self.controller.analysis_path),
-                "memory": self.controller._read_file(
-                    os.path.join(self.controller.target_dir, ".pyob", "MEMORY.md")
+                "analysis": _safe_read(
+                    getattr(self.controller, "analysis_path", None),
+                    "No analysis available.",
                 ),
-                "history": self.controller._read_file(self.controller.history_path)[
-                    -5000:
-                ],
+                "memory": _safe_read(
+                    os.path.join(
+                        getattr(self.controller, "target_dir", ""), ".pyob", "MEMORY.md"
+                    )
+                    if getattr(self.controller, "target_dir", None)
+                    else None,
+                    "No memory found.",
+                ),
+                "history": _safe_read(
+                    getattr(self.controller, "history_path", None),
+                    "No history available.",
+                )[-5000:],
                 "patches_count": len(self.controller.get_pending_patches())
                 if hasattr(self.controller, "get_pending_patches")
                 else 0,
@@ -140,12 +169,16 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     ).encode()
                 )
 
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+                self.wfile.write(
+                    json.dumps(
+                        {"error": "Malformed JSON payload or invalid UTF-8 encoding"}
+                    ).encode()
+                )
             except AttributeError:
                 # If controller doesn't have set_manual_target_file yet
                 self.send_response(500)
@@ -222,12 +255,16 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     ).encode()
                 )
 
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+                self.wfile.write(
+                    json.dumps(
+                        {"error": "Malformed JSON payload or invalid UTF-8 encoding"}
+                    ).encode()
+                )
             except AttributeError:
                 self.send_response(500)
                 self.send_header("Content-type", "application/json")
@@ -286,11 +323,16 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     ).encode()
                 )
 
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+                self.wfile.write(
+                    json.dumps(
+                        {"error": "Malformed JSON payload or invalid UTF-8 encoding"}
+                    ).encode()
+                )
             except AttributeError:
                 self.send_response(500)
                 self.send_header("Content-type", "application/json")
@@ -352,11 +394,16 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     ).encode()
                 )
 
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+                self.wfile.write(
+                    json.dumps(
+                        {"error": "Malformed JSON payload or invalid UTF-8 encoding"}
+                    ).encode()
+                )
             except AttributeError:
                 self.send_response(500)
                 self.send_header("Content-type", "application/json")
@@ -416,11 +463,16 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     ).encode()
                 )
 
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+                self.wfile.write(
+                    json.dumps(
+                        {"error": "Malformed JSON payload or invalid UTF-8 encoding"}
+                    ).encode()
+                )
             except AttributeError:
                 self.send_response(500)
                 self.send_header("Content-type", "application/json")
@@ -479,11 +531,16 @@ class ObserverHandler(BaseHTTPRequestHandler):
                     ).encode()
                 )
 
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.send_response(400)
                 self.send_header("Content-type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "Invalid JSON"}).encode())
+                self.wfile.write(
+                    json.dumps(
+                        {"error": "Malformed JSON payload or invalid UTF-8 encoding"}
+                    ).encode()
+                )
             except AttributeError:
                 self.send_response(500)
                 self.send_header("Content-type", "application/json")

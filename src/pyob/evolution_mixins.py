@@ -129,6 +129,8 @@ class EvolutionMixin:
             start_time = time.time()
             stdout, stderr = "", ""
             process: Optional[subprocess.Popen[str]] = None
+            timeout_val = 5 if is_html else 10
+
             try:
                 process = subprocess.Popen(
                     cmd,
@@ -138,19 +140,47 @@ class EvolutionMixin:
                     cwd=self.target_dir,
                     shell=use_shell,
                 )
-                if is_html:
+                try:
+                    stdout, stderr = process.communicate(timeout=timeout_val)
+                except subprocess.TimeoutExpired as e:
+                    # Capture the standard output/error buffers and safely resolve to string
+                    raw_stdout = e.stdout or ""
+                    raw_stderr = e.stderr or ""
+                    stdout = (
+                        raw_stdout.decode("utf-8", errors="ignore")
+                        if isinstance(raw_stdout, bytes)
+                        else raw_stdout
+                    )
+                    stderr = (
+                        raw_stderr.decode("utf-8", errors="ignore")
+                        if isinstance(raw_stderr, bytes)
+                        else raw_stderr
+                    )
+
+                    # Clean up the process so we don't leak background tasks/ports
+                    process.terminate()
                     try:
-                        stdout, stderr = process.communicate(timeout=5)
-                        if process.returncode == 0:
-                            return True  # HTML launched and exited cleanly within 5s
+                        process.wait(timeout=2)
                     except subprocess.TimeoutExpired:
-                        process.terminate()
+                        process.kill()
                         process.wait()
-                        return True  # HTML launched and ran for 5s, considered success
-                    # If HTML process exited with non-zero code within 5s,
-                    # stdout/stderr are already captured, fall through to general error handling.
-                else:  # For non-HTML processes, use the 10s timeout
-                    stdout, stderr = process.communicate(timeout=10)
+
+                    # For long-running servers, a timeout with no error keywords is a SUCCESS
+                    has_error = any(
+                        kw in stderr or kw in stdout
+                        for kw in [
+                            "Traceback",
+                            "Exception",
+                            "Error:",
+                            "ModuleNotFoundError",
+                            "ImportError",
+                        ]
+                    )
+                    if not has_error:
+                        logger.info(
+                            f"App ran successfully for {timeout_val}s (timeout reached without errors)."
+                        )
+                        return True
             except Exception as e:
                 logger.error(f"Execution failed: {e}")
                 stdout, stderr = "", str(e)
@@ -224,6 +254,10 @@ class EvolutionMixin:
 
             real_files = []
             for root, dirs, files in os.walk(self.target_dir):
+                # Prune ignored and hidden directories in-place to prevent traversing them
+                dirs[:] = [
+                    d for d in dirs if d not in IGNORE_DIRS and not d.startswith(".")
+                ]
                 for fname in files:
                     rel_path = os.path.relpath(
                         os.path.join(root, fname), self.target_dir
@@ -294,7 +328,7 @@ class EvolutionMixin:
             lambda t: len(t) > 5,
             context="Project Genesis",
         ).strip()
-        content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n-----n\n## File Directory\n\n"
+        content = f"# Project Analysis\n\n**Project Summary:**\n{p_summary}\n\n-----\n## File Directory\n\n"
 
         file_structures = {}
         for f_path in all_files:

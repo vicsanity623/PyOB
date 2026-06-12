@@ -41,7 +41,10 @@ class FeatureOperationsMixin:
             with open(filepath, "r", encoding="utf-8") as f:
                 lines = f.readlines()
                 content = "".join(lines)
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as e:
+            logger.warning(
+                f"Skipping analysis of {filepath} due to decoding error: {e}"
+            )
             return
         lang_name, lang_tag = self.get_language_info(filepath)
         filename = os.path.basename(filepath)
@@ -61,7 +64,7 @@ class FeatureOperationsMixin:
                 return
 
         prompt = self.build_patch_prompt(
-            lang_name, lang_tag, content, ruff_out, mypy_out, custom_issues, filepath
+            lang_name, lang_tag, content, ruff_out, mypy_out, custom_issues
         )
         new_code, explanation, llm_response = self.get_valid_edit(
             prompt, content, require_edit=False, target_filepath=filepath
@@ -184,7 +187,18 @@ class FeatureOperationsMixin:
                     # Immediately stage for Git so the Librarian sees it
                     import subprocess
 
-                    subprocess.run(["git", "add", new_path_abs], cwd=self.target_dir)
+                    try:
+                        subprocess.run(
+                            ["git", "add", new_path_abs],
+                            cwd=self.target_dir,
+                            capture_output=True,
+                            check=True,
+                        )
+                    except (subprocess.SubprocessError, FileNotFoundError) as git_err:
+                        logger.warning(
+                            f"Failed to stage {new_path_abs} using git: {git_err}"
+                        )
+
                     created_files.append(new_path_abs)
                 except OSError as e:
                     logger.error(f"Failed to create new module {new_path_rel}: {e}")

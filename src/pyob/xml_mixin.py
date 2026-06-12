@@ -44,7 +44,39 @@ class ApplyXMLMixin:
             if not found:
                 missing_imports.append(import_text)
         if missing_imports:
-            return "\n".join(missing_imports) + "\n\n" + new_code
+            lines = new_code.splitlines()
+            insert_idx = 0
+            in_docstring = False
+            docstring_char = None
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("#!"):
+                    insert_idx = i + 1
+                    continue
+                if stripped.startswith("from __future__"):
+                    insert_idx = i + 1
+                    continue
+                if (
+                    stripped.startswith('"""') or stripped.startswith("'''")
+                ) and not in_docstring:
+                    if (stripped.endswith('"""') or stripped.endswith("'''")) and len(
+                        stripped
+                    ) > 3:
+                        insert_idx = i + 1
+                        continue
+                    in_docstring = True
+                    docstring_char = stripped[:3]
+                    continue
+                if in_docstring:
+                    if docstring_char is not None and stripped.endswith(docstring_char):
+                        in_docstring = False
+                        insert_idx = i + 1
+                    continue
+                break
+            new_lines = lines[:insert_idx] + missing_imports + [""] + lines[insert_idx:]
+            return "\n".join(new_lines)
         return new_code
 
     def apply_xml_edits(
@@ -107,6 +139,9 @@ class ApplyXMLMixin:
         return list(pattern.finditer(llm_response))
 
     def _fix_replace_indentation(self, search: str, replace: str) -> str:
+        search = search.replace("\t", "    ")
+        replace = replace.replace("\t", "    ")
+
         search_lines = search.split("\n")
         replace_lines = replace.split("\n")
 
@@ -122,14 +157,24 @@ class ApplyXMLMixin:
                 replace_base_indent = line[: len(line) - len(line.lstrip(" \t"))]
                 break
 
+        search_indent_len = len(search_indent)
+        replace_base_len = len(replace_base_indent)
+
         fixed_replace_lines = []
         for line in replace_lines:
             if line.strip():
+                line_indent = line[: len(line) - len(line.lstrip(" \t"))]
                 if line.startswith(replace_base_indent):
-                    clean_line = line[len(replace_base_indent) :]
-                else:
+                    relative_indent = line_indent[replace_base_len:]
                     clean_line = line.lstrip(" \t")
-                fixed_replace_lines.append(search_indent + clean_line)
+                    fixed_replace_lines.append(
+                        search_indent + relative_indent + clean_line
+                    )
+                else:
+                    diff = len(line_indent) - replace_base_len
+                    new_indent_len = max(0, search_indent_len + diff)
+                    clean_line = line.lstrip(" \t")
+                    fixed_replace_lines.append(" " * new_indent_len + clean_line)
             else:
                 fixed_replace_lines.append("")
         return "\n".join(fixed_replace_lines)
@@ -179,7 +224,7 @@ class ApplyXMLMixin:
             return "".join(t.split())
 
         clean_search = super_clean(search)
-        if not clean_search:
+        if len(clean_search) < 20:  # Prevent matching tiny blocks falsely
             return source, False
 
         search_lines = search.splitlines()
@@ -226,7 +271,7 @@ class ApplyXMLMixin:
         self, source: str, clean_search: str, replace: str
     ) -> tuple[str, bool]:
         try:
-            search_lines_cleaned = [
+            search_lines_cleaned: list[str] = [
                 line.strip() for line in clean_search.split("\n") if line.strip()
             ]
             if not search_lines_cleaned:
@@ -267,22 +312,15 @@ class ApplyXMLMixin:
 
         replace_lines = replace.split("\n")
         code_lines = source.splitlines()
-        for i in range(len(code_lines) - len(search_lines_stripped) + 1):
+        for i in range(len(code_lines) - len(search_lines) + 1):
             match = True
-            for j, sline in enumerate(search_lines_stripped):
-                if sline not in code_lines[i + j].strip():
+            for j, sline in enumerate(search_lines):
+                if sline.strip() not in code_lines[i + j].strip():
                     match = False
                     break
             if match:
-                # Apply indentation fix to replacement lines
-                fixed_replace = self._fix_replace_indentation(
-                    "\n".join(code_lines[i : i + len(search_lines_stripped)]),
-                    "\n".join(replace_lines),
-                )
                 new_code_lines = (
-                    code_lines[:i]
-                    + fixed_replace.splitlines()
-                    + code_lines[i + len(search_lines_stripped) :]
+                    code_lines[:i] + replace_lines + code_lines[i + len(search_lines) :]
                 )
                 new_code = "\n".join(new_code_lines)
                 if not new_code.endswith("\n") and source.endswith("\n"):

@@ -62,7 +62,9 @@ class AutoReviewer(
         self._ensure_prompt_files()
         if AutoReviewer._shared_cooldowns is None:
             AutoReviewer._shared_cooldowns = {
-                key: 0.0 for key in GEMINI_API_KEYS if key.strip()
+                key: 0.0
+                for key in GEMINI_API_KEYS
+                if isinstance(key, str) and key.strip()
             }
 
         self.key_cooldowns = AutoReviewer._shared_cooldowns
@@ -85,9 +87,9 @@ class AutoReviewer(
         issues = []
         lines = content.splitlines()
 
-        if len(lines) > 800:
+        if len(lines) > self.MODULARITY_THRESHOLD_LINES:
             issues.append(
-                f"Architectural Bloat: File has {len(lines)} lines. This exceeds the 800-line modularity threshold. Priority: HIGH. Action: Split into smaller modules."
+                f"Architectural Bloat: File has {len(lines)} lines. This exceeds the {self.MODULARITY_THRESHOLD_LINES}-line modularity threshold. Priority: HIGH. Action: Split into smaller modules."
             )
 
         try:
@@ -149,7 +151,7 @@ class AutoReviewer(
                 )
                 return "PROCEED"
 
-    def set_manual_target_file(self, filepath: str | None):
+    def set_manual_target_file(self, filepath: str | None) -> None:
         if filepath:
             if not os.path.exists(filepath):
                 logger.warning(
@@ -283,16 +285,22 @@ class AutoReviewer(
                 if os.path.exists(self.pr_file):
                     with open(self.pr_file, "r", encoding="utf-8") as f:
                         content = f.read()
-                    with open(self.failed_pr_file, "w") as f:
+                    with open(self.failed_pr_file, "w", encoding="utf-8") as f:
                         f.write(content + failure_report)
-                    os.remove(self.pr_file)
+                    try:
+                        os.remove(self.pr_file)
+                    except OSError as e:
+                        logger.warning(f"Could not remove temporary PR file: {e}")
 
                 if os.path.exists(self.feature_file):
                     with open(self.feature_file, "r", encoding="utf-8") as f:
                         content = f.read()
-                    with open(self.failed_feature_file, "w") as f:
+                    with open(self.failed_feature_file, "w", encoding="utf-8") as f:
                         f.write(content + failure_report)
-                    os.remove(self.feature_file)
+                    try:
+                        os.remove(self.feature_file)
+                    except OSError as e:
+                        logger.warning(f"Could not remove temporary feature file: {e}")
                 return False
             return True
         elif allow_delete and user_input == "DELETE":
@@ -308,8 +316,8 @@ class AutoReviewer(
             )
             return False
 
-    def run_pipeline(self, current_iteration: int):
-        changes_made = False
+    def run_pipeline(self, current_iteration: int) -> None:
+        changes_made: bool = False
         try:
             if os.path.exists(self.pr_file) or os.path.exists(self.feature_file):
                 logger.info("==================================================")

@@ -27,7 +27,18 @@ class GetValidEditMixin:
             return source_code, "AI generation skipped by user.", ""
 
         attempts = 0
+        max_total_attempts = 15
         while True:
+            if attempts >= max_total_attempts:
+                logger.error(
+                    f"Max validation attempts ({max_total_attempts}) reached for {display_name}. Aborting to prevent infinite loop."
+                )
+                return (
+                    source_code,
+                    "Aborted: Maximum attempts reached without a valid patch.",
+                    "",
+                )
+
             # 2. Fetch from AI (Handles keys, retries, and API limits)
             response_text, attempts = self._fetch_llm_with_retries(
                 prompt, display_name, attempts
@@ -139,14 +150,16 @@ class GetValidEditMixin:
                     prompt, key=None, context=display_name
                 )
 
-            if response.startswith("ERROR_CODE_429"):
+            response_str = str(response) if response is not None else ""
+
+            if response_str.startswith("ERROR_CODE_429"):
                 if key:
                     key_cooldowns[key] = time.time() + 180
                     logger.warning("Key rate limited. Pivoting to next key...")
                     attempts += 1
                     continue
-                elif "RateLimitReached" in response:
-                    match = re.search(r"wait (\d+) seconds", response)
+                elif "RateLimitReached" in response_str:
+                    match = re.search(r"wait (\d+) seconds", response_str)
                     wait_time = int(match.group(1)) if match else 86400
                     if gh_model == "Llama-3":
                         key_cooldowns["github_llama"] = time.time() + wait_time + 60
@@ -162,19 +175,19 @@ class GetValidEditMixin:
                     attempts += 1
                     continue
 
-            if "ERROR_CODE_413" in response:
-                logger.warning("Payload too large (413). Backing off 120s...")
-                time.sleep(120)
-                attempts += 1
-                continue
+            if "ERROR_CODE_413" in response_str or "ERROR_CODE_400" in response_str:
+                logger.error(
+                    f"Fatal client error returned from LLM ({response_str[:40]}). Aborting current edit target to prevent infinite loop."
+                )
+                return response_str, attempts
 
-            if response.startswith("ERROR_CODE_") or not response.strip():
-                if key and "429" not in (response or ""):
+            if response_str.startswith("ERROR_CODE_") or not response_str.strip():
+                if key and "429" not in response_str:
                     key_cooldowns[key] = time.time() + 30
 
                 if available_keys:
                     logger.warning(
-                        f"Engine failed with error: {str(response)[:60]}... Rotating..."
+                        f"Engine failed with error: {response_str[:60]}... Rotating..."
                     )
                     attempts += 1
                     time.sleep(5)
@@ -185,7 +198,7 @@ class GetValidEditMixin:
                 attempts += 1
                 continue
 
-            return response, attempts
+            return response_str, attempts
 
     def _validate_llm_patch(
         self,

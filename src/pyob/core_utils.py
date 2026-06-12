@@ -73,7 +73,7 @@ IGNORE_FILES = {
     "evolved_core_brain.pkl",
     "Dockerfile",
     "build_pyinstaller_multiOS.py",
-    "check.sh",
+    # "check.sh",
     "ci.sh",
     "HOWTO.md",
     "__init__.py",
@@ -117,7 +117,13 @@ class CyberpunkFormatter(logging.Formatter):
         prefix = f"{time.strftime('%H:%M:%S')} | "
         available_width = max(cols - len(prefix) - 1, 20)
         message = record.getMessage()
-        wrapped_lines = textwrap.wrap(message, width=available_width)
+
+        wrapped_lines = []
+        for line in message.splitlines():
+            if not line.strip():
+                wrapped_lines.append("")
+            else:
+                wrapped_lines.extend(textwrap.wrap(line, width=available_width))
 
         formatted_msg = ""
         for i, line in enumerate(wrapped_lines):
@@ -282,10 +288,10 @@ class CoreUtilsMixin:
             time.sleep(0.1)
 
     def _unix_input(self, start_time: float, timeout: int) -> str:
-        import termios
-        import tty
+        import termios  # type: ignore
+        import tty  # type: ignore
 
-        input_str = ""
+        input_str: str = ""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -319,9 +325,13 @@ class CoreUtilsMixin:
         log_message: str = "Opening editor",
         error_message: str = "Using original content.",
     ) -> str:
+        import shlex
         import tempfile
 
-        editor = os.environ.get("EDITOR", "nano")
+        default_editor = "notepad" if sys.platform == "win32" else "nano"
+        editor = os.environ.get("EDITOR", default_editor)
+        editor_args = shlex.split(editor)
+
         with tempfile.NamedTemporaryFile(
             mode="w+", delete=False, encoding="utf-8", suffix=file_suffix
         ) as tmp_file:
@@ -329,7 +339,7 @@ class CoreUtilsMixin:
             tmp_file_path = tmp_file.name
         logger.info(f"{log_message}: {editor} {tmp_file_path}")
         try:
-            subprocess.run([editor, tmp_file_path], check=True)
+            subprocess.run(editor_args + [tmp_file_path], check=True)
             with open(tmp_file_path, "r", encoding="utf-8") as f:
                 edited_content = f.read()
             return edited_content
@@ -338,11 +348,6 @@ class CoreUtilsMixin:
             return initial_content
         except subprocess.CalledProcessError:
             logger.error(f"Editor '{editor}' exited with an error. {error_message}")
-            return initial_content
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occurred with editor: {e}. {error_message}"
-            )
             return initial_content
         finally:
             if os.path.exists(tmp_file_path):
@@ -366,8 +371,8 @@ class CoreUtilsMixin:
         )
 
     def backup_workspace(self) -> dict[str, str]:
-        if not hasattr(self, "_workspace_cache"):
-            self._workspace_cache: dict[str, tuple[float, str]] = {}
+        if "_workspace_cache" not in self.__dict__:
+            self._workspace_cache = {}
 
         state: dict[str, str] = {}
         for root, dirs, files in os.walk(self.target_dir):
@@ -396,7 +401,7 @@ class CoreUtilsMixin:
                         pass
         return state
 
-    def restore_workspace(self, state: dict[str, str]):
+    def restore_workspace(self, state: dict[str, str]) -> None:
         for path, content in state.items():
             try:
                 with open(path, "w", encoding="utf-8") as f:
@@ -407,7 +412,7 @@ class CoreUtilsMixin:
 
     def load_memory(self) -> str:
         """Loads persistent memory and injects repo-level human directives."""
-        memory_content = ""
+        memory_content: str = ""
 
         if os.path.exists(self.memory_path):
             try:

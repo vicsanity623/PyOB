@@ -202,9 +202,11 @@ class ValidationMixin:
             )
 
             stdout, stderr = "", ""
+            timeout_reached = False
             try:
                 stdout, stderr = process.communicate(timeout=10)
             except subprocess.TimeoutExpired:
+                timeout_reached = True
                 process.terminate()
                 try:
                     stdout, stderr = process.communicate(timeout=2)
@@ -224,9 +226,16 @@ class ValidationMixin:
                 logger.info("HTML Entry detected. Verification assumed successful.")
                 return True
 
-            has_crash = any(kw in stderr or kw in stdout for kw in error_keywords) or (
-                process.returncode != 0 and process.returncode not in (0, 15, -15, None)
-            )
+            # If the timeout was reached, the application was successfully running.
+            # We only crash if explicit error keywords exist in the streams.
+            if timeout_reached:
+                has_crash = any(kw in stderr or kw in stdout for kw in error_keywords)
+            else:
+                # If the app closed on its own before 10 seconds, any non-zero exit code
+                # or crash keyword indicates an active crash.
+                has_crash = any(
+                    kw in stderr or kw in stdout for kw in error_keywords
+                ) or (process.returncode != 0)
 
             if not has_crash:
                 logger.info("App ran successfully for 10 seconds.")

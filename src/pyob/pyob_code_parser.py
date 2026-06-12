@@ -22,37 +22,72 @@ class CodeParser:
     def _parse_python(self, code: str) -> str:
         try:
             tree = ast.parse(code)
-            imports, classes, functions, consts = [], [], [], []
-            for node in ast.walk(tree):
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
+
+            class PythonStructureVisitor(ast.NodeVisitor):
+                def __init__(self) -> None:
+                    self.imports: list[str] = []
+                    self.classes: list[str] = []
+                    self.functions: list[str] = []
+                    self.consts: list[str] = []
+                    self.current_class: str | None = None
+
+                def visit_Import(self, node: ast.Import) -> None:
                     try:
-                        imports.append(ast.unparse(node))
+                        self.imports.append(ast.unparse(node))
                     except Exception:
                         pass
-                elif isinstance(node, ast.ClassDef):
-                    classes.append(f"class {node.name}")
+
+                def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+                    try:
+                        self.imports.append(ast.unparse(node))
+                    except Exception:
+                        pass
+
+                def visit_ClassDef(self, node: ast.ClassDef) -> None:
+                    self.classes.append(f"class {node.name}")
+                    old_class = self.current_class
+                    self.current_class = node.name
                     for child in node.body:
-                        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                            args = [
-                                arg.arg for arg in child.args.args if arg.arg != "self"
-                            ]
-                            functions.append(
-                                f"def {node.name}.{child.name}({', '.join(args)})"
-                            )
-                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    if not any(f".{node.name}(" in fn for fn in functions):
-                        args = [arg.arg for arg in node.args.args]
-                        if node.args.vararg:
-                            args.append(f"*{node.args.vararg.arg}")
-                        if node.args.kwarg:
-                            args.append(f"**{node.args.kwarg.arg}")
-                        functions.append(f"def {node.name}({', '.join(args)})")
-                elif isinstance(node, ast.Assign):
+                        self.visit(child)
+                    self.current_class = old_class
+
+                def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+                    self.handle_function(node)
+
+                def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+                    self.handle_function(node)
+
+                def handle_function(
+                    self, node: ast.FunctionDef | ast.AsyncFunctionDef
+                ) -> None:
+                    args = []
+                    for arg in node.args.args:
+                        if self.current_class and arg.arg == "self":
+                            continue
+                        args.append(arg.arg)
+                    if node.args.vararg:
+                        args.append(f"*{node.args.vararg.arg}")
+                    if node.args.kwarg:
+                        args.append(f"**{node.args.kwarg.arg}")
+
+                    args_str = ", ".join(args)
+                    if self.current_class:
+                        self.functions.append(
+                            f"def {self.current_class}.{node.name}({args_str})"
+                        )
+                    else:
+                        self.functions.append(f"def {node.name}({args_str})")
+
+                def visit_Assign(self, node: ast.Assign) -> None:
                     for t in node.targets:
                         if isinstance(t, ast.Name) and t.id.isupper():
-                            consts.append(t.id)
+                            self.consts.append(t.id)
 
-            return self._format_dropdowns(imports, classes, functions, consts)
+            visitor = PythonStructureVisitor()
+            visitor.visit(tree)
+            return self._format_dropdowns(
+                visitor.imports, visitor.classes, visitor.functions, visitor.consts
+            )
 
         except SyntaxError as e:
             logger.warning(
@@ -105,6 +140,11 @@ class CodeParser:
                 "return",
                 "catch",
                 "switch",
+                "await",
+                "yield",
+                "import",
+                "export",
+                "default",
             ]:
                 clean_fns.append(f"{name}({params.strip()})")
                 seen.add(name)
@@ -115,9 +155,11 @@ class CodeParser:
         )
 
     def _parse_html(self, code: str) -> str:
-        scripts: list[str] = re.findall(r"<script.*?src=['\"](.*?)['\"]", code)
-        styles = re.findall(r"<link.*?href=['\"](.*?)['\"]", code)
-        ids = re.findall(r"id=['\"](.*?)['\"]", code)
+        scripts: list[str] = re.findall(
+            r"<script[\s\S]*?src=['\"](.*?)['\"]", code, re.IGNORECASE
+        )
+        styles = re.findall(r"<link[\s\S]*?href=['\"](.*?)['\"]", code, re.IGNORECASE)
+        ids = re.findall(r"id=['\"](.*?)['\"]", code, re.IGNORECASE)
         return self._format_dropdowns(
             [],
             [f"Script: {s}" for s in scripts],
@@ -126,7 +168,7 @@ class CodeParser:
         )
 
     def _parse_css(self, code: str) -> str:
-        selectors = re.findall(r"([#\.][a-zA-Z0-9_-]+)\s*\{", code)
+        selectors = re.findall(r"([#\.]?[a-zA-Z0-9_-]+)\s*\{", code)
         unique_selectors = list(dict.fromkeys(selectors))
         return self._format_dropdowns([], [], unique_selectors[:50], [])
 

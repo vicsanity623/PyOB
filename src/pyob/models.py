@@ -44,7 +44,7 @@ def load_config():
     config_path = ".pyob_config"
     if os.path.exists(config_path):
         try:
-            with open(config_path, "r") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Error loading .pyob_config: {e}")
@@ -128,7 +128,7 @@ def stream_openrouter(
                     break
                 continue
 
-            line_str = line.decode("utf-8").replace("data: ", "")
+            line_str = line.decode("utf-8", errors="ignore").replace("data: ", "")
             if line_str.strip() == "[DONE]":
                 break
 
@@ -177,7 +177,7 @@ def stream_gemini(prompt: str, api_key: str, on_chunk: Callable[[], None]) -> st
                 text = chunk_data["candidates"][0]["content"]["parts"][0]["text"]
                 on_chunk()
                 response_text += text
-            except (KeyError, IndexError, json.JSONDecodeError):
+            except (KeyError, IndexError, TypeError, json.JSONDecodeError):
                 pass
     return response_text
 
@@ -208,12 +208,22 @@ def stream_ollama(prompt: str, on_chunk: Callable[[], None]) -> str:
             stream=True,
         )
         for chunk in stream:
-            content = chunk.get("message", {}).get("content", "")
+            try:
+                content = chunk.get("message", {}).get("content", "")
+            except AttributeError:
+                content = getattr(getattr(chunk, "message", None), "content", "")
+
             if content:
                 on_chunk()
                 print(content, end="", flush=True)
                 response_text += content
-    except (RuntimeError, ConnectionError, OSError, requests.RequestException) as e:
+    except (
+        RuntimeError,
+        ConnectionError,
+        OSError,
+        AttributeError,
+        requests.RequestException,
+    ) as e:
         logger.error(f"Ollama Error: {e}")
         time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {e}"
@@ -253,7 +263,7 @@ def stream_github_models(
                     break
                 continue
 
-            line_str = line.decode("utf-8").replace("data: ", "")
+            line_str = line.decode("utf-8", errors="ignore").replace("data: ", "")
             if line_str.strip() == "[DONE]":
                 break
 
@@ -360,12 +370,11 @@ def stream_single_llm(
         ValueError,
         RuntimeError,
     ) as e:
-        first_chunk_received[0] = True
         if is_cloud:
             time.sleep(30)
         return f"ERROR_CODE_EXCEPTION: {e}"
-
-    first_chunk_received[0] = True
+    finally:
+        first_chunk_received[0] = True
     if response_text and not response_text.startswith("ERROR_CODE_"):
         # Strip DeepSeek / "thinking" model chain-of-thought preamble.
         # These models sometimes bleed raw reasoning text before the actual XML
@@ -446,8 +455,18 @@ def get_valid_llm_response_engine(
         available_gemini_keys = [k for k in gemini_keys if now > key_cooldowns[k]]
         response_text = None
 
-        # 2. DECISION LOGIC: Prioritize OpenRouter > Gemini > GitHub > Ollama
-        if available_or_models:
+        # 2. DECISION LOGIC: Prioritize Gemini > OpenRouter > GitHub > Ollama
+        if available_gemini_keys:
+            key = available_gemini_keys[attempts % len(available_gemini_keys)]
+            provider = "gemini"
+            logger.info(
+                f"Attempting Gemini Key {attempts % len(available_gemini_keys) + 1}/{len(available_gemini_keys)}"
+            )
+            response_text = stream_single_llm(
+                prompt, provider=provider, key=key, context=context
+            )
+
+        elif available_or_models:
             current_or_model = available_or_models[attempts % len(available_or_models)]
             logger.info(f"Attempting OpenRouter ({current_or_model})...")
             key = OPENROUTER_KEY
@@ -458,16 +477,6 @@ def get_valid_llm_response_engine(
                 key=key,
                 context=context,
                 or_model=current_or_model,
-            )
-
-        elif available_gemini_keys:
-            key = available_gemini_keys[attempts % len(available_gemini_keys)]
-            provider = "gemini"
-            logger.info(
-                f"Attempting Gemini Key {attempts % len(available_gemini_keys) + 1}/{len(available_gemini_keys)}"
-            )
-            response_text = stream_single_llm(
-                prompt, provider=provider, key=key, context=context
             )
 
         elif is_cloud:
