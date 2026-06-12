@@ -151,7 +151,7 @@ class AutoReviewer(
                 )
                 return "PROCEED"
 
-    def set_manual_target_file(self, filepath: str | None):
+    def set_manual_target_file(self, filepath: str | None) -> None:
         if filepath:
             if not os.path.exists(filepath):
                 logger.warning(
@@ -316,8 +316,8 @@ class AutoReviewer(
             )
             return False
 
-    def run_pipeline(self, current_iteration: int):
-        changes_made = False
+    def run_pipeline(self, current_iteration: int) -> None:
+        changes_made: bool = False
         try:
             if os.path.exists(self.pr_file) or os.path.exists(self.feature_file):
                 logger.info("==================================================")
