@@ -150,13 +150,13 @@ class EntranceMixin:
         # Capture existing do_POST if it exists to avoid breaking other APIs
         original_do_POST = getattr(ObserverHandler, "do_POST", None)
 
-        def _dynamic_do_POST_wrapper(self: ObserverHandler) -> None:
-            if self.path == "/set_target":
-                _dynamic_do_POST_method(self)
+        def _dynamic_do_POST_wrapper(instance: ObserverHandler) -> None:
+            if instance.path == "/set_target":
+                _dynamic_do_POST_method(instance)
             elif original_do_POST is not None:
-                original_do_POST(self)
+                original_do_POST(instance)
             else:
-                self.send_error(404)
+                instance.send_error(404)
 
         setattr(ObserverHandler, "do_POST", _dynamic_do_POST_wrapper)
 
