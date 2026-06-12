@@ -412,7 +412,7 @@ class CoreUtilsMixin:
 
     def load_memory(self) -> str:
         """Loads persistent memory and injects repo-level human directives."""
-        memory_content = ""
+        memory_content: str = ""
 
         if os.path.exists(self.memory_path):
             try:
