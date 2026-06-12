@@ -288,8 +288,8 @@ class CoreUtilsMixin:
             time.sleep(0.1)
 
     def _unix_input(self, start_time: float, timeout: int) -> str:
-        import termios
-        import tty
+        import termios  # type: ignore
+        import tty  # type: ignore
 
         input_str: str = ""
         fd = sys.stdin.fileno()
