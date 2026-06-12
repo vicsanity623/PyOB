@@ -78,7 +78,7 @@ class CodeParser:
                     else:
                         self.functions.append(f"def {node.name}({args_str})")
 
-                def visit_Assign(self, node):
+                def visit_Assign(self, node: ast.Assign) -> None:
                     for t in node.targets:
                         if isinstance(t, ast.Name) and t.id.isupper():
                             self.consts.append(t.id)
