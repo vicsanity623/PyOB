@@ -24,12 +24,12 @@ class CodeParser:
             tree = ast.parse(code)
 
             class PythonStructureVisitor(ast.NodeVisitor):
-                def __init__(self):
-                    self.imports = []
-                    self.classes = []
-                    self.functions = []
-                    self.consts = []
-                    self.current_class = None
+                def __init__(self) -> None:
+                    self.imports: list[str] = []
+                    self.classes: list[str] = []
+                    self.functions: list[str] = []
+                    self.consts: list[str] = []
+                    self.current_class: str | None = None
 
                 def visit_Import(self, node: ast.Import) -> None:
                     try:
