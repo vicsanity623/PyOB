@@ -139,6 +139,9 @@ class ApplyXMLMixin:
         return list(pattern.finditer(llm_response))
 
     def _fix_replace_indentation(self, search: str, replace: str) -> str:
+        search = search.replace("\t", "    ")
+        replace = replace.replace("\t", "    ")
+
         search_lines = search.split("\n")
         replace_lines = replace.split("\n")
 
