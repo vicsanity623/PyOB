@@ -144,8 +144,7 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         return context
 
     def update_memory(self) -> None:
-        # type: ignore
-        session_context: list[str] = getattr(self, "session_context", [])
+        session_context: list[str] = getattr(self, "session_context", [])  # type: ignore
         if not session_context:
             return
         logger.info("\nPHASE 5: Updating MEMORY.md with session context...")
