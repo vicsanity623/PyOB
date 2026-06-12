@@ -1,4 +1,5 @@
 import os
+import random
 import re
 
 from pyob.core_utils import logger
@@ -55,8 +56,6 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         path_b = os.path.join(data_dir, f"{base_name}.vB{ext}")
 
         if os.path.exists(path_a) and os.path.exists(path_b):
-            import random
-
             chosen_version = random.choice(["vA", "vB"])
             filepath = path_a if chosen_version == "vA" else path_b
             logger.info(f"A/B Testing: Selected {chosen_version} for prompt {filename}")
@@ -145,6 +144,7 @@ class PromptsAndMemoryMixin(SearchAndFilterMixin):
         return context
 
     def update_memory(self) -> None:
+        # type: ignore
         session_context: list[str] = getattr(self, "session_context", [])
         if not session_context:
             return
